@@ -110,7 +110,7 @@ const App = () => {
           {loggedInUser ? (
             <span className="nav-link-block" style={{ color: 'var(--hill-green)' }}>@{loggedInUser.username.toUpperCase()}</span>
           ) : (
-            <span className="nav-signin" onClick={() => navigate('/auth')}>Sign in</span>
+            <span className="nav-link-block" onClick={() => navigate('/auth')}>Sign in</span>
           )}
           <button className="btn-primary-white" style={{ padding: '0.75rem 1.5rem', fontSize: '0.7rem' }}>Start</button>
         </div>

@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  isAdmin: { type: boolean, default: false },
+  isAdmin: { type: Boolean, default: false },
   status: { type: String, default: 'Active' },
   bio: { type: String, default: 'New Explorer' },
   joinDate: { type: Date, default: Date.now }
@@ -31,9 +31,10 @@ const User = mongoose.model('User', userSchema);
 // --- SECURE ADMIN MIDDLEWARE (SIMULATED) ---
 const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
 const validateAdmin = (req, res, next) => {
-  const token = req.headers.authorization;
-  if (!token) return res.status(401).json({ error: "NO_TOKEN_PROVIDED" });
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "NO_TOKEN_PROVIDED" });
 
+  const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err || !decoded.isAdmin) return res.status(403).json({ error: "ADMIN_PRIVILEGES_REQUIRED" });
     req.user = decoded;
@@ -97,6 +98,23 @@ let posts = [
 ];
 
 // --- ENDPOINTS ---
+
+// Auth Login
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+
+    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token, isAdmin: user.isAdmin, username: user.username });
+  } catch (err) {
+    res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
 
 // Admin Stats
 app.get('/api/admin/stats', validateAdmin, (req, res) => {

@@ -33,7 +33,7 @@ body {
   cursor: pointer;
 }
 
-.nav-link-block:hover {
+.nav-link-block:hover, .nav-link-block.active {
   background-color: var(--timber);
   color: var(--himalayan-mist);
 }
