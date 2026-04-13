@@ -7,11 +7,13 @@ import Home from './Home';
 import Blog from './Blog';
 import DestinationDetail from './DestinationDetail';
 import BlogModal from './BlogModal';
+import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
 
 const App = () => {
   const [currentView, setCurrentView] = useState('Home');
   const [isExploreOpen, setIsExploreOpen] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState({ username: 'aaryush_admin', isAdmin: true }); // Simulated login
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedBlogNode, setSelectedBlogNode] = useState(null);
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
@@ -85,16 +87,12 @@ const App = () => {
         );
       case 'Admin':
         return (
-          <div className="view-container admin-panel">
-            <h2>System Control Panel</h2>
-            <div className="admin-grid">
-              <div className="admin-card"><h3>Manage Destinations</h3><button>Add New Route</button></div>
-              <div className="admin-card"><h3>User Queries</h3><button>View Requests</button></div>
-              <div className="admin-card"><h3>System Logs</h3><p>Status: All Nodes Operational</p></div>
+          <ProtectedRoute user={loggedInUser} onRedirect={setCurrentView}>
+            <div className="view-container admin-panel">
+              <button className="btn-outline-dark" style={{ marginBottom: '2rem' }} onClick={() => setCurrentView('Home')}>Exit Admin Mode</button>
+              <AdminDashboard />
             </div>
-            <button className="btn-outline-dark" onClick={() => setCurrentView('Home')}>Exit Admin Mode</button>
-            <AdminDashboard />
-          </div>
+          </ProtectedRoute>
         );
       default:
         return <Home onNavigate={setCurrentView} onSelectNode={handleNodeSelection} />;

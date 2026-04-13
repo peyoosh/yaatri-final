@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const tableHeaderStyle = { textAlign: 'left', padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--hill-green)', fontSize: '0.7rem', letterSpacing: '1px' };
+const tableCellStyle = { padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' };
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ userCount: 0, activeNodes: 0, intelStreams: 0 });
+  const [userList, setUserList] = useState([
+    { id: 1, username: 'aaryush_admin', email: 'admin@yaatri.np', isAdmin: true },
+    { id: 2, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false }
+  ]);
   const [destinations, setDestinations] = useState([]);
   const [blogPosts, setBlogPosts] = useState([]);
   const [editingDest, setEditingDest] = useState(null);
@@ -65,40 +72,64 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* DESTINATION CRUD */}
-      <section style={{ marginTop: '4rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <h3>Manage Terrain Data</h3>
-          <button onClick={() => setEditingDest({ rank: '', title: '', region: '', stats: '', description: '', image: '', isNew: true })} style={{ background: 'var(--hill-green)', color: 'white', border: 'none', padding: '10px 20px', fontWeight: 'bold', cursor: 'pointer' }}>+ ADD_NEW_NODE</button>
-        </div>
+      {/* USER MANAGEMENT TABLE */}
+      <section style={{ marginBottom: '4rem' }}>
+        <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>System User Registry</h3>
+        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'rgba(255,255,255,0.01)' }}>
+          <thead>
+            <tr>
+              <th style={tableHeaderStyle}>USER_ID</th>
+              <th style={tableHeaderStyle}>IDENTIFIER</th>
+              <th style={tableHeaderStyle}>UPLINK_EMAIL</th>
+              <th style={tableHeaderStyle}>ROLE_STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {userList.map(u => (
+              <tr key={u.id}>
+                <td style={tableCellStyle}>#{u.id.toString().padStart(3, '0')}</td>
+                <td style={tableCellStyle}>{u.username}</td>
+                <td style={tableCellStyle}>{u.email}</td>
+                <td style={tableCellStyle}>
+                  <span style={{ color: u.isAdmin ? 'var(--hill-green)' : 'inherit', fontWeight: u.isAdmin ? 'bold' : 'normal' }}>
+                    {u.isAdmin ? 'CORE_ADMIN' : 'EXPLORER'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
-        {editingDest && (
-          <form onSubmit={saveDestination} style={{ background: 'rgba(255,255,255,0.05)', padding: '2rem', marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <input type="text" placeholder="RANK (e.g. 05)" value={editingDest.rank} onChange={e => setEditingDest({...editingDest, rank: e.target.value})} style={{ padding: '10px', background: '#000', border: '1px solid #333', color: 'white' }} />
-              <input type="text" placeholder="TITLE" value={editingDest.title} onChange={e => setEditingDest({...editingDest, title: e.target.value})} style={{ padding: '10px', background: '#000', border: '1px solid #333', color: 'white' }} />
-              <input type="text" placeholder="REGION" value={editingDest.region} onChange={e => setEditingDest({...editingDest, region: e.target.value})} style={{ padding: '10px', background: '#000', border: '1px solid #333', color: 'white' }} />
-              <input type="text" placeholder="IMAGE_URL" value={editingDest.image} onChange={e => setEditingDest({...editingDest, image: e.target.value})} style={{ padding: '10px', background: '#000', border: '1px solid #333', color: 'white' }} />
-            </div>
-            <textarea placeholder="FULL_CONTENT_DESCRIPTION" value={editingDest.description} onChange={e => setEditingDest({...editingDest, description: e.target.value})} style={{ padding: '10px', background: '#000', border: '1px solid #333', color: 'white', minHeight: '100px' }} />
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button type="submit" style={{ background: 'white', color: 'black', border: 'none', padding: '10px 30px', fontWeight: 'bold', cursor: 'pointer' }}>SAVE_CHANGES</button>
-              <button type="button" onClick={() => setEditingDest(null)} style={{ background: 'transparent', border: '1px solid white', color: 'white', padding: '10px 30px', cursor: 'pointer' }}>CANCEL</button>
-            </div>
-          </form>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {destinations.map(dest => (
-            <div key={dest.rank} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <span><strong>[{dest.rank}]</strong> {dest.title} — {dest.region}</span>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setEditingDest(dest)} style={{ background: '#333', color: '#fff', border: 'none', padding: '5px 15px', cursor: 'pointer' }}>EDIT</button>
-                <button style={{ background: '#ff4d4d', color: '#fff', border: 'none', padding: '5px 15px', cursor: 'pointer' }}>REMOVE</button>
-              </div>
-            </div>
-          ))}
+      {/* TOURS/DESTINATIONS TABLE */}
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem' }}>Destination Node Repository</h3>
+          <button onClick={() => setEditingDest({ rank: '', title: '', region: '', stats: '', description: '', image: '', isNew: true })} style={{ background: 'var(--hill-green)', color: 'white', border: 'none', padding: '8px 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.7rem' }}>+ NEW_NODE</button>
         </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'rgba(255,255,255,0.01)' }}>
+          <thead>
+            <tr>
+              <th style={tableHeaderStyle}>RANK</th>
+              <th style={tableHeaderStyle}>NODE_TITLE</th>
+              <th style={tableHeaderStyle}>SECTOR_REGION</th>
+              <th style={tableHeaderStyle}>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {destinations.map(dest => (
+              <tr key={dest.rank}>
+                <td style={tableCellStyle}>{dest.rank}</td>
+                <td style={tableCellStyle}>{dest.title}</td>
+                <td style={tableCellStyle}>{dest.region}</td>
+                <td style={tableCellStyle}>
+                  <button onClick={() => setEditingDest(dest)} style={{ background: 'none', border: 'none', color: 'var(--hill-green)', cursor: 'pointer', marginRight: '15px', fontSize: '0.7rem', fontWeight: 'bold' }}>EDIT</button>
+                  <button style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}>REMOVE</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       {/* BLOG MODERATION */}

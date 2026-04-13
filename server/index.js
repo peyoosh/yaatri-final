@@ -7,13 +7,13 @@ app.use(cors());
 app.use(express.json());
 
 // --- SECURE ADMIN MIDDLEWARE (SIMULATED) ---
-const ADMIN_TOKEN = "YAATRI_SECRET_KEY_2024";
 const validateAdmin = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader === ADMIN_TOKEN) {
+  // In a real MERN app, req.user is populated by a JWT verify middleware
+  const user = req.body.user || { isAdmin: false }; // Mocking user extraction
+  if (user && user.isAdmin) {
     next();
   } else {
-    res.status(401).json({ error: "UNAUTHORIZED_ACCESS_DENIED" });
+    res.status(403).json({ error: "ACCESS_FORBIDDEN: ADMIN_PRIVILEGES_REQUIRED" });
   }
 };
 
@@ -22,8 +22,8 @@ let marqueeTitle = "Top Destinations by Weather";
 
 // USER_DATA_STORE (Mock accounts for tracking)
 let users = [
-  { id: 1, username: 'aaryush_admin', role: 'SuperUser', joinDate: '2024-01-10' },
-  { id: 2, username: 'trekker_88', role: 'Explorer', joinDate: '2024-02-15' }
+  { id: 1, username: 'aaryush_admin', email: 'admin@yaatri.np', isAdmin: true, joinDate: '2024-01-10' },
+  { id: 2, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false, joinDate: '2024-02-15' }
 ];
 
 // DESTINATION_DATA_STORE
