@@ -11,6 +11,7 @@ import BlogModal from './BlogModal';
 import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
+import { AuthProvider } from './context/AuthContext';
 
 const App = () => {
   const navigate = useNavigate();
@@ -68,6 +69,7 @@ const App = () => {
   );
 
   return (
+    <AuthProvider>
     <div className="app-shell">
       <nav className="navbar-main">
         {/* LEFT: BRANDING */}
@@ -107,12 +109,34 @@ const App = () => {
               </AnimatePresence>
             </div>
           </div>
+          {loggedInUser?.isAdmin && (
+            <span className="nav-link-block" style={{ color: 'var(--terai-harvest)', cursor: 'pointer' }} onClick={() => navigate('/admin')}>
+              ADMIN_PANEL
+            </span>
+          )}
           {loggedInUser ? (
             <span className="nav-link-block" style={{ color: 'var(--hill-green)' }}>@{loggedInUser.username.toUpperCase()}</span>
           ) : (
-            <span className="nav-link-block" onClick={() => navigate('/auth')}>Sign in</span>
+            <div style={{ display: 'flex', gap: '1.5rem' }}>
+              {(() => {
+                const isAuthPage = location.pathname === '/auth';
+                const isLoginMode = new URLSearchParams(location.search).get('mode') !== 'signup';
+                
+                if (isAuthPage) {
+                  return isLoginMode ? (
+                    <span className="nav-link-block" onClick={() => navigate('/auth?mode=signup')}>Sign up</span>
+                  ) : (
+                    <span className="nav-link-block" onClick={() => navigate('/auth?mode=login')}>Sign in</span>
+                  );
+                }
+
+                return [
+                  <span key="in" className="nav-link-block" onClick={() => navigate('/auth?mode=login')}>Sign in</span>,
+                  <span key="up" className="nav-link-block" onClick={() => navigate('/auth?mode=signup')}>Sign up</span>
+                ];
+              })()}
+            </div>
           )}
-          <button className="btn-primary-white" style={{ padding: '0.75rem 1.5rem', fontSize: '0.7rem' }}>Start</button>
         </div>
       </nav>
 
@@ -142,6 +166,7 @@ const App = () => {
         YAATRI.NP | RESEARCH_NODE_2431491 | LALITPUR, NEPAL
       </footer>
     </div>
+    </AuthProvider>
   );
 };
 

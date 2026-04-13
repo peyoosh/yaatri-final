@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, UserPlus, LogIn } from 'lucide-react';
 
 const Auth = ({ onLoginSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [formData, setFormData] = useState({ username: '', email: '', phoneNumber: '', password: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    setIsLogin(mode !== 'signup');
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,10 +30,10 @@ const Auth = ({ onLoginSuccess }) => {
       const res = await axios.post(`http://localhost:5000/api/auth/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
-        onLoginSuccess(res.data);
+        onLoginSuccess(res.data.user);
         navigate('/');
       } else {
-        setIsLogin(true);
+        setSearchParams({ mode: 'login' });
         alert("REGISTRATION_COMPLETE: Please login to verify uplink.");
       }
     } catch (err) {
@@ -36,71 +42,73 @@ const Auth = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '90vh', background: 'var(--obsidian)' }}>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ width: '100%', maxWidth: '400px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '3rem' }}
+        style={{ width: '100%', maxWidth: '450px', background: 'var(--obsidian)', border: '1px solid rgba(255,255,255,0.1)', padding: '3rem 2.5rem', borderRadius: '8px' }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{ display: 'inline-flex', padding: '1rem', background: 'rgba(5, 157, 114, 0.1)', borderRadius: '50%', marginBottom: '1rem' }}>
-            {isLogin ? <LogIn className="text-[var(--hill-green)]" /> : <UserPlus className="text-[var(--hill-green)]" />}
-          </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '4px' }}>{isLogin ? 'SYSTEM_ACCESS' : 'CREATE_IDENTITY'}</h2>
-          <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '0.5rem' }}>{isLogin ? 'ENTER_CREDENTIALS_TO_SYNC' : 'REGISTER_NEW_RESEARCH_NODE'}</p>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h1 style={{ color: 'white', letterSpacing: '4px', fontWeight: '900', fontSize: '1.5rem', margin: '0 0 0.5rem 0' }}>YAATRI</h1>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '400', margin: '0.5rem 0' }}>{isLogin ? 'Sign in' : 'Create your account'}</h2>
+          <p style={{ fontSize: '1rem', opacity: 0.8, margin: '0.5rem 0 2rem 0' }}>{isLogin ? 'Use your Yaatri Account' : 'Continue to Yaatri Hub'}</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {!isLogin && (
             <input 
               type="text" 
-              placeholder="USERNAME" 
+              placeholder="Username" 
               className="yaatri-search-input" 
+              style={{ border: '1px solid rgba(255,255,255,0.2)', padding: '13px 15px', borderRadius: '4px' }}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
               required 
             />
           )}
           <input 
             type="text" 
-            placeholder={isLogin ? "EMAIL_OR_PHONE" : "UPLINK_EMAIL"} 
+            placeholder={isLogin ? "Email or phone" : "Email address"} 
             className="yaatri-search-input" 
+            style={{ border: '1px solid rgba(255,255,255,0.2)', padding: '13px 15px', borderRadius: '4px' }}
             onChange={(e) => setFormData({...formData, email: e.target.value})}
             required 
           />
           {!isLogin && (
             <input 
               type="text" 
-              placeholder="PHONE_NUMBER" 
+              placeholder="Phone number" 
               className="yaatri-search-input" 
+              style={{ border: '1px solid rgba(255,255,255,0.2)', padding: '13px 15px', borderRadius: '4px' }}
               onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
               required 
             />
           )}
           <input 
             type="password" 
-            placeholder="ACCESS_PASSWORD" 
+            placeholder="Enter your password" 
             className="yaatri-search-input" 
+            style={{ border: '1px solid rgba(255,255,255,0.2)', padding: '13px 15px', borderRadius: '4px' }}
             onChange={(e) => setFormData({...formData, password: e.target.value})}
             required 
           />
 
           {error && <p style={{ color: '#ff4d4d', fontSize: '0.7rem', textAlign: 'center' }}>[!] {error}</p>}
 
-          <button type="submit" className="btn-primary-white" style={{ marginTop: '1rem' }}>
-            {isLogin ? 'SIGN_IN' : 'SIGN_UP'}
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2.5rem' }}>
+            <button 
+              type="button"
+              onClick={() => setSearchParams({ mode: isLogin ? 'signup' : 'login' })}
+              style={{ background: 'none', border: 'none', color: 'var(--hill-green)', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '600' }}
+            >
+              {isLogin ? "Create account" : "Sign in instead"}
+            </button>
+            <button type="submit" className="btn-primary-white" style={{ padding: '0.6rem 1.5rem', borderRadius: '4px', fontSize: '0.85rem', minWidth: '100px' }}>
+              {isLogin ? 'Next' : 'Register'}
+            </button>
+          </div>
         </form>
 
-        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <button 
-            onClick={() => setIsLogin(!isLogin)}
-            style={{ background: 'none', border: 'none', color: 'var(--terai-harvest)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            {isLogin ? "NEED_AN_ACCOUNT? SIGN_UP" : "ALREADY_REGISTERED? SIGN_IN"}
-          </button>
-        </div>
-        
-        <div style={{ marginTop: '2rem', textAlign: 'center', opacity: 0.2 }}>
+        <div style={{ marginTop: '3rem', textAlign: 'center', opacity: 0.2 }}>
           <ShieldCheck size={14} style={{ display: 'inline' }} /> <span style={{ fontSize: '0.6rem' }}>ENCRYPTION_ACTIVE: LALITPUR_V2</span>
         </div>
       </motion.div>

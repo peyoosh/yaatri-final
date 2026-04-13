@@ -19,10 +19,12 @@ export default function AdminDashboard() {
   ]);
 
   // SECURE CONFIG
-  const adminConfig = { headers: { Authorization: 'YAATRI_SECRET_KEY_2024' } };
+  const token = localStorage.getItem('yaatri_token');
+  const adminConfig = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
     const loadAdminData = async () => {
+      if (!token) return;
       try {
         const [s, d, b] = await Promise.all([
           axios.get('http://localhost:5000/api/admin/stats', adminConfig),

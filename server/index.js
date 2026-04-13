@@ -13,8 +13,29 @@ app.use(express.json());
 // Replace with your actual MongoDB URI string
 const MONGO_URI = "mongodb://localhost:27017/yaatri"; 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log("YAATRI_DATABASE: CONNECTED"))
+  .then(() => {
+    console.log("YAATRI_DATABASE: CONNECTED");
+    seedAdmin();
+  })
   .catch(err => console.error("DATABASE_CONNECTION_ERROR:", err));
+
+const seedAdmin = async () => {
+  try {
+    const admin = await User.findOne({ username: 'aaryush_admin' });
+    if (!admin) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('admin123', salt);
+      await new User({
+        username: 'aaryush_admin',
+        email: 'admin@yaatri.np',
+        phoneNumber: '9841000000',
+        password: hashedPassword,
+        isAdmin: true
+      }).save();
+      console.log("SYSTEM_ADMIN_CREATED: User: aaryush_admin | Pwd: admin123");
+    }
+  } catch (err) { console.error("SEEDING_ERROR:", err); }
+};
 
 // --- USER SCHEMA & MODEL ---
 const userSchema = new mongoose.Schema({
@@ -31,6 +52,17 @@ const User = mongoose.model('User', userSchema);
 
 // --- SECURE ADMIN MIDDLEWARE (SIMULATED) ---
 const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
+
+const protect = async (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "NOT_AUTHORIZED" });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = await User.findById(decoded.id).select("-password");
+    next();
+  } catch (err) { res.status(401).json({ error: "INVALID_TOKEN" }); }
+};
+
 const validateAdmin = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "NO_TOKEN_PROVIDED" });
@@ -138,10 +170,17 @@ app.post('/api/auth/login', async (req, res) => {
     if (!isMatch) return res.status(401).json({ error: "INVALID_CREDENTIALS" });
 
     const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, isAdmin: user.isAdmin, username: user.username });
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    res.json({ token, user: userResponse });
   } catch (err) {
     res.status(500).json({ error: "SERVER_ERROR" });
   }
+});
+
+// Get Current User (Persistence Check)
+app.get('/api/auth/me', protect, (req, res) => {
+  res.json(req.user);
 });
 
 // Admin Stats
