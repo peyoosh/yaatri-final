@@ -40,16 +40,41 @@ export default function AdminDashboard() {
     setBlogPosts(blogPosts.filter(p => p.id !== id));
   };
 
+  const deleteDestination = async (rank) => {
+    if (window.confirm(`CONFIRM_DELETION: NODE_${rank}`)) {
+      await axios.delete(`http://localhost:5000/api/destinations/${rank}`, adminConfig);
+      setDestinations(destinations.filter(d => d.rank !== rank));
+    }
+  };
+
   const saveDestination = async (e) => {
     e.preventDefault();
     const method = editingDest.isNew ? 'post' : 'put';
     const url = `http://localhost:5000/api/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
     
-    await axiosmethod;
+    try {
+      await axiosmethod;
+    } catch (err) {
+      console.error("SAVE_FAILED", err);
+    }
+
     setEditingDest(null);
     // Reload data
     const d = await axios.get('http://localhost:5000/api/destinations');
     setDestinations(d.data);
+  };
+
+  const handleProtocolChange = (index, field, value) => {
+    const newProtocols = [...(editingDest.protocols || [])];
+    newProtocols[index] = { ...newProtocols[index], [field]: value };
+    setEditingDest({ ...editingDest, protocols: newProtocols });
+  };
+
+  const addProtocol = () => {
+    setEditingDest({ 
+      ...editingDest, 
+      protocols: [...(editingDest.protocols || []), { title: '', desc: '' }] 
+    });
   };
 
   return (
@@ -102,11 +127,44 @@ export default function AdminDashboard() {
       </section>
 
       {/* TOURS/DESTINATIONS TABLE */}
-      <section>
+      <section style={{ marginBottom: '4rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ fontSize: '1rem' }}>Destination Node Repository</h3>
-          <button onClick={() => setEditingDest({ rank: '', title: '', region: '', stats: '', description: '', image: '', isNew: true })} style={{ background: 'var(--hill-green)', color: 'white', border: 'none', padding: '8px 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.7rem' }}>+ NEW_NODE</button>
+          <h3 style={{ fontSize: '1rem' }}>Core Node Registry</h3>
+          <button onClick={() => setEditingDest({ rank: '', title: '', region: '', stats: '', description: '', image: '', protocols: [], isNew: true })} style={{ background: 'var(--hill-green)', color: 'white', border: 'none', padding: '8px 16px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.7rem' }}>+ ADD_DESTINATION</button>
         </div>
+
+        {/* DESTINATION & DETAIL EDITOR */}
+        {editingDest && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--hill-green)', padding: '2rem', marginBottom: '3rem' }}>
+            <h4 style={{ color: 'var(--hill-green)', marginBottom: '1.5rem', fontSize: '0.8rem' }}>NODE_EDITOR // DETAILS_CONFIGURATION</h4>
+            <form onSubmit={saveDestination} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <input type="text" placeholder="RANK (e.g. 05)" value={editingDest.rank} onChange={e => setEditingDest({...editingDest, rank: e.target.value})} style={{ padding: '12px', background: '#000', border: '1px solid #333', color: 'white' }} />
+                <input type="text" placeholder="TITLE" value={editingDest.title} onChange={e => setEditingDest({...editingDest, title: e.target.value})} style={{ padding: '12px', background: '#000', border: '1px solid #333', color: 'white' }} />
+                <input type="text" placeholder="REGION" value={editingDest.region} onChange={e => setEditingDest({...editingDest, region: e.target.value})} style={{ padding: '12px', background: '#000', border: '1px solid #333', color: 'white' }} />
+                <input type="text" placeholder="IMAGE_URL" value={editingDest.image} onChange={e => setEditingDest({...editingDest, image: e.target.value})} style={{ padding: '12px', background: '#000', border: '1px solid #333', color: 'white' }} />
+              </div>
+              <textarea placeholder="SYSTEM_DESCRIPTION" value={editingDest.description} onChange={e => setEditingDest({...editingDest, description: e.target.value})} style={{ padding: '12px', background: '#000', border: '1px solid #333', color: 'white', minHeight: '80px' }} />
+              
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
+                <p style={{ fontSize: '0.7rem', color: 'var(--terai-harvest)', marginBottom: '1rem' }}>EXPERIENCE_PROTOCOLS (DESTINATION_DETAILS)</p>
+                {editingDest.protocols?.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                    <input type="text" placeholder="Protocol Title" value={p.title} onChange={e => handleProtocolChange(i, 'title', e.target.value)} style={{ flex: 1, padding: '8px', background: '#111', border: '1px solid #222', color: 'white', fontSize: '0.8rem' }} />
+                    <input type="text" placeholder="Description" value={p.desc} onChange={e => handleProtocolChange(i, 'desc', e.target.value)} style={{ flex: 2, padding: '8px', background: '#111', border: '1px solid #222', color: 'white', fontSize: '0.8rem' }} />
+                  </div>
+                ))}
+                <button type="button" onClick={addProtocol} style={{ background: 'none', border: '1px dashed var(--terai-harvest)', color: 'var(--terai-harvest)', padding: '5px 15px', cursor: 'pointer', fontSize: '0.7rem' }}>+ APPEND_PROTOCOL_DATA</button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button type="submit" style={{ background: 'white', color: 'black', border: 'none', padding: '10px 30px', fontWeight: 'bold', cursor: 'pointer' }}>COMMIT_CHANGES</button>
+                <button type="button" onClick={() => setEditingDest(null)} style={{ background: 'transparent', border: '1px solid white', color: 'white', padding: '10px 30px', cursor: 'pointer' }}>ABORT</button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <table style={{ width: '100%', borderCollapse: 'collapse', background: 'rgba(255,255,255,0.01)' }}>
           <thead>
             <tr>
@@ -123,8 +181,8 @@ export default function AdminDashboard() {
                 <td style={tableCellStyle}>{dest.title}</td>
                 <td style={tableCellStyle}>{dest.region}</td>
                 <td style={tableCellStyle}>
-                  <button onClick={() => setEditingDest(dest)} style={{ background: 'none', border: 'none', color: 'var(--hill-green)', cursor: 'pointer', marginRight: '15px', fontSize: '0.7rem', fontWeight: 'bold' }}>EDIT</button>
-                  <button style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}>REMOVE</button>
+                  <button onClick={() => setEditingDest({ ...dest, isNew: false })} style={{ background: 'none', border: 'none', color: 'var(--hill-green)', cursor: 'pointer', marginRight: '15px', fontSize: '0.7rem', fontWeight: 'bold' }}>EDIT</button>
+                  <button onClick={() => deleteDestination(dest.rank)} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}>REMOVE</button>
                 </td>
               </tr>
             ))}
@@ -134,7 +192,7 @@ export default function AdminDashboard() {
 
       {/* BLOG MODERATION */}
       <section style={{ marginTop: '4rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
-        <h3>Stream Moderation</h3>
+        <h3>Intel Stream Moderation (Blog Delete)</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '2rem' }}>
           {blogPosts.map(post => (
             <div key={post.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
