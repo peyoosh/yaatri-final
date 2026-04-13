@@ -6,19 +6,25 @@ import { ShieldCheck, UserPlus, LogIn } from 'lucide-react';
 
 const Auth = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ username: '', email: '', phoneNumber: '', password: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const endpoint = isLogin ? 'login' : 'signup';
+    const endpoint = isLogin ? 'login' : 'register';
+    
+    // If login, we send email/phone as 'identifier' to match the server logic
+    const payload = isLogin 
+      ? { identifier: formData.email, password: formData.password }
+      : formData;
+
     try {
-      const res = await axios.post(`http://localhost:5000/api/auth/${endpoint}`, formData);
+      const res = await axios.post(`http://localhost:5000/api/auth/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
-        onLoginSuccess(res.data.user);
+        onLoginSuccess(res.data);
         navigate('/');
       } else {
         setIsLogin(true);
@@ -55,12 +61,21 @@ const Auth = ({ onLoginSuccess }) => {
             />
           )}
           <input 
-            type="email" 
-            placeholder="UPLINK_EMAIL" 
+            type="text" 
+            placeholder={isLogin ? "EMAIL_OR_PHONE" : "UPLINK_EMAIL"} 
             className="yaatri-search-input" 
             onChange={(e) => setFormData({...formData, email: e.target.value})}
             required 
           />
+          {!isLogin && (
+            <input 
+              type="text" 
+              placeholder="PHONE_NUMBER" 
+              className="yaatri-search-input" 
+              onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+              required 
+            />
+          )}
           <input 
             type="password" 
             placeholder="ACCESS_PASSWORD" 
@@ -72,7 +87,7 @@ const Auth = ({ onLoginSuccess }) => {
           {error && <p style={{ color: '#ff4d4d', fontSize: '0.7rem', textAlign: 'center' }}>[!] {error}</p>}
 
           <button type="submit" className="btn-primary-white" style={{ marginTop: '1rem' }}>
-            {isLogin ? 'INITIALIZE_SESSION' : 'COMMIT_REGISTRATION'}
+            {isLogin ? 'SIGN_IN' : 'SIGN_UP'}
           </button>
         </form>
 
@@ -81,7 +96,7 @@ const Auth = ({ onLoginSuccess }) => {
             onClick={() => setIsLogin(!isLogin)}
             style={{ background: 'none', border: 'none', color: 'var(--terai-harvest)', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
           >
-            {isLogin ? "NEED_A_NEW_NODE? SIGN_UP" : "ALREADY_REGISTERED? LOGIN"}
+            {isLogin ? "NEED_AN_ACCOUNT? SIGN_UP" : "ALREADY_REGISTERED? SIGN_IN"}
           </button>
         </div>
         

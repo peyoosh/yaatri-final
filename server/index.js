@@ -20,6 +20,7 @@ mongoose.connect(MONGO_URI)
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
+  phoneNumber: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   isAdmin: { type: Boolean, default: false },
   status: { type: String, default: 'Active' },
@@ -99,11 +100,38 @@ let posts = [
 
 // --- ENDPOINTS ---
 
+// Auth Register
+app.post('/api/auth/register', async (req, res) => {
+  const { username, email, phoneNumber, password } = req.body;
+  try {
+    // Check if user already exists by email, phone, or username
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { phoneNumber }, { username }] 
+    });
+    
+    if (existingUser) {
+      return res.status(400).json({ error: "ACCOUNT_EXISTS", message: "Email, Phone, or Username already registered." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({ username, email, phoneNumber, password: hashedPassword });
+    await newUser.save();
+
+    res.status(201).json({ success: true, message: "Registration successful" });
+  } catch (err) {
+    res.status(500).json({ error: "REGISTRATION_ERROR" });
+  }
+});
+
 // Auth Login
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { identifier, password } = req.body; // identifier can be email or phoneNumber
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ 
+      $or: [{ email: identifier }, { phoneNumber: identifier }] 
+    });
     if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -117,9 +145,10 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Admin Stats
-app.get('/api/admin/stats', validateAdmin, (req, res) => {
+app.get('/api/admin/stats', validateAdmin, async (req, res) => {
+  const userCount = await User.countDocuments();
   res.json({
-    userCount: users.length,
+    userCount: userCount,
     activeNodes: destinations.length,
     intelStreams: posts.length
   });
