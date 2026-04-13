@@ -1,20 +1,44 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
 
+// --- MONGODB CONNECTION ---
+// Replace with your actual MongoDB URI string
+const MONGO_URI = "mongodb://localhost:27017/yaatri"; 
+mongoose.connect(MONGO_URI)
+  .then(() => console.log("YAATRI_DATABASE: CONNECTED"))
+  .catch(err => console.error("DATABASE_CONNECTION_ERROR:", err));
+
+// --- USER SCHEMA & MODEL ---
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  isAdmin: { type: boolean, default: false },
+  status: { type: String, default: 'Active' },
+  bio: { type: String, default: 'New Explorer' },
+  joinDate: { type: Date, default: Date.now }
+});
+const User = mongoose.model('User', userSchema);
+
 // --- SECURE ADMIN MIDDLEWARE (SIMULATED) ---
+const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
 const validateAdmin = (req, res, next) => {
-  // In a real MERN app, req.user is populated by a JWT verify middleware
-  const user = req.body.user || { isAdmin: false }; // Mocking user extraction
-  if (user && user.isAdmin) {
+  const token = req.headers.authorization;
+  if (!token) return res.status(401).json({ error: "NO_TOKEN_PROVIDED" });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err || !decoded.isAdmin) return res.status(403).json({ error: "ADMIN_PRIVILEGES_REQUIRED" });
+    req.user = decoded;
     next();
-  } else {
-    res.status(403).json({ error: "ACCESS_FORBIDDEN: ADMIN_PRIVILEGES_REQUIRED" });
-  }
+  });
 };
 
 // SYSTEM_SETTINGS_STORAGE

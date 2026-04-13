@@ -8,6 +8,7 @@ import Home from './Home';
 import Blog from './Blog';
 import DestinationDetail from './DestinationDetail';
 import BlogModal from './BlogModal';
+import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
 
@@ -15,7 +16,7 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isExploreOpen, setIsExploreOpen] = useState(false);
-  const [loggedInUser, setLoggedInUser] = useState({ username: 'aaryush_admin', isAdmin: true }); // Simulated login
+  const [loggedInUser, setLoggedInUser] = useState(null); 
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedBlogNode, setSelectedBlogNode] = useState(null);
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
@@ -106,7 +107,11 @@ const App = () => {
               </AnimatePresence>
             </div>
           </div>
-          <span className="nav-signin">Sign in</span>
+          {loggedInUser ? (
+            <span className="nav-link-block" style={{ color: 'var(--hill-green)' }}>@{loggedInUser.username.toUpperCase()}</span>
+          ) : (
+            <span className="nav-signin" onClick={() => navigate('/auth')}>Sign in</span>
+          )}
           <button className="btn-primary-white" style={{ padding: '0.75rem 1.5rem', fontSize: '0.7rem' }}>Start</button>
         </div>
       </nav>
@@ -118,6 +123,7 @@ const App = () => {
           <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<ContactView />} />
+          <Route path="/auth" element={<Auth onLoginSuccess={setLoggedInUser} />} />
           <Route path="/admin" element={
             <ProtectedRoute user={loggedInUser}>
               <AdminDashboard />

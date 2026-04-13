@@ -7,12 +7,16 @@ const tableCellStyle = { padding: '12px', borderBottom: '1px solid rgba(255,255,
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ userCount: 0, activeNodes: 0, intelStreams: 0 });
   const [userList, setUserList] = useState([
-    { id: 1, username: 'aaryush_admin', email: 'admin@yaatri.np', isAdmin: true },
-    { id: 2, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false }
+    { id: 1, username: 'aaryush_admin', email: 'admin@yaatri.np', isAdmin: true, status: 'Active', bio: 'Core system administrator for Yaatri Hub.' },
+    { id: 2, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false, status: 'Active', bio: 'Veteran explorer specializing in Khumbu terrain.' }
   ]);
   const [destinations, setDestinations] = useState([]);
   const [blogPosts, setBlogPosts] = useState([]);
   const [editingDest, setEditingDest] = useState(null);
+  const [viewingProfile, setViewingProfile] = useState(null);
+  const [resetRequests, setResetRequests] = useState([
+    { id: 1, username: 'trekker_88', timestamp: '2024-04-12 14:30', status: 'Pending' }
+  ]);
 
   // SECURE CONFIG
   const adminConfig = { headers: { Authorization: 'YAATRI_SECRET_KEY_2024' } };
@@ -64,6 +68,21 @@ export default function AdminDashboard() {
     setDestinations(d.data);
   };
 
+  const blockUser = (id) => {
+    setUserList(userList.map(u => u.id === id ? { ...u, status: u.status === 'Blocked' ? 'Active' : 'Blocked' } : u));
+  };
+
+  const deleteUser = (id) => {
+    if (window.confirm("PURGE_PROTOCOL: CONFIRM_USER_DELETION? This action is irreversible.")) {
+      setUserList(userList.filter(u => u.id !== id));
+    }
+  };
+
+  const verifyPasswordReset = (id) => {
+    alert(`RESET_VERIFIED for Request_ID: ${id}`);
+    setResetRequests(resetRequests.filter(r => r.id !== id));
+  };
+
   const handleProtocolChange = (index, field, value) => {
     const newProtocols = [...(editingDest.protocols || [])];
     newProtocols[index] = { ...newProtocols[index], [field]: value };
@@ -107,23 +126,47 @@ export default function AdminDashboard() {
               <th style={tableHeaderStyle}>IDENTIFIER</th>
               <th style={tableHeaderStyle}>UPLINK_EMAIL</th>
               <th style={tableHeaderStyle}>ROLE_STATUS</th>
+              <th style={tableHeaderStyle}>NODE_STATUS</th>
+              <th style={tableHeaderStyle}>OPERATIONS</th>
             </tr>
           </thead>
           <tbody>
             {userList.map(u => (
               <tr key={u.id}>
                 <td style={tableCellStyle}>#{u.id.toString().padStart(3, '0')}</td>
-                <td style={tableCellStyle}>{u.username}</td>
+                <td style={{...tableCellStyle, cursor: 'pointer', color: 'var(--hill-green)'}} onClick={() => setViewingProfile(u)}>{u.username}</td>
                 <td style={tableCellStyle}>{u.email}</td>
                 <td style={tableCellStyle}>
                   <span style={{ color: u.isAdmin ? 'var(--hill-green)' : 'inherit', fontWeight: u.isAdmin ? 'bold' : 'normal' }}>
                     {u.isAdmin ? 'CORE_ADMIN' : 'EXPLORER'}
                   </span>
                 </td>
+                <td style={tableCellStyle}>
+                  <span style={{ color: u.status === 'Blocked' ? '#ff4d4d' : 'white' }}>{u.status}</span>
+                </td>
+                <td style={tableCellStyle}>
+                  <button onClick={() => blockUser(u.id)} style={{ background: 'none', border: 'none', color: 'orange', cursor: 'pointer', marginRight: '10px', fontSize: '0.7rem', fontWeight: 'bold' }}>{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
+                  <button onClick={() => deleteUser(u.id)} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}>DELETE</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </section>
+
+      {/* PASSWORD RESET VERIFICATION */}
+      <section style={{ marginBottom: '4rem' }}>
+        <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>Pending Password Resets</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {resetRequests.length > 0 ? resetRequests.map(req => (
+            <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ fontSize: '0.85rem' }}><strong>@{req.username}</strong> requested reset at {req.timestamp}</span>
+              <button onClick={() => verifyPasswordReset(req.id)} style={{ background: 'var(--hill-green)', color: '#fff', border: 'none', padding: '5px 15px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.7rem' }}>VERIFY_RESET</button>
+            </div>
+          )) : (
+            <p style={{ fontSize: '0.7rem', opacity: 0.3 }}>[ NO_PENDING_REQUESTS ]</p>
+          )}
+        </div>
       </section>
 
       {/* TOURS/DESTINATIONS TABLE */}
@@ -202,6 +245,22 @@ export default function AdminDashboard() {
           ))}
         </div>
       </section>
+
+      {/* PROFILE VIEWER OVERLAY */}
+      {viewingProfile && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(5px)', zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--obsidian)', border: '1px solid var(--hill-green)', padding: '2rem', width: '400px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ color: 'var(--hill-green)', marginBottom: '1.5rem', letterSpacing: '2px' }}>INTEL_NODE: {viewingProfile.username}</h3>
+            <div style={{ fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: 0.8 }}>
+              <p><strong>UPLINK:</strong> {viewingProfile.email}</p>
+              <p><strong>AUTH_STATUS:</strong> {viewingProfile.isAdmin ? 'ADMIN' : 'USER'}</p>
+              <p><strong>NODE_STATUS:</strong> {viewingProfile.status}</p>
+              <p><strong>EXPEDITION_BIO:</strong> {viewingProfile.bio}</p>
+            </div>
+            <button onClick={() => setViewingProfile(null)} style={{ marginTop: '2rem', width: '100%', padding: '12px', background: 'white', color: 'black', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>ABORT_VIEW</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
