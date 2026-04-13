@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Globe, Map, Compass } from 'lucide-react';
 import './index.css';
@@ -11,7 +12,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
 
 const App = () => {
-  const [currentView, setCurrentView] = useState('Home');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState({ username: 'aaryush_admin', isAdmin: true }); // Simulated login
   const [selectedNode, setSelectedNode] = useState(null);
@@ -33,71 +35,36 @@ const App = () => {
 
   const handleNodeSelection = (node) => {
     setSelectedNode(node);
-    setCurrentView('DestinationDetail');
+    navigate('/destination-detail');
   };
 
-  const renderView = () => {
-    switch(currentView) {
-      case 'Destinations':
-        return <Destinations onSelectNode={handleNodeSelection} />;
-      case 'DestinationDetail':
-        return (
-          <DestinationDetail 
-            node={selectedNode} 
-            onBack={() => setCurrentView('Destinations')} 
-            onSeeBlog={openBlogModal}
-          />
-        );
-      case 'Planner':
-        return <div className="view-container"><h2>Itinerary Engine</h2><p>Calculated schedules based on local terrain.</p></div>;
-      case 'Guide':
-        return <div className="view-container"><h2>Assistance Node</h2><p>Connection established with Lalitpur studio.</p></div>;
-      case 'Blog':
-        return <Blog onSeeBlog={openBlogModal} />;
-      case 'Contact':
-        return (
-          <div className="view-container contact-node" style={{ padding: '4rem 10%', minHeight: '80vh' }}>
-            <h2 className="vibrant-title">Contact Assistance</h2>
-            
-            <div className="contact-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', marginTop: '3rem' }}>
-              <div className="info-block">
-                <h3 style={{ color: 'var(--hill-green)', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: '900' }}>WEBSITE_HOLDER</h3>
-                <p style={{ marginTop: '1rem', fontWeight: '600' }}>YAATRI CORE SYSTEMS // Sector 4</p>
-                <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Lead Node: Aaryush Shrestha</p>
-                <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Uplink: support@yaatri.np.system</p>
-              </div>
-
-              <div className="info-block">
-                <h3 style={{ color: 'var(--hill-green)', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: '900' }}>INQUIRY_EXAMPLES</h3>
-                <ul style={{ listStyle: 'none', padding: 0, marginTop: '1rem', opacity: 0.6, fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                  <li>[ID_001] Terrain Scan Request - Khumbu</li>
-                  <li>[ID_042] Cultural Protocol Sync - Newari</li>
-                  <li>[ID_109] Pathfinding Calculation - Mustang</li>
-                </ul>
-              </div>
-
-              <div className="info-block" style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2rem' }}>
-                <h3 style={{ color: 'var(--hill-green)', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: '900' }}>ADDITIONAL_INTEL // LICENCE</h3>
-                <p style={{ marginTop: '1rem', fontSize: '0.85rem', opacity: 0.5, lineHeight: '1.6', maxWidth: '800px' }}>
-                  This system interface and all associated terrain mapping data are licensed under the YAATRI_V7_OPEN_INTEL_PROTOCOL. Commercial redistribution of localized research nodes without Sector verification is strictly prohibited. © 2024 RESEARCH_NODE_2431491.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'Admin':
-        return (
-          <ProtectedRoute user={loggedInUser} onRedirect={setCurrentView}>
-            <div className="view-container admin-panel">
-              <button className="btn-outline-dark" style={{ marginBottom: '2rem' }} onClick={() => setCurrentView('Home')}>Exit Admin Mode</button>
-              <AdminDashboard />
-            </div>
-          </ProtectedRoute>
-        );
-      default:
-        return <Home onNavigate={setCurrentView} onSelectNode={handleNodeSelection} />;
-    }
-  };
+  const ContactView = () => (
+    <div className="view-container contact-node" style={{ padding: '4rem 10%', minHeight: '80vh' }}>
+      <h2 className="vibrant-title">Contact Assistance</h2>
+      <div className="contact-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', marginTop: '3rem' }}>
+        <div className="info-block">
+          <h3 style={{ color: 'var(--hill-green)', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: '900' }}>WEBSITE_HOLDER</h3>
+          <p style={{ marginTop: '1rem', fontWeight: '600' }}>YAATRI CORE SYSTEMS // Sector 4</p>
+          <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Lead Node: Aaryush Shrestha</p>
+          <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Uplink: support@yaatri.np.system</p>
+        </div>
+        <div className="info-block">
+          <h3 style={{ color: 'var(--hill-green)', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: '900' }}>INQUIRY_EXAMPLES</h3>
+          <ul style={{ listStyle: 'none', padding: 0, marginTop: '1rem', opacity: 0.6, fontSize: '0.85rem', fontFamily: 'monospace' }}>
+            <li>[ID_001] Terrain Scan Request - Khumbu</li>
+            <li>[ID_042] Cultural Protocol Sync - Newari</li>
+            <li>[ID_109] Pathfinding Calculation - Mustang</li>
+          </ul>
+        </div>
+        <div className="info-block" style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2rem' }}>
+          <h3 style={{ color: 'var(--hill-green)', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: '900' }}>ADDITIONAL_INTEL // LICENCE</h3>
+          <p style={{ marginTop: '1rem', fontSize: '0.85rem', opacity: 0.5, lineHeight: '1.6', maxWidth: '800px' }}>
+            This system interface and all associated terrain mapping data are licensed under the YAATRI_V7_OPEN_INTEL_PROTOCOL. Commercial redistribution of localized research nodes without Sector verification is strictly prohibited. © 2024 RESEARCH_NODE_2431491.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="app-shell">
@@ -105,7 +72,7 @@ const App = () => {
         {/* LEFT: BRANDING */}
         <div 
           className="nav-brand"
-          onClick={() => setCurrentView('Home')}
+          onClick={() => navigate('/')}
         >
           YAATRI
         </div>
@@ -113,9 +80,9 @@ const App = () => {
         {/* RIGHT: NAVIGATION & ACTIONS */}
         <div className="nav-actions">
           <div className="nav-links-container">
-            <span className="nav-link-block" onClick={() => setCurrentView('Destinations')}>Destinations</span>
-            <span className="nav-link-block" onClick={() => setCurrentView('Blog')}>Blog</span>
-            <span className="nav-link-block" onClick={() => setCurrentView('Contact')}>Contact</span>
+            <span className={`nav-link-block ${location.pathname === '/destinations' ? 'active' : ''}`} onClick={() => navigate('/destinations')}>Destinations</span>
+            <span className={`nav-link-block ${location.pathname === '/blog' ? 'active' : ''}`} onClick={() => navigate('/blog')}>Blog</span>
+            <span className={`nav-link-block ${location.pathname === '/contact' ? 'active' : ''}`} onClick={() => navigate('/contact')}>Contact</span>
             <div 
               className="relative"
               onMouseEnter={() => setIsExploreOpen(true)}
@@ -140,13 +107,23 @@ const App = () => {
             </div>
           </div>
           <span className="nav-signin">Sign in</span>
-          <span className="nav-link-block" onClick={() => setCurrentView('Admin')} style={{ opacity: 0.4, fontSize: '0.7rem' }}>[ ADMIN_CORE ]</span>
           <button className="btn-primary-white" style={{ padding: '0.75rem 1.5rem', fontSize: '0.7rem' }}>Start</button>
         </div>
       </nav>
 
       <main className="main-content animate-alive">
-        {renderView()}
+        <Routes>
+          <Route path="/" element={<Home onNavigate={navigate} onSelectNode={handleNodeSelection} />} />
+          <Route path="/destinations" element={<Destinations onSelectNode={handleNodeSelection} />} />
+          <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
+          <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
+          <Route path="/contact" element={<ContactView />} />
+          <Route path="/admin" element={
+            <ProtectedRoute user={loggedInUser}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+        </Routes>
       </main>
 
       <BlogModal 

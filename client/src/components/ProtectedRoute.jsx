@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ user, children, onRedirect }) => {
+const ProtectedRoute = ({ user, children }) => {
+  const navigate = useNavigate();
   if (!user || !user.isAdmin) {
     // Trigger a view reset if the user isn't an admin
-    setTimeout(() => onRedirect('Home'), 0);
+    setTimeout(() => navigate('/'), 0);
     return null;
   }
 
