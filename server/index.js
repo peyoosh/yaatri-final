@@ -136,6 +136,11 @@ let posts = [
 // Auth Register
 app.post('/api/auth/register', async (req, res) => {
   const { username, email, phoneNumber, password } = req.body;
+  
+  if (!username || !email || !phoneNumber || !password) {
+    return res.status(400).json({ error: "MISSING_FIELDS", message: "All fields are required." });
+  }
+
   try {
     // Check if user already exists by email, phone, or username
     const existingUser = await User.findOne({ 
@@ -154,7 +159,11 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({ success: true, message: "Registration successful" });
   } catch (err) {
-    res.status(500).json({ error: "REGISTRATION_ERROR" });
+    console.error("REGISTRATION_CRASH:", err);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: "DUPLICATE_KEY", message: "Username, Email, or Phone already in use." });
+    }
+    res.status(500).json({ error: "REGISTRATION_ERROR", message: err.message });
   }
 });
 
@@ -175,7 +184,8 @@ app.post('/api/auth/login', async (req, res) => {
     delete userResponse.password;
     res.json({ token, user: userResponse });
   } catch (err) {
-    res.status(500).json({ error: "SERVER_ERROR" });
+    console.error("LOGIN_CRASH:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: err.message });
   }
 });
 

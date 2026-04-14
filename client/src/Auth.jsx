@@ -30,14 +30,15 @@ const Auth = ({ onLoginSuccess }) => {
       const res = await axios.post(`http://localhost:5000/api/auth/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
-        onLoginSuccess(res.data.user);
+        if (onLoginSuccess) onLoginSuccess(res.data.user);
         navigate('/');
       } else {
         setSearchParams({ mode: 'login' });
         alert("REGISTRATION_COMPLETE: Please login to verify uplink.");
       }
     } catch (err) {
-      setError(err.response?.data?.error || "UPLINK_FAILED");
+      console.error("AUTH_ERROR_OBJECT:", err);
+      setError(err.response?.data?.message || err.response?.data?.error || "UPLINK_FAILED: Server unreachable.");
     }
   };
 
