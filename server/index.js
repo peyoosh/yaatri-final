@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -9,9 +10,22 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
+// --- USER SCHEMA & MODEL ---
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  phoneNumber: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  isAdmin: { type: Boolean, default: false },
+  status: { type: String, default: 'Active' },
+  bio: { type: String, default: 'New Explorer' },
+  joinDate: { type: Date, default: Date.now }
+});
+const User = mongoose.model('User', userSchema);
+
 // --- MONGODB CONNECTION ---
 // Replace with your actual MongoDB URI string
-const MONGO_URI = "mongodb://localhost:27017/yaatri"; 
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
 mongoose.connect(MONGO_URI)
   .then(() => {
     console.log("YAATRI_DATABASE: CONNECTED");
@@ -36,19 +50,6 @@ const seedAdmin = async () => {
     }
   } catch (err) { console.error("SEEDING_ERROR:", err); }
 };
-
-// --- USER SCHEMA & MODEL ---
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  email: { type: String, required: true, unique: true },
-  phoneNumber: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  isAdmin: { type: Boolean, default: false },
-  status: { type: String, default: 'Active' },
-  bio: { type: String, default: 'New Explorer' },
-  joinDate: { type: Date, default: Date.now }
-});
-const User = mongoose.model('User', userSchema);
 
 // --- SECURE ADMIN MIDDLEWARE (SIMULATED) ---
 const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
