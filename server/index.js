@@ -38,18 +38,24 @@ mongoose.connect(MONGO_URI)
 
 const seedAdmin = async () => {
   try {
-    const admin = await User.findOne({ role: 'author' });
-    if (!admin) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('admin123', salt);
-      await new User({
-        username: 'aaryush_admin',
-        email: 'admin@yaatri.np',
-        phoneNumber: '9841000000',
-        password: hashedPassword,
-        role: 'author'
-      }).save();
-      console.log("SYSTEM_ADMIN_CREATED: User: aaryush_admin | Pwd: admin123");
+    const admins = [
+      { username: 'aaryush_admin', email: 'admin@yaatri.np', phoneNumber: '9841000000' },
+      { username: 'peyoosh_admin', email: 'peyoosh@yaatri.np', phoneNumber: '9841111111' }
+    ];
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('admin123', salt);
+
+    for (const adminData of admins) {
+      const exists = await User.findOne({ username: adminData.username });
+      if (!exists) {
+        await new User({
+          ...adminData,
+          password: hashedPassword,
+          role: 'author'
+        }).save();
+        console.log(`SYSTEM_ADMIN_CREATED: User: ${adminData.username} | Pwd: admin123`);
+      }
     }
   } catch (err) { console.error("SEEDING_ERROR:", err); }
 };
