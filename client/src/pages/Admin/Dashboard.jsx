@@ -22,7 +22,7 @@ export default function AdminDashboard() {
   const token = localStorage.getItem('yaatri_token');
   const adminConfig = { headers: { Authorization: `Bearer ${token}` } };
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-final.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
 
   useEffect(() => {
     const loadAdminData = async () => {

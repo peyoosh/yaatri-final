@@ -16,7 +16,7 @@ const Home = ({ onNavigate, onSelectNode }) => {
   const [topModules, setTopModules] = useState([]);
   const trackRef = React.useRef(null);
   
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-final.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
 
   useEffect(() => {
     const fetchData = async () => {

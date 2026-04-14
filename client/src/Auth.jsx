@@ -12,7 +12,7 @@ const Auth = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-final.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
 
   useEffect(() => {
     const mode = searchParams.get('mode');
