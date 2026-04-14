@@ -31,7 +31,7 @@ const User = mongoose.model('User', userSchema);
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
 mongoose.connect(MONGO_URI)
   .then(() => {
-    console.log("YAATRI_DATABASE: CONNECTED");
+    console.log(`YAATRI_DATABASE: CONNECTED TO [${mongoose.connection.name.toUpperCase()}]`);
     seedAdmin();
   })
   .catch(err => console.error("DATABASE_CONNECTION_ERROR:", err));

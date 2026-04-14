@@ -9,7 +9,6 @@ const Auth = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [formData, setFormData] = useState({ username: '', email: '', phoneNumber: '', password: '' });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
@@ -22,11 +21,10 @@ const Auth = ({ onLoginSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-
     const BASE_URL = `${API_BASE_URL}/api/auth`;
     const endpoint = isLogin ? 'login' : 'register';
     
+    // If login, we send email/phone as 'identifier' to match the server logic
     const payload = isLogin 
       ? { identifier: formData.email, password: formData.password }
       : formData;
@@ -35,7 +33,6 @@ const Auth = ({ onLoginSuccess }) => {
       const res = await axios.post(`${BASE_URL}/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
-        localStorage.setItem('yaatri_user', JSON.stringify(res.data.user));
         if (onLoginSuccess) onLoginSuccess(res.data.user);
         navigate('/');
       } else {
@@ -45,8 +42,6 @@ const Auth = ({ onLoginSuccess }) => {
     } catch (err) {
       console.error("AUTH_ERROR_OBJECT:", err);
       setError(err.response?.data?.message || err.response?.data?.error || "UPLINK_FAILED: Server unreachable.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -111,13 +106,8 @@ const Auth = ({ onLoginSuccess }) => {
             >
               {isLogin ? "Create account" : "Sign in instead"}
             </button>
-            <button 
-              type="submit" 
-              className="btn-primary-white" 
-              disabled={loading}
-              style={{ padding: '0.6rem 1.5rem', borderRadius: '4px', fontSize: '0.85rem', minWidth: '100px', opacity: loading ? 0.5 : 1 }}
-            >
-              {loading ? 'SYNCING...' : (isLogin ? 'Next' : 'Register')}
+            <button type="submit" className="btn-primary-white" style={{ padding: '0.6rem 1.5rem', borderRadius: '4px', fontSize: '0.85rem', minWidth: '100px' }}>
+              {isLogin ? 'Next' : 'Register'}
             </button>
           </div>
         </form>
