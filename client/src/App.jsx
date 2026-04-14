@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Globe, Map, Compass } from 'lucide-react';
-import { User } from 'lucide-react'; // Import the User icon
+import { ChevronDown, Globe, Map, Compass, User, LogOut } from 'lucide-react';
 import Destinations from './Destinations';
 import Home from './Home';
 import Blog from './Blog';
@@ -22,6 +21,21 @@ const App = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedBlogNode, setSelectedBlogNode] = useState(null);
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
+
+  // Persist session on load
+  useEffect(() => {
+    const savedUser = localStorage.getItem('yaatri_user');
+    if (savedUser) {
+      setLoggedInUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('yaatri_token');
+    localStorage.removeItem('yaatri_user');
+    setLoggedInUser(null);
+    navigate('/');
+  };
 
   useEffect(() => {
     if (isBlogModalOpen) {
@@ -116,11 +130,20 @@ const App = () => {
             </span>
           )}
           {loggedInUser ? (
-            <div className="nav-link-block flex items-center gap-2" style={{ color: 'var(--hill-green)', cursor: 'pointer' }} onClick={() => navigate('/profile')}> {/* Assuming a profile route */}
-              <User size={20} />
-              <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                @{loggedInUser.username.toUpperCase()}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+              <div 
+                className="nav-link-block flex items-center gap-2" 
+                style={{ color: 'var(--hill-green)', cursor: 'pointer' }} 
+                onClick={() => navigate('/profile')}
+              >
+                <User size={18} />
+                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                  @{loggedInUser.username.toUpperCase()}
+                </span>
+              </div>
+              <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <LogOut size={16} />
+              </button>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: '1.5rem' }}>

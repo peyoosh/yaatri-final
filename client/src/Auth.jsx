@@ -27,7 +27,6 @@ const Auth = ({ onLoginSuccess }) => {
     const BASE_URL = `${API_BASE_URL}/api/auth`;
     const endpoint = isLogin ? 'login' : 'register';
     
-    // If login, we send email/phone as 'identifier' to match the server logic
     const payload = isLogin 
       ? { identifier: formData.email, password: formData.password }
       : formData;
@@ -36,6 +35,7 @@ const Auth = ({ onLoginSuccess }) => {
       const res = await axios.post(`${BASE_URL}/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
+        localStorage.setItem('yaatri_user', JSON.stringify(res.data.user));
         if (onLoginSuccess) onLoginSuccess(res.data.user);
         navigate('/');
       } else {
