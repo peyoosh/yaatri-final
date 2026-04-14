@@ -9,11 +9,10 @@ const Auth = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [formData, setFormData] = useState({ username: '', email: '', phoneNumber: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const API_BASE_URL = window.location.hostname === "localhost" 
-    ? "http://localhost:5000" 
-    : "https://yaatri-final.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-final.onrender.com";
 
   useEffect(() => {
     const mode = searchParams.get('mode');
@@ -23,6 +22,8 @@ const Auth = ({ onLoginSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+
     const BASE_URL = `${API_BASE_URL}/api/auth`;
     const endpoint = isLogin ? 'login' : 'register';
     
@@ -44,6 +45,8 @@ const Auth = ({ onLoginSuccess }) => {
     } catch (err) {
       console.error("AUTH_ERROR_OBJECT:", err);
       setError(err.response?.data?.message || err.response?.data?.error || "UPLINK_FAILED: Server unreachable.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,8 +111,13 @@ const Auth = ({ onLoginSuccess }) => {
             >
               {isLogin ? "Create account" : "Sign in instead"}
             </button>
-            <button type="submit" className="btn-primary-white" style={{ padding: '0.6rem 1.5rem', borderRadius: '4px', fontSize: '0.85rem', minWidth: '100px' }}>
-              {isLogin ? 'Next' : 'Register'}
+            <button 
+              type="submit" 
+              className="btn-primary-white" 
+              disabled={loading}
+              style={{ padding: '0.6rem 1.5rem', borderRadius: '4px', fontSize: '0.85rem', minWidth: '100px', opacity: loading ? 0.5 : 1 }}
+            >
+              {loading ? 'SYNCING...' : (isLogin ? 'Next' : 'Register')}
             </button>
           </div>
         </form>

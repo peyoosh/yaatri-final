@@ -8,9 +8,7 @@ const Blog = ({ onSeeBlog }) => {
   const [newCaption, setNewCaption] = useState('');
   const [newLocation, setNewLocation] = useState('');
 
-  const API_BASE_URL = window.location.hostname === "localhost" 
-    ? "http://localhost:5000" 
-    : "https://yaatri-final.onrender.com";
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-final.onrender.com";
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/api/posts`).then(res => setPosts(res.data));
