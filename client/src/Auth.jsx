@@ -27,7 +27,7 @@ const Auth = ({ onLoginSuccess }) => {
       : formData;
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/auth/${endpoint}`, payload);
+      const res = await axios.post(`https://yaatri-final.onrender.com/api/auth/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
         if (onLoginSuccess) onLoginSuccess(res.data.user);

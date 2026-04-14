@@ -27,9 +27,9 @@ export default function AdminDashboard() {
       if (!token) return;
       try {
         const [s, d, b] = await Promise.all([
-          axios.get('http://localhost:5000/api/admin/stats', adminConfig),
-          axios.get('http://localhost:5000/api/destinations'),
-          axios.get('http://localhost:5000/api/posts')
+          axios.get('https://yaatri-final.onrender.com/api/admin/stats', adminConfig),
+          axios.get('https://yaatri-final.onrender.com/api/destinations'),
+          axios.get('https://yaatri-final.onrender.com/api/posts')
         ]);
         setStats(s.data);
         setDestinations(d.data);
@@ -42,13 +42,13 @@ export default function AdminDashboard() {
   }, []);
 
   const deletePost = async (id) => {
-    await axios.delete(`http://localhost:5000/api/posts/${id}`, adminConfig);
+    await axios.delete(`https://yaatri-final.onrender.com/api/posts/${id}`, adminConfig);
     setBlogPosts(blogPosts.filter(p => p.id !== id));
   };
 
   const deleteDestination = async (rank) => {
     if (window.confirm(`CONFIRM_DELETION: NODE_${rank}`)) {
-      await axios.delete(`http://localhost:5000/api/destinations/${rank}`, adminConfig);
+      await axios.delete(`https://yaatri-final.onrender.com/api/destinations/${rank}`, adminConfig);
       setDestinations(destinations.filter(d => d.rank !== rank));
     }
   };
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
   const saveDestination = async (e) => {
     e.preventDefault();
     const method = editingDest.isNew ? 'post' : 'put';
-    const url = `http://localhost:5000/api/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
+    const url = `https://yaatri-final.onrender.com/api/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
     
     try {
       await axiosmethod;
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
 
     setEditingDest(null);
     // Reload data
-    const d = await axios.get('http://localhost:5000/api/destinations');
+    const d = await axios.get('https://yaatri-final.onrender.com/api/destinations');
     setDestinations(d.data);
   };
 

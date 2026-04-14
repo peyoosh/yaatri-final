@@ -9,11 +9,11 @@ const Blog = ({ onSeeBlog }) => {
   const [newLocation, setNewLocation] = useState('');
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/posts').then(res => setPosts(res.data));
+    axios.get('https://yaatri-final.onrender.com/api/posts').then(res => setPosts(res.data));
   }, []);
 
   const handleLike = async (id) => {
-    await axios.patch(`http://localhost:5000/api/posts/${id}/like`);
+    await axios.patch(`https://yaatri-final.onrender.com/api/posts/${id}/like`);
     setPosts(posts.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p));
   };
 
@@ -26,7 +26,7 @@ const Blog = ({ onSeeBlog }) => {
       likes: 0,
       caption: newCaption,
     };
-    const res = await axios.post('http://localhost:5000/api/posts', postData);
+    const res = await axios.post('https://yaatri-final.onrender.com/api/posts', postData);
     setPosts([res.data, ...posts]);
     setNewCaption('');
     setNewLocation('');

@@ -252,4 +252,4 @@ app.patch('/api/posts/:id/like', (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(PORT, () => console.log(`YAATRI_HUB online at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`YAATRI_HUB online at https://yaatri-final.onrender.com`));

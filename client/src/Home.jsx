@@ -18,8 +18,8 @@ const Home = ({ onNavigate, onSelectNode }) => {
   
   useEffect(() => {
     const fetchData = async () => {
-      const dests = await axios.get('http://localhost:5000/api/destinations');
-      const settings = await axios.get('http://localhost:5000/api/settings');
+      const dests = await axios.get('https://yaatri-final.onrender.com/api/destinations');
+      const settings = await axios.get('https://yaatri-final.onrender.com/api/settings');
       setTopModules(dests.data);
       setMarqueeTitle(settings.data.marqueeTitle);
     };
