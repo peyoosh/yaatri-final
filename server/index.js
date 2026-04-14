@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phoneNumber: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  isAdmin: { type: Boolean, default: false },
+  role: { type: String, default: 'explorer' },
   status: { type: String, default: 'Active' },
   bio: { type: String, default: 'New Explorer' },
   joinDate: { type: Date, default: Date.now }
@@ -38,7 +38,7 @@ mongoose.connect(MONGO_URI)
 
 const seedAdmin = async () => {
   try {
-    const admin = await User.findOne({ username: 'aaryush_admin' });
+    const admin = await User.findOne({ role: 'author' });
     if (!admin) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash('admin123', salt);
@@ -47,7 +47,7 @@ const seedAdmin = async () => {
         email: 'admin@yaatri.np',
         phoneNumber: '9841000000',
         password: hashedPassword,
-        isAdmin: true
+        role: 'author'
       }).save();
       console.log("SYSTEM_ADMIN_CREATED: User: aaryush_admin | Pwd: admin123");
     }
@@ -73,7 +73,7 @@ const validateAdmin = (req, res, next) => {
 
   const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err || !decoded.isAdmin) return res.status(403).json({ error: "ADMIN_PRIVILEGES_REQUIRED" });
+    if (err || decoded.role !== 'author') return res.status(403).json({ error: "AUTHOR_PRIVILEGES_REQUIRED" });
     req.user = decoded;
     next();
   });
@@ -136,61 +136,9 @@ let posts = [
 
 // --- ENDPOINTS ---
 
-// Auth Register
-app.post('/api/auth/register', async (req, res) => {
-  const { username, email, phoneNumber, password } = req.body;
-  
-  if (!username || !email || !phoneNumber || !password) {
-    return res.status(400).json({ error: "MISSING_FIELDS", message: "All fields are required." });
-  }
-
-  try {
-    // Check if user already exists by email, phone, or username
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { phoneNumber }, { username }] 
-    });
-    
-    if (existingUser) {
-      return res.status(400).json({ error: "ACCOUNT_EXISTS", message: "Email, Phone, or Username already registered." });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const newUser = new User({ username, email, phoneNumber, password: hashedPassword });
-    await newUser.save();
-
-    res.status(201).json({ success: true, message: "Registration successful" });
-  } catch (err) {
-    console.error("REGISTRATION_CRASH:", err);
-    if (err.code === 11000) {
-      return res.status(400).json({ error: "DUPLICATE_KEY", message: "Username, Email, or Phone already in use." });
-    }
-    res.status(500).json({ error: "REGISTRATION_ERROR", message: err.message });
-  }
-});
-
-// Auth Login
-app.post('/api/auth/login', async (req, res) => {
-  const { identifier, password } = req.body; // identifier can be email or phoneNumber
-  try {
-    const user = await User.findOne({ 
-      $or: [{ email: identifier }, { phoneNumber: identifier }] 
-    });
-    if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-
-    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '1h' });
-    const userResponse = user.toObject();
-    delete userResponse.password;
-    res.json({ token, user: userResponse });
-  } catch (err) {
-    console.error("LOGIN_CRASH:", err);
-    res.status(500).json({ error: "SERVER_ERROR", message: err.message });
-  }
-});
+// Auth Routes (Modular)
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
 
 // Get Current User (Persistence Check)
 app.get('/api/auth/me', protect, (req, res) => {
