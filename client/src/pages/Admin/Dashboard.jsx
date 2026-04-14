@@ -22,14 +22,18 @@ export default function AdminDashboard() {
   const token = localStorage.getItem('yaatri_token');
   const adminConfig = { headers: { Authorization: `Bearer ${token}` } };
 
+  const API_BASE_URL = window.location.hostname === "localhost" 
+    ? "http://localhost:5000" 
+    : "https://yaatri-final.onrender.com";
+
   useEffect(() => {
     const loadAdminData = async () => {
       if (!token) return;
       try {
         const [s, d, b] = await Promise.all([
-          axios.get('https://yaatri-final.onrender.com/api/admin/stats', adminConfig),
-          axios.get('https://yaatri-final.onrender.com/api/destinations'),
-          axios.get('https://yaatri-final.onrender.com/api/posts')
+          axios.get(`${API_BASE_URL}/api/admin/stats`, adminConfig),
+          axios.get(`${API_BASE_URL}/api/destinations`),
+          axios.get(`${API_BASE_URL}/api/posts`)
         ]);
         setStats(s.data);
         setDestinations(d.data);
@@ -42,13 +46,13 @@ export default function AdminDashboard() {
   }, []);
 
   const deletePost = async (id) => {
-    await axios.delete(`https://yaatri-final.onrender.com/api/posts/${id}`, adminConfig);
+    await axios.delete(`${API_BASE_URL}/api/posts/${id}`, adminConfig);
     setBlogPosts(blogPosts.filter(p => p.id !== id));
   };
 
   const deleteDestination = async (rank) => {
     if (window.confirm(`CONFIRM_DELETION: NODE_${rank}`)) {
-      await axios.delete(`https://yaatri-final.onrender.com/api/destinations/${rank}`, adminConfig);
+      await axios.delete(`${API_BASE_URL}/api/destinations/${rank}`, adminConfig);
       setDestinations(destinations.filter(d => d.rank !== rank));
     }
   };
@@ -56,7 +60,7 @@ export default function AdminDashboard() {
   const saveDestination = async (e) => {
     e.preventDefault();
     const method = editingDest.isNew ? 'post' : 'put';
-    const url = `https://yaatri-final.onrender.com/api/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
+    const url = `${API_BASE_URL}/api/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
     
     try {
       await axiosmethod;
@@ -66,7 +70,7 @@ export default function AdminDashboard() {
 
     setEditingDest(null);
     // Reload data
-    const d = await axios.get('https://yaatri-final.onrender.com/api/destinations');
+    const d = await axios.get(`${API_BASE_URL}/api/destinations`);
     setDestinations(d.data);
   };
 

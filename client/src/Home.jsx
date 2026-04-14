@@ -16,10 +16,14 @@ const Home = ({ onNavigate, onSelectNode }) => {
   const [topModules, setTopModules] = useState([]);
   const trackRef = React.useRef(null);
   
+  const API_BASE_URL = window.location.hostname === "localhost" 
+    ? "http://localhost:5000" 
+    : "https://yaatri-final.onrender.com";
+
   useEffect(() => {
     const fetchData = async () => {
-      const dests = await axios.get('https://yaatri-final.onrender.com/api/destinations');
-      const settings = await axios.get('https://yaatri-final.onrender.com/api/settings');
+      const dests = await axios.get(`${API_BASE_URL}/api/destinations`);
+      const settings = await axios.get(`${API_BASE_URL}/api/settings`);
       setTopModules(dests.data);
       setMarqueeTitle(settings.data.marqueeTitle);
     };

@@ -11,6 +11,10 @@ const Auth = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const API_BASE_URL = window.location.hostname === "localhost" 
+    ? "http://localhost:5000" 
+    : "https://yaatri-final.onrender.com";
+
   useEffect(() => {
     const mode = searchParams.get('mode');
     setIsLogin(mode !== 'signup');
@@ -19,6 +23,7 @@ const Auth = ({ onLoginSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const BASE_URL = `${API_BASE_URL}/api/auth`;
     const endpoint = isLogin ? 'login' : 'register';
     
     // If login, we send email/phone as 'identifier' to match the server logic
@@ -27,7 +32,7 @@ const Auth = ({ onLoginSuccess }) => {
       : formData;
 
     try {
-      const res = await axios.post(`https://yaatri-final.onrender.com/api/auth/${endpoint}`, payload);
+      const res = await axios.post(`${BASE_URL}/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
         if (onLoginSuccess) onLoginSuccess(res.data.user);

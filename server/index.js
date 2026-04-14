@@ -5,9 +5,13 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173", "https://yaatri-final.onrender.com"], // Allow both local and live
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 app.use(express.json());
 
 // --- USER SCHEMA & MODEL ---
@@ -252,4 +256,4 @@ app.patch('/api/posts/:id/like', (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(PORT, () => console.log(`YAATRI_HUB online at https://yaatri-final.onrender.com`));
+app.listen(PORT, () => console.log(`YAATRI_HUB online at port ${PORT}`));
