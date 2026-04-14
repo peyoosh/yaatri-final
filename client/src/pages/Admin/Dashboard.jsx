@@ -102,7 +102,7 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ padding: '4rem 10%', background: 'var(--obsidian)', minHeight: '100vh', color: 'white' }}>
-      <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--hill-green)', letterSpacing: '4px' }}>ADMIN_CONTROL_CENTER</h2>
+      <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--hill-green)', letterSpacing: '4px' }}>AUTHOR_MANAGEMENT_FRONT</h2>
       
       {/* METRICS ROW */}
       <div style={{ display: 'flex', gap: '2rem', margin: '2rem 0' }}>
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
                 <td style={tableCellStyle}>{u.email}</td>
                 <td style={tableCellStyle}>
                   <span style={{ color: u.isAdmin ? 'var(--hill-green)' : 'inherit', fontWeight: u.isAdmin ? 'bold' : 'normal' }}>
-                    {u.isAdmin ? 'CORE_ADMIN' : 'EXPLORER'}
+                    {u.role === 'author' ? 'AUTHOR' : 'EXPLORER'}
                   </span>
                 </td>
                 <td style={tableCellStyle}>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Globe, Map, Compass } from 'lucide-react';
-import './index.css';
+import { User } from 'lucide-react'; // Import the User icon
 import Destinations from './Destinations';
 import Home from './Home';
 import Blog from './Blog';
@@ -12,6 +12,7 @@ import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
 import { AuthProvider } from './context/AuthContext';
+import './index.css';
 
 const App = () => {
   const navigate = useNavigate();
@@ -109,13 +110,18 @@ const App = () => {
               </AnimatePresence>
             </div>
           </div>
-          {loggedInUser?.isAdmin && (
+          {loggedInUser?.role === 'author' && (
             <span className="nav-link-block" style={{ color: 'var(--terai-harvest)', cursor: 'pointer' }} onClick={() => navigate('/admin')}>
-              ADMIN_PANEL
+              MANAGEMENT_FRONT
             </span>
           )}
           {loggedInUser ? (
-            <span className="nav-link-block" style={{ color: 'var(--hill-green)' }}>@{loggedInUser.username.toUpperCase()}</span>
+            <div className="nav-link-block flex items-center gap-2" style={{ color: 'var(--hill-green)', cursor: 'pointer' }} onClick={() => navigate('/profile')}> {/* Assuming a profile route */}
+              <User size={20} />
+              <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                @{loggedInUser.username.toUpperCase()}
+              </span>
+            </div>
           ) : (
             <div style={{ display: 'flex', gap: '1.5rem' }}>
               {(() => {
