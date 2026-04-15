@@ -33,6 +33,7 @@ const Auth = ({ onLoginSuccess }) => {
       const res = await axios.post(`${BASE_URL}/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
+        localStorage.setItem('yaatri_user', JSON.stringify(res.data.user));
         if (onLoginSuccess) onLoginSuccess(res.data.user);
         navigate('/');
       } else {

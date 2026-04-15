@@ -127,7 +127,7 @@ const App = () => {
           </div>
           {loggedInUser?.role === 'author' && (
             <span className="nav-link-block" style={{ color: 'var(--terai-harvest)', cursor: 'pointer' }} onClick={() => navigate('/admin')}>
-              MANAGEMENT_FRONT
+              ADMIN_DASHBOARD
             </span>
           )}
           {loggedInUser ? (
