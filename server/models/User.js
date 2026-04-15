@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   phoneNumber: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'explorer' },
+  isAdmin: { type: Boolean, default: false },
   status: { type: String, default: 'Active' },
   bio: { type: String, default: 'New Explorer' },
   joinDate: { type: Date, default: Date.now }

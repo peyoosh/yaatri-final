@@ -13,6 +13,7 @@ const sampleUsers = [
     password: '1234567890',
     phoneNumber: '9841111111',
     role: 'author',
+    isAdmin: true,
     bio: 'Core system administrator for Yaatri Hub.'
   }
 ];

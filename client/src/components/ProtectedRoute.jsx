@@ -1,15 +1,17 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ user, children }) => {
-  const navigate = useNavigate();
-  if (!user || !user.isAdmin) {
-    // Trigger a view reset if the user isn't an admin
-    setTimeout(() => navigate('/'), 0);
-    return null;
+const ProtectedRoute = ({ user, children, isAdminRoute = false }) => {
+  if (!user) {
+    return <Navigate to="/auth?mode=login" />;
   }
 
-  return <>{children}</>;
+  if (isAdminRoute && user.role !== 'author' && !user.isAdmin) {
+    console.warn("Access Denied: Author privileges required.");
+    return <Navigate to="/" />;
+  }
+
+  return children;
 };
 
 export default ProtectedRoute;

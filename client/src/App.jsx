@@ -185,7 +185,7 @@ const App = () => {
             </ProtectedRoute>
           } />
           <Route path="/admin" element={
-            <ProtectedRoute user={loggedInUser}>
+            <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
               <AdminDashboard />
             </ProtectedRoute>
           } />

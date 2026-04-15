@@ -41,11 +41,13 @@ const seedAdmin = async () => {
         await new User({
           ...adminData,
           password: hashedPassword,
-          role: 'author'
+          role: 'author',
+          isAdmin: true
         }).save();
         console.log(`SYSTEM_ADMIN_CREATED: User: ${adminData.username} | Pwd: 1234567890`);
       } else {
         exists.password = hashedPassword;
+        exists.isAdmin = true;
         await exists.save();
         console.log(`SYSTEM_ADMIN_UPDATED: User: ${adminData.username} | New Pwd applied.`);
       }
