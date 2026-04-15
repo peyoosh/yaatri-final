@@ -17,18 +17,14 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isExploreOpen, setIsExploreOpen] = useState(false);
-  const [loggedInUser, setLoggedInUser] = useState(null); 
+  // Initialize state directly from localStorage to prevent redirect flickers
+  const [loggedInUser, setLoggedInUser] = useState(() => {
+    const saved = localStorage.getItem('yaatri_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedBlogNode, setSelectedBlogNode] = useState(null);
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
-
-  // Persist session on load
-  useEffect(() => {
-    const savedUser = localStorage.getItem('yaatri_user');
-    if (savedUser) {
-      setLoggedInUser(JSON.parse(savedUser));
-    }
-  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('yaatri_token');
