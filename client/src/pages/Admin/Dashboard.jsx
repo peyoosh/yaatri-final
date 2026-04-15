@@ -16,8 +16,8 @@ export default function AdminDashboard() {
     activeGuides: 42
   });
   const [userList, setUserList] = useState([
-    { id: 1, username: 'aaryush_admin', email: 'admin@yaatri.np', isAdmin: true, status: 'Active', bio: 'Core system administrator for Yaatri Hub.' },
-    { id: 2, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false, status: 'Active', bio: 'Veteran explorer specializing in Khumbu terrain.' }
+    { id: 1, username: 'peyoosh_admin', email: 'peyoosh@yaatri.np', role: 'author', status: 'Active', bio: 'Core system administrator for Yaatri Hub.' },
+    { id: 2, username: 'trekker_88', email: 'user@gmail.com', role: 'explorer', status: 'Active', bio: 'Veteran explorer specializing in Khumbu terrain.' }
   ]);
   const [destinations, setDestinations] = useState([]);
   const [blogPosts, setBlogPosts] = useState([]);
