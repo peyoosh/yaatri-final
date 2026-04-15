@@ -135,7 +135,7 @@ const App = () => {
               <div 
                 className="nav-link-block flex items-center gap-2" 
                 style={{ color: 'var(--hill-green)', cursor: 'pointer' }} 
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate('/dashboard')}
               >
                 <User size={18} />
                 <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
