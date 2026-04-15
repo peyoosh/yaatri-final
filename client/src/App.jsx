@@ -62,7 +62,7 @@ const App = () => {
         <div className="info-block">
           <h3 style={{ color: 'var(--hill-green)', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: '900' }}>WEBSITE_HOLDER</h3>
           <p style={{ marginTop: '1rem', fontWeight: '600' }}>YAATRI CORE SYSTEMS // Sector 4</p>
-          <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Lead Node: Aaryush Shrestha</p>
+          <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Lead Node: Yaatri Core Administrator</p>
           <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>Uplink: support@yaatri.np.system</p>
         </div>
         <div className="info-block">

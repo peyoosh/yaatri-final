@@ -1,8 +1,21 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const bcrypt = require('bcryptjs');
 const Destination = require('./models/Destination');
+const User = require('./models/User');
 
 dotenv.config();
+
+const sampleUsers = [
+  {
+    username: 'peyoosh_admin',
+    email: 'peyoosh@yaatri.np',
+    password: '1234567890',
+    phoneNumber: '9841111111',
+    role: 'author',
+    bio: 'Core system administrator for Yaatri Hub.'
+  }
+];
 
 const sampleDestinations = [
   {
@@ -26,9 +39,20 @@ const sampleDestinations = [
 const seedDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
+
+    // Seed Users
+    await User.deleteMany({});
+    const salt = await bcrypt.genSalt(10);
+    for (let user of sampleUsers) {
+      user.password = await bcrypt.hash(user.password, salt);
+    }
+    await User.insertMany(sampleUsers);
+    console.log("👤 Users Seeded...");
+
+    // Seed Destinations
     await Destination.deleteMany({}); // Clears existing data
     await Destination.insertMany(sampleDestinations);
-    console.log("✅ Database Seeded Successfully!");
+    console.log("✅ Database (Users & Destinations) Seeded Successfully!");
     process.exit();
   } catch (err) {
     console.error("❌ Seeding Error:", err);

@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const User = mongoose.model('User');
+const User = require('../models/User');
 
 const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
 
@@ -32,7 +32,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { identifier, password } = req.body;
   try {
-    const user = await User.findOne({ $or: [{ email: identifier }, { phoneNumber: identifier }] });
+    const user = await User.findOne({ $or: [{ email: identifier }, { phoneNumber: identifier }, { username: identifier }] });
     if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
 
     const isMatch = await bcrypt.compare(password, user.password);

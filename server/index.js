@@ -14,17 +14,7 @@ app.use(cors({
 app.use(express.json());
 
 // --- USER SCHEMA & MODEL ---
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  email: { type: String, required: true, unique: true },
-  phoneNumber: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, default: 'explorer' },
-  status: { type: String, default: 'Active' },
-  bio: { type: String, default: 'New Explorer' },
-  joinDate: { type: Date, default: Date.now }
-});
-const User = mongoose.model('User', userSchema);
+const User = require('./models/User');
 
 // --- MONGODB CONNECTION ---
 // Replace with your actual MongoDB URI string
@@ -39,12 +29,11 @@ mongoose.connect(MONGO_URI)
 const seedAdmin = async () => {
   try {
     const admins = [
-      { username: 'aaryush_admin', email: 'admin@yaatri.np', phoneNumber: '9841000000' },
       { username: 'peyoosh_admin', email: 'peyoosh@yaatri.np', phoneNumber: '9841111111' }
     ];
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('admin123', salt);
+    const hashedPassword = await bcrypt.hash('1234567890', salt);
 
     for (const adminData of admins) {
       const exists = await User.findOne({ username: adminData.username });
@@ -54,7 +43,11 @@ const seedAdmin = async () => {
           password: hashedPassword,
           role: 'author'
         }).save();
-        console.log(`SYSTEM_ADMIN_CREATED: User: ${adminData.username} | Pwd: admin123`);
+        console.log(`SYSTEM_ADMIN_CREATED: User: ${adminData.username} | Pwd: 1234567890`);
+      } else {
+        exists.password = hashedPassword;
+        await exists.save();
+        console.log(`SYSTEM_ADMIN_UPDATED: User: ${adminData.username} | New Pwd applied.`);
       }
     }
   } catch (err) { console.error("SEEDING_ERROR:", err); }
@@ -90,8 +83,7 @@ let marqueeTitle = "Top Destinations by Weather";
 
 // USER_DATA_STORE (Mock accounts for tracking)
 let users = [
-  { id: 1, username: 'aaryush_admin', email: 'admin@yaatri.np', isAdmin: true, joinDate: '2024-01-10' },
-  { id: 2, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false, joinDate: '2024-02-15' }
+  { id: 1, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false, joinDate: '2024-02-15' }
 ];
 
 // DESTINATION_DATA_STORE
