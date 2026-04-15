@@ -10,7 +10,7 @@ import BlogModal from './BlogModal';
 import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
-import UserDashboard from './pages/User/UserDashboard';
+import UserDashboard from './UserDashboard';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
