@@ -10,6 +10,7 @@ import BlogModal from './BlogModal';
 import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
+import UserDashboard from './pages/User/UserDashboard';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
@@ -79,9 +80,13 @@ const App = () => {
     </div>
   );
 
+  // Detect if we are in a management/dashboard view to hide site-wide nav/footer
+  const isManagementView = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
+
   return (
     <AuthProvider>
-    <div className="app-shell">
+    <div className={isManagementView ? "management-shell" : "app-shell"}>
+      {!isManagementView && (
       <nav className="navbar-main">
         {/* LEFT: BRANDING */}
         <div 
@@ -164,8 +169,9 @@ const App = () => {
           )}
         </div>
       </nav>
+      )}
 
-      <main className="main-content animate-alive">
+      <main className={isManagementView ? "management-main" : "main-content animate-alive"}>
         <Routes>
           <Route path="/" element={<Home onNavigate={navigate} onSelectNode={handleNodeSelection} />} />
           <Route path="/destinations" element={<Destinations onSelectNode={handleNodeSelection} />} />
@@ -173,6 +179,11 @@ const App = () => {
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<ContactView />} />
           <Route path="/auth" element={<Auth onLoginSuccess={setLoggedInUser} />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute user={loggedInUser}>
+              <UserDashboard user={loggedInUser} />
+            </ProtectedRoute>
+          } />
           <Route path="/admin" element={
             <ProtectedRoute user={loggedInUser}>
               <AdminDashboard />
@@ -181,6 +192,8 @@ const App = () => {
         </Routes>
       </main>
 
+      {!isManagementView && (
+        <>
       <BlogModal 
         isOpen={isBlogModalOpen} 
         onClose={() => setIsBlogModalOpen(false)} 
@@ -190,6 +203,8 @@ const App = () => {
       <footer className="system-footer">
         YAATRI.NP | RESEARCH_NODE_2431491 | LALITPUR, NEPAL
       </footer>
+        </>
+      )}
     </div>
     </AuthProvider>
   );

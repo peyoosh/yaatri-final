@@ -1,0 +1,53 @@
+.user-dashboard-layout { display: flex; min-height: 100vh; background: #0d0a02; color: #fff; font-family: 'Inter', sans-serif; }
+.user-sidebar { width: 240px; background: rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.05); padding: 2rem 1.5rem; display: flex; flexDirection: column; }
+.sidebar-brand { font-size: 1.5rem; font-weight: 900; letter-spacing: 4px; color: var(--hill-green); margin-bottom: 3rem; cursor: pointer; }
+.sidebar-menu { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.menu-item { background: none; border: none; color: rgba(255,255,255,0.6); padding: 12px 1rem; text-align: left; display: flex; align-items: center; gap: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; border-radius: 6px; }
+.menu-item:hover, .menu-item.active { background: rgba(5, 157, 114, 0.1); color: var(--hill-green); }
+.logout-btn { background: none; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; width: 100%; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+.user-main { flex: 1; display: flex; flex-direction: column; }
+.user-header { height: 70px; padding: 0 3rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.search-container { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 8px 1.5rem; border-radius: 20px; width: 350px; }
+.search-container input { background: none; border: none; color: #fff; outline: none; width: 100%; font-size: 0.85rem; }
+.user-profile-brief { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 32px; height: 32px; background: var(--hill-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
+
+.dashboard-content { padding: 3rem; }
+.welcome-text { font-size: 1.8rem; font-weight: 800; margin-bottom: 2.5rem; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+.stat-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; }
+.stat-icon { color: var(--hill-green); opacity: 0.8; }
+.stat-value { display: block; font-size: 1.4rem; font-weight: 800; }
+.stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
+
+.middle-section { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 3rem; }
+.activity-container { background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+.activity-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.activity-table th { text-align: left; font-size: 0.7rem; color: var(--hill-green); padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.activity-table td { padding: 12px 10px; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.status-pill { padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+.status-pill.completed { background: rgba(5, 157, 114, 0.1); color: var(--hill-green); }
+.status-pill.booked { background: rgba(255, 165, 0, 0.1); color: orange; }
+
+.weather-widget { background: linear-gradient(135deg, rgba(5, 157, 114, 0.1), rgba(0,0,0,0)); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(5, 157, 114, 0.2); }
+.weather-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.temp-main { margin-bottom: 1.5rem; }
+.temp-value { font-size: 2.5rem; font-weight: 800; }
+.temp-desc { display: block; font-size: 0.8rem; opacity: 0.6; }
+.weather-details { display: flex; gap: 1rem; margin-bottom: 1rem; font-size: 0.75rem; opacity: 0.8; }
+.weather-footer { font-size: 0.7rem; color: var(--hill-green); font-style: italic; }
+
+.recommendations-section h3 { margin-bottom: 1.5rem; }
+.recom-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.recom-card { height: 200px; border-radius: 12px; overflow: hidden; position: relative; }
+.recom-card img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); transition: 0.3s; }
+.recom-card:hover img { transform: scale(1.1); filter: brightness(0.9); }
+.recom-overlay { position: absolute; bottom: 0; left: 0; padding: 1.5rem; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
+.energy-pill { font-size: 0.6rem; background: var(--hill-green); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase; }
+
+@media (max-width: 900px) {
+  .middle-section { grid-template-columns: 1fr; }
+  .recom-grid { grid-template-columns: 1fr; }
+}
