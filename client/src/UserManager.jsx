@@ -1,18 +1,18 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 
 export default function UserManager({
   stats,
-  safetyConcerns,
   userList,
-  blogPosts,
   setViewingProfile,
   blockUser,
   deleteUser,
-  deletePost,
   setActiveHub
 }) {
-  const navigate = useNavigate();
+  const activityLog = [
+    { id: 1, user: 'trekker_88', action: 'Updated profile bio', timestamp: '2024-04-12 18:00' },
+    { id: 2, user: 'peyoosh_admin', action: 'Purged user \'spam_bot_101\'', timestamp: '2024-04-12 17:30' },
+    { id: 3, user: 'trekker_88', action: 'Posted new intel in Khumbu Node', timestamp: '2024-04-12 15:00' },
+  ];
 
   return (
     <>
@@ -41,33 +41,6 @@ export default function UserManager({
           [ DATA_VISUALIZATION: TOPOGRAPHIC_FLOW_ANALYSIS ]
         </div>
       </div>
-
-      {/* GUIDE SAFETY TABLE */}
-      <section className="table-section">
-        <h3 className="section-title">Guide Safety Concerns</h3>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>GUIDE_NAME</th>
-                <th>REGION</th>
-                <th>SEVERITY</th>
-                <th>INCIDENT_LOG</th>
-              </tr>
-            </thead>
-            <tbody>
-              {safetyConcerns.map(c => (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td>{c.region}</td>
-                  <td><span className={`severity-tag ${c.severity.toLowerCase()}`}>{c.severity}</span></td>
-                  <td>{c.log}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       {/* USER REGISTRY */}
       <section className="table-section">
@@ -100,33 +73,31 @@ export default function UserManager({
         </div>
       </section>
 
-      {/* BLOG MODERATION */}
+      {/* ACTIVITY LOG */}
       <section className="table-section">
-        <h3 className="section-title">Intel Stream Moderation</h3>
+        <h3 className="section-title">Recent Activity Log</h3>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
-                <th>AUTHOR</th>
-                <th>CAPTION_EXTRACT</th>
-                <th>OPERATIONS</th>
+                <th>USER</th>
+                <th>ACTION</th>
+                <th>TIMESTAMP</th>
               </tr>
             </thead>
             <tbody>
-              {blogPosts.map(post => (
-                <tr key={post.id}>
-                  <td>@{post.user}</td>
-                  <td>{post.caption.substring(0, 50)}...</td>
-                  <td className="actions-cell">
-                    <button onClick={() => navigate(`/admin/users/${post.user_id || 1}`)} className="action-btn info">VIEW_AUTHOR</button>
-                    <button onClick={() => deletePost(post.id)} className="action-btn danger">DELETE_STREAM</button>
-                  </td>
+              {activityLog.map(log => (
+                <tr key={log.id}>
+                  <td className="highlight-text">@{log.user}</td>
+                  <td>{log.action}</td>
+                  <td>{log.timestamp}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </section>
+
     </>
   );
 }
