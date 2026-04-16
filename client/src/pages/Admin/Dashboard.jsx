@@ -9,7 +9,7 @@ import SkeletonLoader from './SkeletonLoader';
 import NotificationBar from './NotificationBar';
 
 // Hub Components
-import DestinationManager from '../../components/admin/DestinationManager';
+import DestinationManager from '../../DestinationManager';
 import UserManager from '../../UserManager';
 import BlogManager from './BlogManager';
 import GuideManager from './GuideManager';
