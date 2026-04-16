@@ -4,9 +4,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layout and Core Components
 import AdminLayout from './AdminLayout';
-import ErrorBoundary from '../../components/admin/ErrorBoundary';
-import SkeletonLoader from '../../components/admin/SkeletonLoader';
-import NotificationBar from '../../components/admin/NotificationBar';
+import ErrorBoundary from './ErrorBoundary';
+import SkeletonLoader from './SkeletonLoader';
+import NotificationBar from './NotificationBar';
 
 // Hub Components
 import DestinationManager from '../../components/admin/DestinationManager';
