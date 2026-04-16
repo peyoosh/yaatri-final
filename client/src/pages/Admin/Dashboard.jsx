@@ -12,7 +12,7 @@ import './Dashboard.css';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeHub, setActiveHub] = useState('users');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ 
     userCount: 0, 
@@ -147,32 +147,32 @@ export default function AdminDashboard() {
         <div className="sidebar-brand">YAATRI_HUB</div>
         <nav className="sidebar-nav">
           <button 
-            className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('users')}
+            className={`nav-item ${activeHub === 'users' ? 'active' : ''}`} 
+            onClick={() => setActiveHub('users')}
           >
             User Management
           </button>
           <button 
-            className={`nav-item ${activeTab === 'destinations' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('destinations')}
+            className={`nav-item ${activeHub === 'destinations' ? 'active' : ''}`} 
+            onClick={() => setActiveHub('destinations')}
           >
             Destination Core
           </button>
           <button 
-            className={`nav-item ${activeTab === 'blogs' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('blogs')}
+            className={`nav-item ${activeHub === 'blogs' ? 'active' : ''}`} 
+            onClick={() => setActiveHub('blogs')}
           >
             Blog Moderation
           </button>
           <button 
-            className={`nav-item ${activeTab === 'hotels' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('hotels')}
+            className={`nav-item ${activeHub === 'hotels' ? 'active' : ''}`} 
+            onClick={() => setActiveHub('hotels')}
           >
             Hotel Inventory
           </button>
           <button 
-            className={`nav-item ${activeTab === 'guides' ? 'active' : ''}`} 
-            onClick={() => setActiveTab('guides')}
+            className={`nav-item ${activeHub === 'guides' ? 'active' : ''}`} 
+            onClick={() => setActiveHub('guides')}
           >
             Guide Services
           </button>
@@ -199,17 +199,18 @@ export default function AdminDashboard() {
         </header>
 
         <div className="admin-content">
-          {activeTab === 'users' && (
+          {activeHub === 'users' && (
             <UserManager
               stats={stats}
               userList={userList}
               setViewingProfile={setViewingProfile}
               blockUser={blockUser}
               deleteUser={deleteUser}
+              setActiveHub={setActiveHub}
             />
           )}
 
-          {activeTab === 'destinations' && (
+          {activeHub === 'destinations' && (
             <DestinationManager 
               destinations={destinations}
               editingDest={editingDest}
@@ -221,11 +222,11 @@ export default function AdminDashboard() {
             />
           )}
           
-          {activeTab === 'blogs' && (
+          {activeHub === 'blogs' && (
             <BlogManager blogPosts={blogPosts} deletePost={deletePost} />
           )}
-          {activeTab === 'hotels' && <HotelManager />}
-          {activeTab === 'guides' && (
+          {activeHub === 'hotels' && <HotelManager />}
+          {activeHub === 'guides' && (
             <GuideManager safetyConcerns={safetyConcerns} />
           )}
         </div>

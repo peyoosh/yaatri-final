@@ -9,7 +9,8 @@ export default function UserManager({
   setViewingProfile,
   blockUser,
   deleteUser,
-  deletePost
+  deletePost,
+  setActiveHub
 }) {
   const navigate = useNavigate();
 
@@ -88,7 +89,7 @@ export default function UserManager({
                   <td className="highlight-text" onClick={() => setViewingProfile(u)}>{u.username}</td>
                   <td>{u.role.toUpperCase()}</td>
                   <td className="actions-cell">
-                    <button onClick={() => navigate(`/admin/blogs?user=${u.id}`)} className="action-btn info">VIEW_BLOGS</button>
+                    <button onClick={() => setActiveHub('blogs')} className="action-btn info">VIEW_BLOGS</button>
                     <button onClick={() => blockUser(u.id)} className="action-btn warn">{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
                     <button onClick={() => deleteUser(u.id)} className="action-btn danger">PURGE</button>
                   </td>
