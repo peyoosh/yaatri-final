@@ -48,6 +48,30 @@ const DestinationManager = () => {
         });
     };
 
+    const handleDeploy = async () => {
+        const token = localStorage.getItem('token'); // Assuming you store JWT in localStorage
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/destinations`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                fetchDestinations();
+                setShowModal(false);
+            } else {
+                const err = await response.json();
+                alert(`Access Denied: ${err.error}`);
+            }
+        } catch (error) {
+            console.error("Deployment failure:", error);
+        }
+    };
+
     const filteredDestinations = destinations.filter(dest =>
         dest.region?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -81,7 +105,7 @@ const DestinationManager = () => {
                     </thead>
                     <tbody>
                         {filteredDestinations.map((dest) => (
-                            <tr key={dest.rank}>
+                            <tr key={dest._id}>
                                 <td>{dest.title}</td>
                                 <td>{dest.region}</td>
                                 <td>{dest.popularity || '8.5/10'}</td> {/* Mock score if not in DB */}
@@ -89,7 +113,7 @@ const DestinationManager = () => {
                                 <td>
                                     <button 
                                         className="btn-analyze"
-                                        onClick={() => navigate(`/admin/destinations/reports/${dest.rank}`)}
+                                        onClick={() => navigate(`/admin/destinations/reports/${dest._id}`)}
                                     >
                                         Analyze
                                     </button>
@@ -130,10 +154,7 @@ const DestinationManager = () => {
                         </div>
                         <div className="modal-actions">
                             <button className="btn-cancel" onClick={() => setShowModal(false)}>Abort</button>
-                            <button className="btn-save" onClick={() => {
-                                // Implementation for POST to /api/destinations would go here
-                                setShowModal(false);
-                            }}>Deploy Node</button>
+                            <button className="btn-save" onClick={handleDeploy}>Deploy Node</button>
                         </div>
                     </div>
                 </div>

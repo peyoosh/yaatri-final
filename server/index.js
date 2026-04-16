@@ -8,13 +8,14 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: "https://yaatri-final.onrender.com",
+  origin: ["https://yaatri-final.onrender.com", "http://localhost:3000", "http://localhost:5173"],
   credentials: true
 }));
 app.use(express.json());
 
 // --- USER SCHEMA & MODEL ---
 const User = require('./models/User');
+const Destination = require('./models/Destination');
 
 // --- MONGODB CONNECTION ---
 // Replace with your actual MongoDB URI string
@@ -88,46 +89,6 @@ let users = [
   { id: 1, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false, joinDate: '2024-02-15' }
 ];
 
-// DESTINATION_DATA_STORE
-let destinations = [
-  { 
-    rank: '01', 
-    region: 'HIMALAYAN_SECTOR', 
-    title: 'Everest Khumbu Node', 
-    stats: 'ATMOS: STABLE | -25°C', 
-    image: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=1200',
-    description: 'Detailed analysis of coordinate node 01. This sector represents the peak of high-altitude exploration.',
-    protocols: [
-      { title: 'Adventure on foot', desc: 'Expert-led trekking modules with localized survival data.' },
-      { title: 'Living traditions', desc: 'Connect with heritage through neural-mapped cultural immersion.' }
-    ]
-  },
-  { 
-    rank: '02', 
-    region: 'HILL_SECTOR', 
-    title: 'Annapurna Circuit', 
-    stats: 'ATMOS: VARIABLE | 10°C', 
-    image: 'https://images.unsplash.com/photo-1582234131908-769502909282?w=1200',
-    description: 'Calculative exploration of the Annapurna region, optimizing for variable weather node stability.'
-  },
-  { 
-    rank: '03', 
-    region: 'TERAI_SECTOR', 
-    title: 'Chitwan Lowlands', 
-    stats: 'ATMOS: HUMID | 32°C', 
-    image: 'https://images.unsplash.com/photo-1582650845100-3057102e3532?w=1200',
-    description: 'Tropical sector analysis focusing on biodiversity and low-altitude humidity nodes.'
-  },
-  { 
-    rank: '04', 
-    region: 'HIMALAYAN_SECTOR', 
-    title: 'Langtang Valley', 
-    stats: 'ATMOS: CLEAR | -5°C', 
-    image: 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=1200',
-    description: 'Primary research node for Glacial movement and high-altitude flora.'
-  }
-];
-
 // BLOG_DATA_STORE
 let posts = [
   { id: 1, user: 'yaatri_nepal', location: 'KHUMBU_SECTOR', image: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800', likes: 42, caption: 'Topographic scan of the Khumbu sector complete.', status: 'Active' },
@@ -148,9 +109,10 @@ app.get('/api/auth/me', protect, (req, res) => {
 // Admin Stats
 app.get('/api/admin/stats', validateAdmin, async (req, res) => {
   const userCount = await User.countDocuments();
+  const nodeCount = await Destination.countDocuments();
   res.json({
     userCount: userCount,
-    activeNodes: destinations.length,
+    activeNodes: nodeCount,
     intelStreams: posts.length
   });
 });
@@ -163,26 +125,40 @@ app.post('/api/settings', validateAdmin, (req, res) => {
 });
 
 // Destinations
-app.get('/api/destinations', (req, res) => res.json(destinations));
-app.get('/api/destinations/:rank', (req, res) => {
-  const dest = destinations.find(d => d.rank === req.params.rank);
-  res.json(dest || { error: 'Node not found' });
+app.get('/api/destinations', async (req, res) => {
+  try {
+    const allDestinations = await Destination.find();
+    res.json(allDestinations);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/destinations', validateAdmin, (req, res) => {
-  const newDest = { ...req.body };
-  destinations.push(newDest);
-  res.json(newDest);
+app.get('/api/destinations/:id', async (req, res) => {
+  try {
+    const dest = await Destination.findById(req.params.id);
+    res.json(dest || { error: 'Node not found' });
+  } catch (err) { res.status(404).json({ error: 'Invalid ID format' }); }
 });
 
-app.put('/api/destinations/:rank', validateAdmin, (req, res) => {
-  destinations = destinations.map(d => d.rank === req.params.rank ? { ...d, ...req.body } : d);
-  res.json({ success: true });
+app.post('/api/destinations', validateAdmin, async (req, res) => {
+  try {
+    const newDest = new Destination(req.body);
+    await newDest.save();
+    res.json(newDest);
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-app.delete('/api/destinations/:rank', validateAdmin, (req, res) => {
-  destinations = destinations.filter(d => d.rank !== req.params.rank);
-  res.json({ success: true });
+app.put('/api/destinations/:id', validateAdmin, async (req, res) => {
+  try {
+    await Destination.findByIdAndUpdate(req.params.id, req.body);
+    res.json({ success: true });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/api/destinations/:id', validateAdmin, async (req, res) => {
+  try {
+    await Destination.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 // Posts
