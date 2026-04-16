@@ -11,19 +11,19 @@ const AdminLayout = ({ user }) => {
       <aside className="admin-sidebar">
         <div className="sidebar-brand">YAATRI_HUB</div>
         <nav className="sidebar-nav">
-          <NavLink to="users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="usermanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             User Management
           </NavLink>
-          <NavLink to="destinations" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="destinationmanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             Destination Core
           </NavLink>
-          <NavLink to="blogs" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="blogmanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             Blog Moderation
           </NavLink>
-          <NavLink to="hotels" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="hotelmanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             Hotel Inventory
           </NavLink>
-          <NavLink to="guides" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="userguidemanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             Guide Services
           </NavLink>
         </nav>

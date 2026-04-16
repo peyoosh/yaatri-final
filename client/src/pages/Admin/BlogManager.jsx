@@ -22,7 +22,7 @@ export default function BlogManager({ blogPosts, deletePost }) {
                 <td>@{post.user}</td>
                 <td>{post.caption.substring(0, 50)}...</td>
                 <td className="actions-cell">
-                  <button onClick={() => navigate(`/admin/users/${post.user_id || 1}`)} className="action-btn info">VIEW_AUTHOR</button>
+                  <button onClick={() => navigate('/admin/usermanagement')} className="action-btn info">VIEW_AUTHOR</button>
                   <button onClick={() => deletePost(post.id)} className="action-btn danger">DELETE_STREAM</button>
                 </td>
               </tr>

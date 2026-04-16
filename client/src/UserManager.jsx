@@ -1,13 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function UserManager({
   stats,
   userList,
   setViewingProfile,
   blockUser,
-  deleteUser,
-  setActiveHub
+  deleteUser
 }) {
+  const navigate = useNavigate();
   const activityLog = [
     { id: 1, user: 'trekker_88', action: 'Updated profile bio', timestamp: '2024-04-12 18:00' },
     { id: 2, user: 'peyoosh_admin', action: 'Purged user \'spam_bot_101\'', timestamp: '2024-04-12 17:30' },
@@ -62,7 +63,7 @@ export default function UserManager({
                   <td className="highlight-text" onClick={() => setViewingProfile(u)}>{u.username}</td>
                   <td>{u.role.toUpperCase()}</td>
                   <td className="actions-cell">
-                    <button onClick={() => setActiveHub('blogs')} className="action-btn info">VIEW_BLOGS</button>
+                    <button onClick={() => navigate(`/admin/blogmanagement?user=${u.id}`)} className="action-btn info">VIEW_BLOGS</button>
                     <button onClick={() => blockUser(u.id)} className="action-btn warn">{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
                     <button onClick={() => deleteUser(u.id)} className="action-btn danger">PURGE</button>
                   </td>

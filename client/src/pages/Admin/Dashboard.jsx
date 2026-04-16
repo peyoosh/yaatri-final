@@ -147,13 +147,13 @@ export default function AdminDashboard() {
       <NotificationBar message={notificationMessage} />
       <Routes>
         <Route path="/" element={<AdminLayout user={loggedInUser} />}>
-          <Route index element={<Navigate to="users" replace />} />
-          <Route path="users" element={
+          <Route index element={<Navigate to="usermanagement" replace />} />
+          <Route path="usermanagement" element={
             <ErrorBoundary>
               <UserManager stats={stats} userList={userList} blockUser={blockUser} deleteUser={deleteUser} />
             </ErrorBoundary>
           } />
-          <Route path="destinations" element={
+          <Route path="destinationmanagement" element={
             <ErrorBoundary>
               <DestinationManager 
                 destinations={destinations}
@@ -166,13 +166,13 @@ export default function AdminDashboard() {
               />
             </ErrorBoundary>
           } />
-          <Route path="blogs" element={
+          <Route path="blogmanagement" element={
             <ErrorBoundary>
               <BlogManager blogPosts={blogPosts} deletePost={deletePost} />
             </ErrorBoundary>
           } />
-          <Route path="hotels" element={<ErrorBoundary><HotelManager /></ErrorBoundary>} />
-          <Route path="guides" element={
+          <Route path="hotelmanagement" element={<ErrorBoundary><HotelManager /></ErrorBoundary>} />
+          <Route path="userguidemanagement" element={
             <ErrorBoundary>
               <GuideManager safetyConcerns={safetyConcerns} />
             </ErrorBoundary>
