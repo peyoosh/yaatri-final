@@ -25,7 +25,10 @@ const sampleDestinations = [
     description: "A beautiful homestay village offering pristine Gurung culture.",
     culturalSignificance: "Famous for traditional honey hunting and local hospitality.",
     image: "https://images.unsplash.com/photo-1544735716-392fe2489ffa", // Placeholder image
-    tags: ["Culture", "Homestay"]
+    tags: ["Culture", "Homestay"],
+    coordinates: { lat: 28.2195, lng: 84.4168 },
+    popularity: 8.8,
+    terrain: "Hills"
   },
   {
     title: "Upper Mustang",
@@ -33,7 +36,10 @@ const sampleDestinations = [
     description: "The forbidden kingdom with desert-like landscapes and ancient caves.",
     culturalSignificance: "Home to centuries-old Buddhist monasteries.",
     image: "https://images.unsplash.com/photo-1623492701902-47dc207df5dc",
-    tags: ["Adventure", "Heritage"]
+    tags: ["Adventure", "Heritage"],
+    coordinates: { lat: 28.9985, lng: 83.8473 },
+    popularity: 9.4,
+    terrain: "Mountain"
   }
 ];
 

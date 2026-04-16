@@ -17,7 +17,8 @@ const DestinationManager = () => {
         longitude: '',
         status: 'Active',
         region: '',
-        rank: ''
+        popularity: '',
+        terrain: 'Mountain'
     });
 
     useEffect(() => {
@@ -50,6 +51,16 @@ const DestinationManager = () => {
 
     const handleDeploy = async () => {
         const token = localStorage.getItem('token'); // Assuming you store JWT in localStorage
+        
+        // Restructuring data to match the new MongoDB schema
+        const payload = {
+            ...formData,
+            coordinates: {
+                lat: parseFloat(formData.latitude),
+                lng: parseFloat(formData.longitude)
+            }
+        };
+
         try {
             const response = await fetch(`${API_BASE_URL}/api/destinations`, {
                 method: 'POST',
@@ -57,7 +68,7 @@ const DestinationManager = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
@@ -108,12 +119,15 @@ const DestinationManager = () => {
                             <tr key={dest._id}>
                                 <td>{dest.title}</td>
                                 <td>{dest.region}</td>
-                                <td>{dest.popularity || '8.5/10'}</td> {/* Mock score if not in DB */}
-                                <td>{dest.terrain || 'Mountain'}</td>   {/* Mock terrain if not in DB */}
+                                <td>{dest.popularity ? `${dest.popularity}/10` : 'N/A'}</td>
+                                <td>{dest.terrain}</td>
                                 <td>
                                     <button 
                                         className="btn-analyze"
-                                        onClick={() => navigate(`/admin/destinations/reports/${dest._id}`)}
+                                        onClick={() => navigate(`/admin/destinations/reports/${dest._id}`, { 
+                                            // Passing terrain data to the analytics view
+                                            state: { terrain: dest.terrain } 
+                                        })}
                                     >
                                         Analyze
                                     </button>
@@ -136,6 +150,16 @@ const DestinationManager = () => {
                         </div>
                         <div className="form-row">
                             <div className="form-group">
+                                <label>Region</label>
+                                <input type="text" name="region" value={formData.region} onChange={handleInputChange} placeholder="District/Zone" />
+                            </div>
+                            <div className="form-group">
+                                <label>Popularity (0-10)</label>
+                                <input type="number" name="popularity" value={formData.popularity} onChange={handleInputChange} placeholder="8.5" step="0.1" />
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
                                 <label>Latitude</label>
                                 <input type="text" name="latitude" value={formData.latitude} onChange={handleInputChange} placeholder="27.1234" />
                             </div>
@@ -143,6 +167,14 @@ const DestinationManager = () => {
                                 <label>Longitude</label>
                                 <input type="text" name="longitude" value={formData.longitude} onChange={handleInputChange} placeholder="85.5678" />
                             </div>
+                        </div>
+                        <div className="form-group">
+                            <label>Terrain Type</label>
+                            <select name="terrain" value={formData.terrain} onChange={handleInputChange} className="dark-select">
+                                <option value="Mountain">Mountain</option>
+                                <option value="Hills">Hills</option>
+                                <option value="Terai">Terai</option>
+                            </select>
                         </div>
                         <div className="form-group">
                             <label>System Status</label>
