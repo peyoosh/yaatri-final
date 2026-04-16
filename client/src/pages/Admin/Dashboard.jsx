@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import './Dashboard.css';
 
@@ -150,6 +151,10 @@ export default function AdminDashboard() {
       <main className="admin-main">
         {/* HEADER */}
         <header className="admin-header">
+          <button onClick={() => navigate('/')} className="action-btn info" style={{ marginRight: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ArrowLeft size={16} />
+            EXIT_TO_HOME
+          </button>
           <div className="search-bar">
             <input type="text" placeholder="GLOBAL_SEARCH_NODES..." />
           </div>
