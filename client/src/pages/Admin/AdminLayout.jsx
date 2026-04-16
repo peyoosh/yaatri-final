@@ -5,27 +5,29 @@ import { ArrowLeft } from 'lucide-react';
 const AdminLayout = ({ user }) => {
   const navigate = useNavigate();
 
+  const navLinks = [
+    { to: 'usermanagement', label: 'User Management' },
+    { to: 'destinationmanagement', label: 'Destination Core' },
+    { to: 'blogmanagement', label: 'Blog Moderation' },
+    { to: 'hotelmanagement', label: 'Hotel Inventory' },
+    { to: 'userguidemanagement', label: 'Guide Services' },
+  ];
+
   return (
     <div className="admin-layout">
       {/* SIDEBAR NAVIGATION */}
       <aside className="admin-sidebar">
         <div className="sidebar-brand">YAATRI_HUB</div>
         <nav className="sidebar-nav">
-          <NavLink to="usermanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            User Management
-          </NavLink>
-          <NavLink to="destinationmanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            Destination Core
-          </NavLink>
-          <NavLink to="blogmanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            Blog Moderation
-          </NavLink>
-          <NavLink to="hotelmanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            Hotel Inventory
-          </NavLink>
-          <NavLink to="userguidemanagement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            Guide Services
-          </NavLink>
+          {navLinks.map(link => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            >
+              {link.label}
+            </NavLink>
+          ))}
         </nav>
       </aside>
 

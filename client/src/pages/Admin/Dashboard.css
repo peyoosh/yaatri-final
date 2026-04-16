@@ -27,7 +27,9 @@
 
 .admin-sidebar {
   width: 260px;
-  overflow: hidden;
+  flex-shrink: 0;
+  height: 100vh;
+  overflow-y: auto;
   background-color: var(--bg-light-2);
   border-right: 1px solid var(--border-light-1);
   padding: 2rem 1.5rem;
@@ -70,6 +72,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100vh;
   overflow-y: auto;
 }
 

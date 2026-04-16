@@ -63,7 +63,7 @@ export default function UserManager({
                   <td className="highlight-text" onClick={() => setViewingProfile(u)}>{u.username}</td>
                   <td>{u.role.toUpperCase()}</td>
                   <td className="actions-cell">
-                    <button onClick={() => navigate(`/admin/blogmanagement?user=${u.id}`)} className="action-btn info">VIEW_BLOGS</button>
+                    <button onClick={() => navigate(`/admin/blogmanagement?id=${u.id}`)} className="action-btn info">VIEW_BLOGS</button>
                     <button onClick={() => blockUser(u.id)} className="action-btn warn">{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
                     <button onClick={() => deleteUser(u.id)} className="action-btn danger">PURGE</button>
                   </td>
