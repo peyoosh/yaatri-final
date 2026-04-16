@@ -184,6 +184,7 @@ const App = () => {
               <UserDashboard user={loggedInUser} />
             </ProtectedRoute>
           } />
+          {/* ADMIN ROUTING: Wildcard delegates all sub-routes (usermanagement, etc.) to the AdminDashboard router */}
           <Route path="/admin/*" element={
             <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
               <AdminDashboard />
