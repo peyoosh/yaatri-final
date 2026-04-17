@@ -6,11 +6,11 @@ const AdminLayout = ({ user }) => {
   const navigate = useNavigate();
 
   const navLinks = [
-    { to: 'usermanagement', label: 'User Management' },
-    { to: 'destinationmanagement', label: 'Destination Core' },
-    { to: 'blogmanagement', label: 'Blog Moderation' },
-    { to: 'hotelmanagement', label: 'Hotel Inventory' },
-    { to: 'userguidemanagement', label: 'Guide Services' },
+    { to: '/admin/usermanagement', label: 'User Management' },
+    { to: '/admin/destinationmanagement', label: 'Destination Core' },
+    { to: '/admin/blogmanagement', label: 'Blog Moderation' },
+    { to: '/admin/hotelmanagement', label: 'Hotel Inventory' },
+    { to: '/admin/userguidemanagement', label: 'Guide Services' },
   ];
 
   return (

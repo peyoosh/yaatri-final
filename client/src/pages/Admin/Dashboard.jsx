@@ -34,10 +34,7 @@ apiClient.interceptors.request.use(config => {
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
-  const [userList, setUserList] = useState([
-    { id: 1, username: 'peyoosh_admin', email: 'peyoosh@yaatri.np', role: 'author', status: 'Active', bio: 'Core system administrator for Yaatri Hub.' },
-    { id: 2, username: 'trekker_88', email: 'user@gmail.com', role: 'explorer', status: 'Active', bio: 'Veteran explorer specializing in Khumbu terrain.' }
-  ]);
+  const [userList, setUserList] = useState([]);
   const [destinations, setDestinations] = useState([]);
   const [blogPosts, setBlogPosts] = useState([]);
   const [editingDest, setEditingDest] = useState(null);
@@ -54,15 +51,17 @@ export default function AdminDashboard() {
     const loadAdminData = async () => {
       try {
         setLoading(true);
-        const [s, d, b] = await Promise.all([
+        const [s, d, b, u] = await Promise.all([
           apiClient.get('/api/admin/stats'),
           apiClient.get('/api/destinations'),
-          apiClient.get('/api/posts')
+          apiClient.get('/api/posts'),
+          apiClient.get('/api/users')
         ]);
 
         setStats(prev => ({ ...prev, ...s.data }));
         setDestinations(d.data);
         setBlogPosts(b.data);
+        setUserList(u.data);
       } catch (err) {
         console.error("ADMIN_AUTH_FAILED", err);
       } finally {
@@ -146,7 +145,7 @@ export default function AdminDashboard() {
     <>
       <NotificationBar message={notificationMessage} />
       <Routes>
-        <Route path="/" element={<AdminLayout user={loggedInUser} />}>
+        <Route element={<AdminLayout user={loggedInUser} />}>
           <Route index element={<Navigate to="usermanagement" replace />} />
           <Route path="usermanagement" element={
             <ErrorBoundary>
