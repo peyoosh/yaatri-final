@@ -15,7 +15,7 @@ app.use(express.json());
 
 // --- USER SCHEMA & MODEL ---
 const User = require('./models/User');
-const Destination = require('./models/Destination');
+const Destination = require('./models/destination');
 
 // --- MONGODB CONNECTION ---
 // Replace with your actual MongoDB URI string
