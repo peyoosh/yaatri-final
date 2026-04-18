@@ -35,12 +35,20 @@
   padding: 2rem 1.5rem;
 }
 
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3rem;
+}
+
 .sidebar-brand {
   font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: 4px;
   color: var(--hill-green);
   margin-bottom: 3rem;
+  margin-bottom: 0;
 }
 
 .sidebar-nav {
@@ -201,9 +209,17 @@
   100% { left: 150%; }
 }
 
+/* Mobile Layout Adjustments */
+.mobile-menu-btn { display: none; background: none; border: none; color: var(--hill-green); cursor: pointer; padding: 0; }
+.mobile-close-btn { display: none; background: none; border: none; color: var(--danger-red); cursor: pointer; padding: 0; }
+.sidebar-overlay { display: none; }
+.hide-on-mobile { display: inline; }
+.exit-btn { margin-right: 1.5rem; }
+
 @media (max-width: 1024px) {
   .admin-sidebar { width: 80px; padding: 2rem 0.5rem; align-items: center; }
   .sidebar-brand { font-size: 0.6rem; letter-spacing: 1px; text-align: center; }
+  .sidebar-header { justify-content: center; }
   .nav-item { font-size: 0; padding: 12px; text-align: center; }
   .nav-item::before { content: '•'; font-size: 1.5rem; }
 }
@@ -212,4 +228,42 @@
   .summary-grid { grid-template-columns: 1fr; }
   .admin-header { padding: 0 1rem; }
   .search-bar input { width: 150px; }
+  .search-bar input { width: 140px; font-size: 0.75rem; }
+  .hide-on-mobile { display: none; }
+  .profile-info { display: none; }
+  .exit-btn { margin-right: 0; }
+  
+  /* Sidebar Off-Canvas */
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 260px;
+    z-index: 2000;
+    transition: left 0.3s ease;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+    background-color: var(--obsidian);
+    padding: 2rem 1.5rem;
+    align-items: stretch;
+  }
+  .admin-sidebar.open { left: 0; }
+  
+  /* Reset from 1024px */
+  .sidebar-brand { font-size: 1.5rem; letter-spacing: 4px; text-align: left; }
+  .sidebar-header { justify-content: space-between; margin-bottom: 2rem; }
+  .nav-item { font-size: 0.85rem; padding: 12px 1rem; text-align: left; }
+  .nav-item::before { content: none; }
+  
+  .mobile-menu-btn { display: block; }
+  .mobile-close-btn { display: block; }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(2px);
+    z-index: 1999;
+  }
+  
+  .destination-editor .form-grid { grid-template-columns: 1fr; }
 }

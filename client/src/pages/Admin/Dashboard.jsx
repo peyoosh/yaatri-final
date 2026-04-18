@@ -9,7 +9,7 @@ import SkeletonLoader from './SkeletonLoader';
 import NotificationBar from './NotificationBar';
 
 // Hub Components
-import DestinationManager from '../../DestinationManager';
+import DestinationManager from './DestinationManager';
 import UserManager from '../../UserManager';
 import BlogManager from './BlogManager';
 import GuideManager from './GuideManager';
@@ -154,15 +154,7 @@ export default function AdminDashboard() {
           } />
           <Route path="destinationmanagement" element={
             <ErrorBoundary>
-              <DestinationManager 
-                destinations={destinations}
-                editingDest={editingDest}
-                setEditingDest={setEditingDest}
-                deleteDestination={deleteDestination}
-                saveDestination={saveDestination}
-                handleProtocolChange={handleProtocolChange}
-                addProtocol={addProtocol}
-              />
+              <DestinationManager />
             </ErrorBoundary>
           } />
           <Route path="blogmanagement" element={
