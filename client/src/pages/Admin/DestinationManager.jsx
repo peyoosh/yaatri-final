@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import axios from 'axios';
 import './DestinationManager.css';
 
-const API_BASE_URL = "http://localhost:5000"; // Adjust to your environment
+const API_BASE_URL = "https://yaatri-final.onrender.com";
 
 const DestinationManager = () => {
     const [destinations, setDestinations] = useState([]);
@@ -12,13 +13,10 @@ const DestinationManager = () => {
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
-        title: '',
-        latitude: '',
-        longitude: '',
-        status: 'Active',
+        name: '',
         region: '',
-        popularity: '',
-        terrain: 'Mountain'
+        imageURL: '',
+        terrain: 'Himalayan'
     });
 
     useEffect(() => {
@@ -27,9 +25,9 @@ const DestinationManager = () => {
 
     const fetchDestinations = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/destinations`);
-            const data = await response.json();
-            setDestinations(data);
+            setLoading(true);
+            const response = await axios.get(`${API_BASE_URL}/api/destinations`);
+            setDestinations(response.data);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching destinations:", error);
@@ -42,53 +40,29 @@ const DestinationManager = () => {
         setFormData({ ...formData, [name]: value });
     };
 
-    const toggleStatus = () => {
-        setFormData({
-            ...formData,
-            status: formData.status === 'Active' ? 'Maintenance' : 'Active'
-        });
-    };
-
     const handleDeploy = async () => {
         const token = localStorage.getItem('yaatri_token'); // Fixed to match your auth system
         
-        // Restructuring data to match the new MongoDB schema
-        const payload = {
-            ...formData,
-            coordinates: {
-                lat: parseFloat(formData.latitude) || 0,
-                lng: parseFloat(formData.longitude) || 0
-            }
-        };
-
         try {
-            const response = await fetch(`${API_BASE_URL}/api/destinations`, {
-                method: 'POST',
+            const response = await axios.post(`${API_BASE_URL}/api/admin/destinations`, formData, {
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
+                }
             });
 
-            if (response.ok) {
+            if (response.status === 200 || response.status === 201) {
                 fetchDestinations();
                 setShowModal(false);
                 setFormData({ // Clear the form for the next entry
-                    title: '',
-                    latitude: '',
-                    longitude: '',
-                    status: 'Active',
+                    name: '',
                     region: '',
-                    popularity: '',
-                    terrain: 'Mountain'
+                    imageURL: '',
+                    terrain: 'Himalayan'
                 });
-            } else {
-                const err = await response.json();
-                alert(`Access Denied: ${err.error}`);
             }
         } catch (error) {
             console.error("Deployment failure:", error);
+            alert(`Access Denied: ${error.response?.data?.error || error.message}`);
         }
     };
 
@@ -97,14 +71,11 @@ const DestinationManager = () => {
         
         const token = localStorage.getItem('yaatri_token');
         try {
-            const response = await fetch(`${API_BASE_URL}/api/destinations/${id}`, {
-                method: 'DELETE',
+            await axios.delete(`${API_BASE_URL}/api/admin/destinations/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
-            if (response.ok) {
-                fetchDestinations();
-            }
+            fetchDestinations();
         } catch (error) {
             console.error("Purge failure:", error);
         }
@@ -144,9 +115,9 @@ const DestinationManager = () => {
                     <tbody>
                         {filteredDestinations.map((dest) => (
                             <tr key={dest._id}>
-                                <td>{dest.title}</td>
+                                <td>{dest.name}</td>
                                 <td>{dest.region}</td>
-                                <td>{dest.popularity ? `${dest.popularity}/10` : 'N/A'}</td>
+                                <td>{dest.popularity || 0}/10</td>
                                 <td>{dest.terrain}</td>
                                 <td>
                                     <button 
@@ -163,7 +134,7 @@ const DestinationManager = () => {
                                         style={{ marginLeft: '10px' }}
                                         onClick={() => handleDelete(dest._id)}
                                     >
-                                        PURGE
+                                        Delete
                                     </button>
                                 </td>
                             </tr>
@@ -180,43 +151,23 @@ const DestinationManager = () => {
                         <h3>Initialize New Destination Node</h3>
                         <div className="form-group">
                             <label>Destination Name</label>
-                            <input type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g. Langtang Valley" />
+                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Langtang Valley" />
                         </div>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Region</label>
-                                <input type="text" name="region" value={formData.region} onChange={handleInputChange} placeholder="District/Zone" />
-                            </div>
-                            <div className="form-group">
-                                <label>Popularity (0-10)</label>
-                                <input type="number" name="popularity" value={formData.popularity} onChange={handleInputChange} placeholder="8.5" step="0.1" />
-                            </div>
+                        <div className="form-group">
+                            <label>Region</label>
+                            <input type="text" name="region" value={formData.region} onChange={handleInputChange} placeholder="District/Zone" />
                         </div>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Latitude</label>
-                                <input type="text" name="latitude" value={formData.latitude} onChange={handleInputChange} placeholder="27.1234" />
-                            </div>
-                            <div className="form-group">
-                                <label>Longitude</label>
-                                <input type="text" name="longitude" value={formData.longitude} onChange={handleInputChange} placeholder="85.5678" />
-                            </div>
+                        <div className="form-group">
+                            <label>Image URL</label>
+                            <input type="text" name="imageURL" value={formData.imageURL} onChange={handleInputChange} placeholder="Cloudinary or S3 link" />
                         </div>
                         <div className="form-group">
                             <label>Terrain Type</label>
                             <select name="terrain" value={formData.terrain} onChange={handleInputChange} className="dark-select">
-                                <option value="Mountain">Mountain</option>
-                                <option value="Hills">Hills</option>
+                                <option value="Himalayan">Himalayan</option>
+                                <option value="Hill">Hill</option>
                                 <option value="Terai">Terai</option>
                             </select>
-                        </div>
-                        <div className="form-group">
-                            <label>System Status</label>
-                            <div className="toggle-container" onClick={toggleStatus}>
-                                <div className={`toggle-slider ${formData.status.toLowerCase()}`}>
-                                    {formData.status}
-                                </div>
-                            </div>
                         </div>
                         <div className="modal-actions">
                             <button className="btn-cancel" onClick={() => setShowModal(false)}>Abort</button>
