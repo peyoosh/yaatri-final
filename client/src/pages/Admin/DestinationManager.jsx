@@ -75,7 +75,8 @@ const DestinationManager = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
-            fetchDestinations();
+            // Filter the local state to remove the deleted node instantly
+            setDestinations(destinations.filter(d => d._id !== id));
         } catch (error) {
             console.error("Purge failure:", error);
         }
@@ -117,8 +118,8 @@ const DestinationManager = () => {
                             <tr key={dest._id}>
                                 <td>{dest.name}</td>
                                 <td>{dest.region}</td>
-                                <td>{dest.popularity || 0}/10</td>
-                                <td>{dest.terrain}</td>
+                                <td>{dest.popularity || "0"}/10</td>
+                                <td>{dest.terrainType || "N/A"}</td>
                                 <td>
                                     <button 
                                         className="btn-analyze"
@@ -141,8 +142,8 @@ const DestinationManager = () => {
                         ))}
                     </tbody>
                 </table>
-                {loading && <p className="status-text">Scanning data nodes...</p>}
-                {!loading && filteredDestinations.length === 0 && <p className="status-text">No sectors found.</p>}
+                {loading && <p className="status-text">FETCHING_CORE_DATA...</p>}
+                {!loading && destinations.length === 0 && <p className="status-text">No sectors found.</p>}
             </div>
 
             {showModal && (
