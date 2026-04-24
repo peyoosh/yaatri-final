@@ -15,7 +15,8 @@ app.use(express.json());
 
 // --- USER SCHEMA & MODEL ---
 const User = require('./models/User');
-const Destination = require('./models/destination');
+const Destination = require('./models/Destination');
+const Blog = require('./models/Blog');
 
 // --- MONGODB CONNECTION ---
 // Replace with your actual MongoDB URI string
@@ -84,17 +85,6 @@ const validateAdmin = (req, res, next) => {
 // SYSTEM_SETTINGS_STORAGE
 let marqueeTitle = "Top Destinations by Weather";
 
-// USER_DATA_STORE (Mock accounts for tracking)
-let users = [
-  { id: 1, username: 'trekker_88', email: 'user@gmail.com', isAdmin: false, joinDate: '2024-02-15' }
-];
-
-// BLOG_DATA_STORE
-let posts = [
-  { id: 1, user: 'yaatri_nepal', location: 'KHUMBU_SECTOR', image: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800', likes: 42, caption: 'Topographic scan of the Khumbu sector complete.', status: 'Active' },
-  { id: 2, user: 'himalayan_vibe', location: 'LALITPUR_HUB', image: 'https://images.unsplash.com/photo-1582234131908-769502909282?w=800', likes: 128, caption: 'Neural mapping of Newari cultural protocols.', status: 'Active' }
-];
-
 // --- ENDPOINTS ---
 
 // Auth Routes (Modular)
@@ -110,10 +100,11 @@ app.get('/api/auth/me', protect, (req, res) => {
 app.get('/api/admin/stats', validateAdmin, async (req, res) => {
   const userCount = await User.countDocuments();
   const nodeCount = await Destination.countDocuments();
+  const blogCount = await Blog.countDocuments();
   res.json({
     userCount: userCount,
     activeNodes: nodeCount,
-    intelStreams: posts.length
+    intelStreams: blogCount
   });
 });
 
@@ -124,11 +115,22 @@ app.post('/api/settings', validateAdmin, (req, res) => {
   res.json({ success: true, marqueeTitle });
 });
 
+// Admin: Fetch all blogs (published, reported, flagged) for Management Panel
+app.get('/api/admin/blogs', validateAdmin, async (req, res) => {
+  try {
+    // Populates the authorId field with the author's actual username and email
+    const allBlogs = await Blog.find()
+      .populate('authorId', 'username email')
+      .sort({ timestamp: -1 });
+    res.json(allBlogs || []);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Destinations
 app.get('/api/destinations', async (req, res) => {
   try {
-    const allDestinations = await Destination.find();
-    res.json(allDestinations);
+    const allDestinations = await Destination.find().sort({ popularity: -1 });
+    res.json(allDestinations || []);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -141,7 +143,8 @@ app.get('/api/destinations/:id', async (req, res) => {
 
 app.post('/api/destinations', validateAdmin, async (req, res) => {
   try {
-    const newDest = new Destination(req.body);
+    const { name, description, region, imageURL } = req.body;
+    const newDest = new Destination({ name, description, region, imageURL });
     await newDest.save();
     res.json(newDest);
   } catch (err) { res.status(400).json({ error: err.message }); }
@@ -161,22 +164,56 @@ app.delete('/api/destinations/:id', validateAdmin, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-// Posts
-app.get('/api/posts', (req, res) => res.json(posts));
-app.post('/api/posts', (req, res) => {
-  const newPost = { id: Date.now(), ...req.body, likes: 0, status: 'Active' };
-  posts = [newPost, ...posts];
-  res.json(newPost);
+// Blogs
+app.get('/api/blogs', async (req, res) => {
+  try {
+    // Ensures empty array [] is returned if none are found
+    const publishedBlogs = await Blog.find({ status: 'published' })
+      .populate('authorId', 'username') // Safely fetches only the username for public display
+      .sort({ timestamp: -1 });
+    res.json(publishedBlogs);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/posts/:id', validateAdmin, (req, res) => {
-  posts = posts.filter(p => p.id != req.params.id);
-  res.json({ success: true });
+app.post('/api/blogs', protect, async (req, res) => {
+  try {
+    const { title, content, images, locationNode } = req.body;
+    const newBlog = new Blog({
+      title,
+      content,
+      authorId: req.user._id, // Gathered securely from the token parsing in 'protect'
+      locationNode,
+      images,
+      status: 'published'
+    }); // Timestamp defaults to Date.now in schema
+    await newBlog.save();
+    res.status(201).json(newBlog);
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-app.patch('/api/posts/:id/like', (req, res) => {
-  posts = posts.map(p => p.id == req.params.id ? { ...p, likes: p.likes + 1 } : p);
-  res.json({ success: true });
+app.patch('/api/blogs/:id/report', protect, async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+
+    blog.reportCount += 1;
+    
+    if (blog.reportCount > 5) {
+      blog.status = 'flagged';
+    } else if (blog.status === 'published') {
+      blog.status = 'reported';
+    }
+    
+    await blog.save();
+    res.json({ success: true, message: 'Blog reported successfully' });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/api/blogs/:id', validateAdmin, async (req, res) => {
+  try {
+    await Blog.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 app.listen(PORT, () => console.log(`YAATRI_HUB online at port ${PORT}`));

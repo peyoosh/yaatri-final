@@ -1,20 +1,15 @@
 const mongoose = require('mongoose');
 
 const destinationSchema = new mongoose.Schema({
-  title: String,
-  region: String,
-  description: String,
-  category: String,
-  image: String,
+  name: { type: String, required: true },
+  description: { type: String, required: true },
+  region: { type: String, required: true },
+  // Sets a professional Nepal-themed placeholder if the Admin leaves the photo blank
+  imageURL: { type: String, default: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800' },
   coordinates: {
     lat: { type: Number },
     lng: { type: Number }
-  },
-  popularity: { type: Number },
-  terrain: { type: String, enum: ['Mountain', 'Hills', 'Terai'], default: 'Mountain' },
-  status: { type: String, enum: ['Active', 'Maintenance'], default: 'Active' },
-  culturalSignificance: String,
-  tags: [{ type: String }]
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Destination', destinationSchema);
