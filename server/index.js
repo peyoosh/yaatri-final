@@ -141,7 +141,7 @@ app.get('/api/destinations/:id', async (req, res) => {
   } catch (err) { res.status(404).json({ error: 'Invalid ID format' }); }
 });
 
-app.post('/api/destinations', validateAdmin, async (req, res) => {
+app.post('/api/admin/destinations', validateAdmin, async (req, res) => {
   try {
     const { name, description, region, imageURL } = req.body;
     const newDest = new Destination({ name, description, region, imageURL });
@@ -150,14 +150,14 @@ app.post('/api/destinations', validateAdmin, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-app.put('/api/destinations/:id', validateAdmin, async (req, res) => {
+app.put('/api/admin/destinations/:id', validateAdmin, async (req, res) => {
   try {
     await Destination.findByIdAndUpdate(req.params.id, req.body);
     res.json({ success: true });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-app.delete('/api/destinations/:id', validateAdmin, async (req, res) => {
+app.delete('/api/admin/destinations/:id', validateAdmin, async (req, res) => {
   try {
     await Destination.findByIdAndDelete(req.params.id);
     res.json({ success: true });

@@ -45,6 +45,13 @@ const DestinationManager = () => {
   // Handle adding a new destination
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // The Guardrail: Prevent empty name or description (including whitespace-only strings)
+    if (!newDestination.name.trim() || !newDestination.description.trim()) {
+      alert("Name and Description cannot be empty.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const token = localStorage.getItem('token');
@@ -114,7 +121,7 @@ const DestinationManager = () => {
             
             <button type="submit" disabled={isSubmitting} 
               className="w-full bg-hill-green text-obsidian font-bold py-3 rounded hover:bg-opacity-80 transition duration-300 disabled:opacity-50">
-              {isSubmitting ? 'Adding...' : 'Add Node'}
+              {isSubmitting ? 'Syncing...' : 'Add Node'}
             </button>
           </form>
         </div>
