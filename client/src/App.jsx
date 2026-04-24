@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Globe, Map, Compass, User, LogOut } from 'lucide-react';
-import Destinations from './Destinations';
 import Home from './Home';
 import Blog from './Blog';
 import DestinationDetail from './DestinationDetail';
@@ -11,6 +10,7 @@ import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
 import UserDashboard from './UserDashboard';
+import DestinationPage from './pages/DestinationPage';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
@@ -174,7 +174,7 @@ const App = () => {
       <main className={isManagementView ? "management-main" : "main-content animate-alive"}>
         <Routes>
           <Route path="/" element={<Home onNavigate={navigate} onSelectNode={handleNodeSelection} />} />
-          <Route path="/destinations" element={<Destinations onSelectNode={handleNodeSelection} />} />
+          <Route path="/destinations" element={<DestinationPage />} />
           <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<ContactView />} />

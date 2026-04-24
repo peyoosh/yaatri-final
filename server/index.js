@@ -146,7 +146,7 @@ app.post('/api/admin/destinations', validateAdmin, async (req, res) => {
     const { name, description, region, imageURL } = req.body;
     const newDest = new Destination({ name, description, region, imageURL });
     await newDest.save();
-    res.json(newDest);
+    res.status(201).json(newDest);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 

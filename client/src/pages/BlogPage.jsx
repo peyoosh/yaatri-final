@@ -42,7 +42,7 @@ const BlogPage = () => {
       setIsPublishing(true);
       
       // Retrieve your auth token (adjust this based on how you store user sessions)
-      const token = localStorage.getItem('token'); 
+      const token = localStorage.getItem('yaatri_token'); 
       const config = {
         headers: { Authorization: `Bearer ${token}` }
       };
