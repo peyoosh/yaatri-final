@@ -1,3 +1,4 @@
+// client/src/Destinations.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -5,6 +6,7 @@ const Destinations = ({ onSelectNode }) => {
   const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Use the env variable or the fallback Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://yaatri-final.onrender.com';
 
   useEffect(() => {
@@ -12,78 +14,76 @@ const Destinations = ({ onSelectNode }) => {
       try {
         setLoading(true);
         const res = await axios.get(`${API_URL}/api/destinations`);
-        // Map the backend fields to match the expected UI variables
-        const mappedSectors = res.data.map((dest, index) => ({
-          _id: dest._id,
-          rank: (index + 1).toString().padStart(2, '0'),
-          title: dest.name,
-          stats: dest.description,
-          image: dest.imageURL,
-          region: dest.region
-        }));
-        setSectors(mappedSectors);
+        // We store the RAW data here. No double-mapping.
+        setSectors(res.data);
       } catch (err) {
-        console.error("Error fetching destinations:", err);
+        console.error("DATA_STREAM_FAILURE:", err);
       } finally {
         setLoading(false);
       }
     };
     fetchDestinations();
-  }, [API_URL]);
+  }, []); // Empty array because API_URL is static
 
   const recommended = ["Langtang Valley", "Upper Mustang", "Rara Lake", "Shey Phoksundo"];
 
   return (
     <section className="destinations-split-layout">
-      {/* LEFT COLUMN: 25% - CONTROL NODE */}
+      {/* SIDEBAR REMAINS THE SAME */}
       <aside className="dest-sidebar">
         <div className="sidebar-group">
           <p className="sidebar-kicker">SYSTEM_SEARCH</p>
-          <input 
-            type="text" 
-            placeholder="INPUT_DESTINATION_QUERY..." 
-            className="yaatri-search-input"
-          />
+          <input type="text" placeholder="INPUT_DESTINATION_QUERY..." className="yaatri-search-input" />
         </div>
-
         <div className="sidebar-group" style={{ marginTop: '3rem' }}>
           <p className="sidebar-kicker">RECOMMENDED_NODES</p>
           <ul className="recommended-list">
             {recommended.map((item, index) => (
-              <li key={index} className="recommended-item">
-                <span className="dot" /> {item}
-              </li>
+              <li key={index} className="recommended-item"><span className="dot" /> {item}</li>
             ))}
           </ul>
         </div>
-
         <div className="sidebar-footer">
           <p style={{ opacity: 0.3, fontSize: '0.6rem', fontFamily: 'monospace' }}>
-            DATA_STREAM: ACTIVE<br/>
-            ENCRYPTION: LALITPUR_V2
+            DATA_STREAM: ACTIVE<br/>ENCRYPTION: LALITPUR_V2
           </p>
         </div>
       </aside>
 
-      {/* RIGHT COLUMN: 75% - RANKING ANALYSIS */}
+      {/* MAIN CONTENT - THE FIX IS HERE */}
       <main className="dest-rankings">
         <h2 className="vibrant-title" style={{ marginBottom: '2rem' }}>Terrain Rankings</h2>
         <div className="ranking-stack">
           {loading ? (
-            <p style={{ color: 'var(--hill-green)', fontFamily: 'monospace' }}>SYSTEM_SYNCHRONIZING...</p>
+            <p className="sidebar-kicker animate-pulse">SYSTEM_SYNCHRONIZING...</p>
           ) : sectors.length === 0 ? (
-            <p style={{ color: 'var(--terai-harvest)', fontFamily: 'monospace' }}>ZERO_NODES_ACTIVE. POPULATE_VIA_ADMIN_PANEL.</p>
+            <p className="sidebar-kicker">ZERO_NODES_ACTIVE. POPULATE_VIA_ADMIN_PANEL.</p>
           ) : (
-            sectors.map((sector, index) => (
-              <div key={sector._id} className="rank-card" onClick={() => onSelectNode(sector)} style={{ cursor: 'pointer' }}>
+            sectors.map((dest, index) => (
+              <div 
+                key={dest._id} 
+                className="rank-card" 
+                onClick={() => onSelectNode(dest)} 
+                style={{ cursor: 'pointer' }}
+              >
+                {/* 1. Dynamic Rank Badge */}
                 <div className="rank-badge">{(index + 1).toString().padStart(2, '0')}</div>
-                <div className="rank-image" style={{ backgroundImage: `url(${sector.image})` }}>
+                
+                {/* 2. Direct Field Mapping (Safe Fallbacks) */}
+                <div 
+                  className="rank-image" 
+                  style={{ backgroundImage: `url(${dest.imageURL || dest.image || 'https://via.placeholder.com/1200'})` }}
+                >
                   <div className="rank-overlay" />
                 </div>
+
                 <div className="rank-content">
-                  <p className="rank-region">{sector.region}</p>
-                  <h3 className="rank-title">{sector.title}</h3>
-                  <p className="rank-stats">{sector.stats?.substring(0, 60)}...</p>
+                  <p className="rank-region">{dest.region || 'NEPAL_SECTOR'}</p>
+                  <h3 className="rank-title">{dest.name || dest.title}</h3>
+                  <p className="rank-stats">
+                    {/* Using description from your DB model */}
+                    {dest.description ? `${dest.description.substring(0, 60)}...` : 'NO_DATA_PULLED'}
+                  </p>
                 </div>
               </div>
             ))
