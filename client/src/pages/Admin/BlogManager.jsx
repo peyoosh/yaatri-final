@@ -72,7 +72,7 @@ const BlogManager = () => {
 
         {feedback && (
           <div className={`mb-6 p-4 rounded border font-mono tracking-tight ${feedback.type === 'success' ? 'bg-green-900 border-green-500 text-green-100' : 'bg-red-900 border-red-500 text-red-100'}`}>
-            > [SYSTEM_STATUS]: {feedback.text}
+             [SYSTEM_STATUS]: {feedback.text}
           </div>
         )}
 

@@ -9,7 +9,8 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors({
   origin: ["https://yaatri-final.onrender.com", "http://localhost:3000", "http://localhost:5173"],
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -62,7 +63,7 @@ const seedAdmin = async () => {
 };
 
 // --- SECURE ADMIN MIDDLEWARE (SIMULATED) ---
-const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
+const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
 
 const protect = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];

@@ -59,12 +59,12 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const [s, d, b, u] = await Promise.all([
-          apiClient.get('/api/admin/stats', {
+          apiClient.get('/admin/stats', {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          apiClient.get('/api/destinations'),
-          apiClient.get('/api/admin/blogs'),
-          apiClient.get('/api/users')
+          apiClient.get('/destinations'),
+          apiClient.get('/admin/blogs'),
+          apiClient.get('/users')
         ]);
 
         setStats(prev => ({ ...prev, ...s.data }));
@@ -84,13 +84,13 @@ export default function AdminDashboard() {
   }, []); // Empty array ensures this only runs ONCE on mount
 
   const deletePost = async (id) => {
-    await apiClient.delete(`/api/blogs/${id}`);
+    await apiClient.delete(`/blogs/${id}`);
     setBlogPosts(blogPosts.filter(p => p._id !== id));
   };
 
   const deleteDestination = async (rank) => {
     if (window.confirm(`CONFIRM_DELETION: NODE_${rank}`)) {
-      await apiClient.delete(`/api/destinations/${rank}`);
+      await apiClient.delete(`/destinations/${rank}`);
       setDestinations(destinations.filter(d => d.rank !== rank));
     }
   };
@@ -100,11 +100,11 @@ export default function AdminDashboard() {
     if (!editingDest) return;
 
     const method = editingDest.isNew ? 'post' : 'put';
-    const url = `/api/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
+    const url = `/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
 
     try {
       await apiClientmethod;
-      const d = await apiClient.get('/api/destinations');
+      const d = await apiClient.get('/destinations');
       setDestinations(d.data);
       setEditingDest(null);
     } catch (err) {
