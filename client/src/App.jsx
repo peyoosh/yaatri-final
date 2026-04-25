@@ -13,6 +13,7 @@ import UserDashboard from './UserDashboard';
 import DestinationPage from './pages/DestinationPage';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
+import Destinations from './pages/destinations';
 
 const App = () => {
   const navigate = useNavigate();
