@@ -13,19 +13,17 @@ const DestinationManager = () => {
   const [feedback, setFeedback] = useState(null);
 
   // Dynamic Uplink for Production
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onrender.com/api';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yaatri-final.onrender.com/api';
 
   // Utility to get auth token headers for your validateAdmin protected routes
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token'); 
+    const token = localStorage.getItem('yaatri_token'); 
     return { Authorization: `Bearer ${token}` };
   };
 
   const fetchDestinations = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/destinations`, {
-        headers: getAuthHeaders()
-      });
+      const response = await axios.get(`${API_BASE_URL}/destinations`);
       // Align fetch with potential payload variations
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setDestinations(fetchedData);
@@ -91,7 +89,7 @@ const DestinationManager = () => {
         {/* Real-time Feedback Banner */}
         {feedback && (
           <div className={`mb-6 p-4 rounded border font-mono tracking-tight ${feedback.type === 'success' ? 'bg-green-900 border-green-500 text-green-100' : 'bg-red-900 border-red-500 text-red-100'}`}>
-             [SYSTEM_STATUS]: {feedback.text}
+            > [SYSTEM_STATUS]: {feedback.text}
           </div>
         )}
 

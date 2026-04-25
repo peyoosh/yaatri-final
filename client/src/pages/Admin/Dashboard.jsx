@@ -22,7 +22,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onr
 const apiClient = axios.create({ baseURL: API_BASE_URL });
 
 apiClient.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('yaatri_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   const loggedInUser = JSON.parse(localStorage.getItem('yaatri_user'));
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('yaatri_token');
     
     if (!token) {
       navigate('/auth?mode=login');

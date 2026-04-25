@@ -30,7 +30,7 @@ const Blog = ({ onSeeBlog }) => {
       images: ['https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800']
     };
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('yaatri_token');
       await axios.post(`${API_BASE_URL}/api/blogs`, postData, {
         headers: { Authorization: `Bearer ${token}` }
       });

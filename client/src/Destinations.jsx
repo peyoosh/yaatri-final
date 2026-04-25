@@ -13,7 +13,7 @@ const Destinations = ({ onSelectNode }) => {
     const fetchDestinations = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('yaatri_token');
         const res = await axios.get(`${API_URL}/api/destinations`, {
           headers: { Authorization: `Bearer ${token}` }
         });
