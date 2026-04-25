@@ -4,7 +4,7 @@ const Destination = require('../models/Destination');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
+const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
 
 // --- REUSABLE MIDDLEWARE ---
 const validateAdmin = async (req, res, next) => {

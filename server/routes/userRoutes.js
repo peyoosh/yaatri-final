@@ -4,7 +4,7 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
+const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
 
 // --- MIDDLEWARE: RE-REFINED VALIDATE_ADMIN ---
 const validateAdmin = async (req, res, next) => {

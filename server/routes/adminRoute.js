@@ -5,7 +5,7 @@ const Destination = require('../models/Destination');
 const Blog = require('../models/Blog');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = "YAATRI_CORE_ENCRYPTION_KEY";
+const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
 
 // --- MIDDLEWARE: ADMIN SHIELD ---
 const validateAdmin = async (req, res, next) => {
@@ -13,7 +13,7 @@ const validateAdmin = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: "NO_TOKEN_PROVIDED" });
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
     const decoded = jwt.verify(token, JWT_SECRET);
     
     const user = await User.findById(decoded.id);
