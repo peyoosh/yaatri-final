@@ -10,7 +10,7 @@ import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
 import UserDashboard from './UserDashboard';
-import DestinationPage from './pages/Admin/DestinationPage';
+import Destinations from './Destinations';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
@@ -174,7 +174,7 @@ const App = () => {
       <main className={isManagementView ? "management-main" : "main-content animate-alive"}>
         <Routes>
           <Route path="/" element={<Home onNavigate={navigate} onSelectNode={handleNodeSelection} />} />
-          <Route path="/destinations" element={<DestinationPage />} />
+          <Route path="/destinations" element={<Destinations onSelectNode={handleNodeSelection} />} />
           <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<ContactView />} />
