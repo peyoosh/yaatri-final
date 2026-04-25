@@ -45,10 +45,11 @@ export default function AdminDashboard() {
   ]);
 
   // SECURE CONFIG
-  const token = localStorage.getItem('token');
   const loggedInUser = JSON.parse(localStorage.getItem('yaatri_user'));
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    
     if (!token) {
       navigate('/auth?mode=login');
       return;
@@ -80,7 +81,7 @@ export default function AdminDashboard() {
       }
     };
     loadAdminData();
-  }, [navigate, token]);
+  }, []); // Empty array ensures this only runs ONCE on mount
 
   const deletePost = async (id) => {
     await apiClient.delete(`/api/blogs/${id}`);
