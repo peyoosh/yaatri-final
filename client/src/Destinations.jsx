@@ -69,19 +69,18 @@ const Destinations = ({ onSelectNode }) => {
                 {/* 1. Dynamic Rank Badge */}
                 <div className="rank-badge">{(index + 1).toString().padStart(2, '0')}</div>
                 
-                {/* 2. Direct Field Mapping (Safe Fallbacks) */}
+                {/* 2. Direct Field Mapping */}
                 <div 
                   className="rank-image" 
-                  style={{ backgroundImage: `url(${dest.imageURL || dest.image || 'https://via.placeholder.com/1200'})` }}
+                  style={{ backgroundImage: `url(${dest.imageURL})` }}
                 >
                   <div className="rank-overlay" />
                 </div>
 
                 <div className="rank-content">
-                  <p className="rank-region">{dest.region || 'NEPAL_SECTOR'}</p>
-                  <h3 className="rank-title">{dest.name || dest.title}</h3>
+                  <p className="rank-region">{dest.region}</p>
+                  <h3 className="rank-title">{dest.name}</h3>
                   <p className="rank-stats">
-                    {/* Using description from your DB model */}
                     {dest.description ? `${dest.description.substring(0, 60)}...` : 'NO_DATA_PULLED'}
                   </p>
                 </div>

@@ -129,39 +129,38 @@ app.get('/api/admin/blogs', validateAdmin, async (req, res) => {
 // Destinations
 app.get('/api/destinations', async (req, res) => {
   try {
-    const allDestinations = await Destination.find().sort({ popularity: -1 });
-    res.json(allDestinations || []);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    const allDestinations = await Destination.find().sort({ popularityScore: -1 });
+    res.json(allDestinations);
+  } catch (err) { res.status(500).json(err); }
 });
 
 app.get('/api/destinations/:id', async (req, res) => {
   try {
     const dest = await Destination.findById(req.params.id);
-    res.json(dest || { error: 'Node not found' });
-  } catch (err) { res.status(404).json({ error: 'Invalid ID format' }); }
+    res.json(dest);
+  } catch (err) { res.status(404).json(err); }
 });
 
 app.post('/api/admin/destinations', validateAdmin, async (req, res) => {
   try {
-    const { name, description, region, imageURL } = req.body;
-    const newDest = new Destination({ name, description, region, imageURL });
-    await newDest.save();
-    res.status(201).json(newDest);
-  } catch (err) { res.status(400).json({ error: err.message }); }
+    const newDest = new Destination(req.body);
+    const savedDest = await newDest.save();
+    res.status(201).json(savedDest);
+  } catch (err) { res.status(400).json(err); }
 });
 
 app.put('/api/admin/destinations/:id', validateAdmin, async (req, res) => {
   try {
-    await Destination.findByIdAndUpdate(req.params.id, req.body);
-    res.json({ success: true });
-  } catch (err) { res.status(400).json({ error: err.message }); }
+    const updatedDest = await Destination.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    res.json(updatedDest);
+  } catch (err) { res.status(400).json(err); }
 });
 
 app.delete('/api/admin/destinations/:id', validateAdmin, async (req, res) => {
   try {
-    await Destination.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (err) { res.status(400).json({ error: err.message }); }
+    const deletedDest = await Destination.findByIdAndDelete(req.params.id);
+    res.json(deletedDest);
+  } catch (err) { res.status(400).json(err); }
 });
 
 // Blogs
