@@ -22,9 +22,7 @@ const Blog = require('./models/Blog');
 // --- MONGODB CONNECTION ---
 // Replace with your actual MongoDB URI string
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+mongoose.connect(process.env.MONGO_URI, {
   dbName: 'yaatri'
 })
   .then(() => {
