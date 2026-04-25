@@ -23,7 +23,8 @@ const Blog = require('./models/Blog');
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  dbName: 'yaatri'
 })
   .then(() => {
     console.log(`YAATRI_DATABASE: CONNECTED TO [${mongoose.connection.name.toUpperCase()}]`);
@@ -151,7 +152,7 @@ app.post('/api/admin/destinations', validateAdmin, async (req, res) => {
     const { name, region, description, imageURL, terrainType } = req.body;
     const newDest = new Destination({ name, region, description, imageURL, terrainType });
     const savedDest = await newDest.save();
-    res.status(201).json({ message: "UPLINK_SUCCESS: Node stored in yaatri_db.", data: savedDest });
+    res.status(201).json(savedDest);
   } catch (err) { res.status(400).json(err); }
 });
 
@@ -211,6 +212,18 @@ app.patch('/api/blogs/:id/report', protect, async (req, res) => {
     
     await blog.save();
     res.json({ success: true, message: 'Blog reported successfully' });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.patch('/api/admin/blogs/:id/flag', validateAdmin, async (req, res) => {
+  try {
+    const blog = await Blog.findByIdAndUpdate(
+      req.params.id, 
+      { status: 'flagged' }, 
+      { new: true }
+    );
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    res.json(blog);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
