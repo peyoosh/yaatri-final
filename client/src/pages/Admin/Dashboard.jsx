@@ -18,11 +18,11 @@ import HotelManager from './HotelManager';
 import './Dashboard.css';
 
 // Setup Axios Global Interceptor
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onrender.com/api';
 const apiClient = axios.create({ baseURL: API_BASE_URL });
 
 apiClient.interceptors.request.use(config => {
-  const token = localStorage.getItem('yaatri_token');
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -45,7 +45,7 @@ export default function AdminDashboard() {
   ]);
 
   // SECURE CONFIG
-  const token = localStorage.getItem('yaatri_token');
+  const token = localStorage.getItem('token');
   const loggedInUser = JSON.parse(localStorage.getItem('yaatri_user'));
 
   useEffect(() => {
@@ -58,7 +58,9 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const [s, d, b, u] = await Promise.all([
-          apiClient.get('/api/admin/stats'),
+          apiClient.get('/api/admin/stats', {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
           apiClient.get('/api/destinations'),
           apiClient.get('/api/posts'),
           apiClient.get('/api/users')
