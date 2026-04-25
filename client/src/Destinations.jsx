@@ -13,7 +13,10 @@ const Destinations = ({ onSelectNode }) => {
     const fetchDestinations = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`${API_URL}/api/destinations`);
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_URL}/api/destinations`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         // We store the RAW data here. No double-mapping.
         setSectors(res.data);
       } catch (err) {

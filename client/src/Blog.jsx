@@ -11,27 +11,38 @@ const Blog = ({ onSeeBlog }) => {
   const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/posts`).then(res => setPosts(res.data));
+    axios.get(`${API_BASE_URL}/api/blogs`).then(res => setPosts(res.data));
   }, []);
 
   const handleLike = async (id) => {
-    await axios.patch(`${API_BASE_URL}/api/posts/${id}/like`);
-    setPosts(posts.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p));
+    try {
+      await axios.patch(`${API_BASE_URL}/api/blogs/${id}/like`);
+    } catch (e) { console.warn("Liking requires backend support", e); }
+    setPosts(posts.map(p => p._id === id ? { ...p, likes: (p.likes || 0) + 1 } : p));
   };
 
   const handlePost = async () => {
     if (!newCaption) return;
     const postData = {
-      user: 'LOCAL_NODE',
-      location: newLocation || 'UNKNOWN_COORDINATES',
-      image: 'https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800',
-      likes: 0,
-      caption: newCaption,
+      title: newLocation || 'INTEL_STREAM',
+      content: newCaption,
+      locationNode: newLocation || 'UNKNOWN_COORDINATES',
+      images: ['https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800']
     };
-    const res = await axios.post(`${API_BASE_URL}/api/posts`, postData);
-    setPosts([res.data, ...posts]);
-    setNewCaption('');
-    setNewLocation('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_BASE_URL}/api/blogs`, postData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Re-fetch to guarantee we get the populated author profile instantly
+      const updated = await axios.get(`${API_BASE_URL}/api/blogs`);
+      setPosts(updated.data);
+      setNewCaption('');
+      setNewLocation('');
+    } catch (err) {
+      console.error("Failed to broadcast:", err);
+      if (err.response?.status === 401) alert("Unauthorized: Please log in to post.");
+    }
   };
 
   return (
@@ -50,10 +61,10 @@ const Blog = ({ onSeeBlog }) => {
         <div className="sidebar-section">
           <p className="sidebar-kicker" style={{ color: 'var(--hill-green)', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '2px', marginBottom: '1rem' }}>MOST_LIKED_DATA</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {[...posts].sort((a, b) => b.likes - a.likes).slice(0, 2).map(p => (
-              <div key={p.id} style={{ fontSize: '0.75rem', borderLeft: '1px solid var(--hill-green)', paddingLeft: '10px' }}>
-                <p style={{ fontWeight: 700 }}>{p.user.toUpperCase()}</p>
-                <p style={{ opacity: 0.5 }}>{p.likes} DATA_POINTS</p>
+          {[...posts].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 2).map(p => (
+            <div key={p._id} style={{ fontSize: '0.75rem', borderLeft: '1px solid var(--hill-green)', paddingLeft: '10px' }}>
+              <p style={{ fontWeight: 700 }}>{p.authorId?.username?.toUpperCase() || 'UNKNOWN'}</p>
+              <p style={{ opacity: 0.5 }}>{p.likes || 0} DATA_POINTS</p>
               </div>
             ))}
           </div>
@@ -111,7 +122,7 @@ const Blog = ({ onSeeBlog }) => {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            key={post.id}
+            key={post._id}
             onClick={() => onSeeBlog(post)}
             style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)', marginBottom: '4rem', cursor: 'pointer' }}
           >
@@ -119,15 +130,15 @@ const Blog = ({ onSeeBlog }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--hill-green)' }} />
                 <div>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px', margin: 0 }}>{post.user.toUpperCase()}</p>
-                  <p style={{ fontSize: '0.65rem', opacity: 0.6, margin: 0, color: 'var(--terai-harvest)' }}>{post.location}</p>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px', margin: 0 }}>{post.authorId?.username?.toUpperCase() || 'UNKNOWN'}</p>
+                  <p style={{ fontSize: '0.65rem', opacity: 0.6, margin: 0, color: 'var(--terai-harvest)' }}>{post.locationNode}</p>
                 </div>
               </div>
-              {post.status === 'Flagged' && <ShieldAlert size={16} style={{ color: 'orange' }} />}
+              {post.status === 'flagged' && <ShieldAlert size={16} style={{ color: 'orange' }} />}
             </div>
             
             <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden' }}>
-              <img src={post.image} alt="Intel" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(20%)' }} />
+              <img src={post.images?.[0] || 'https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800'} alt="Intel" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(20%)' }} />
             </div>
 
             <div style={{ padding: '1.5rem' }}>
@@ -136,7 +147,7 @@ const Blog = ({ onSeeBlog }) => {
                   size={24}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleLike(post.id);
+                    handleLike(post._id);
                   }}
                   style={{ cursor: 'pointer', color: 'var(--hill-green)', transition: 'transform 0.2s' }} 
                   className="hover:scale-110"
@@ -144,13 +155,13 @@ const Blog = ({ onSeeBlog }) => {
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--hill-green)', marginBottom: '0.5rem' }}>{post.likes} DATA_POINTS</p>
-                <span style={{ fontSize: '0.6rem', opacity: 0.3, fontFamily: 'monospace' }}>NODE_ID: {post.id}</span>
+                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--hill-green)', marginBottom: '0.5rem' }}>{post.likes || 0} DATA_POINTS</p>
+                <span style={{ fontSize: '0.6rem', opacity: 0.3, fontFamily: 'monospace' }}>NODE_ID: {post._id}</span>
               </div>
 
               <p style={{ fontSize: '0.85rem', lineHeight: '1.5', opacity: 0.8 }}>
-                <span style={{ fontWeight: 900, marginRight: '0.5rem', color: 'var(--himalayan-mist)' }}>{post.user}</span>
-                {post.caption}
+                <span style={{ fontWeight: 900, marginRight: '0.5rem', color: 'var(--himalayan-mist)' }}>{post.authorId?.username || 'UNKNOWN'}</span>
+                {post.content}
               </p>
             </div>
           </motion.div>

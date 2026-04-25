@@ -59,7 +59,7 @@ const BlogModal = ({ isOpen, onClose, post }) => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.85rem', fontWeight: 900, margin: 0 }}>@{post.user.toUpperCase()}</p>
+              <p style={{ fontSize: '0.85rem', fontWeight: 900, margin: 0 }}>@{post.authorId?.username?.toUpperCase() || 'UNKNOWN'}</p>
               <p style={{ fontSize: '0.6rem', color: 'var(--hill-green)', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
                 <ShieldCheck size={10} /> AUTHENTICATED_EXPLORER
               </p>
@@ -75,7 +75,7 @@ const BlogModal = ({ isOpen, onClose, post }) => {
           {/* LEFT: MEDIA CONTENT (70%) */}
           <div style={{ flex: '0 0 70%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
             <img 
-              src={post.img || post.image} 
+              src={post.images?.[0] || post.img || post.image || 'https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800'} 
               alt="Broadcast Content" 
               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
             />
@@ -85,8 +85,8 @@ const BlogModal = ({ isOpen, onClose, post }) => {
           <div style={{ flex: '0 0 30%', borderLeft: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
               <h3 style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '2px', color: 'var(--terai-harvest)', marginBottom: '1.5rem' }}>INTEL_LOG</h3>
-              <p style={{ fontSize: '0.9rem', lineHeight: '1.6', opacity: 0.8, marginBottom: '3rem' }}>
-                {post.caption || "System-generated summary: User broadcast captured during regional expedition. Topographic analysis suggests optimal route markers."}
+              <p style={{ fontSize: '0.9rem', lineHeight: '1.6', opacity: 0.8, marginBottom: '3rem', whiteSpace: 'pre-wrap' }}>
+                {post.content || post.caption || "System-generated summary: User broadcast captured during regional expedition. Topographic analysis suggests optimal route markers."}
               </p>
 
               <h3 style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '2px', color: 'var(--terai-harvest)', marginBottom: '1.5rem' }}>DATA_FEEDBACK</h3>

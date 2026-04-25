@@ -74,16 +74,22 @@ const protect = async (req, res, next) => {
   } catch (err) { res.status(401).json({ error: "INVALID_TOKEN" }); }
 };
 
-const validateAdmin = (req, res, next) => {
+const validateAdmin = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "NO_TOKEN_PROVIDED" });
 
   const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err || decoded.role !== 'author') return res.status(403).json({ error: "AUTHOR_PRIVILEGES_REQUIRED" });
-    req.user = decoded;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user || user.isAdmin !== true) {
+      return res.status(403).json({ error: "ADMIN_PRIVILEGES_REQUIRED" });
+    }
+    req.user = user;
     next();
-  });
+  } catch (err) {
+    return res.status(401).json({ error: "INVALID_TOKEN" });
+  }
 };
 
 // SYSTEM_SETTINGS_STORAGE
@@ -94,6 +100,8 @@ let marqueeTitle = "Top Destinations by Weather";
 // Auth Routes (Modular)
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+const userRoutes = require('./routes/userRoutes');
+app.use('/api/users', userRoutes);
 
 // Get Current User (Persistence Check)
 app.get('/api/auth/me', protect, (req, res) => {
@@ -110,14 +118,6 @@ app.get('/api/admin/stats', validateAdmin, async (req, res) => {
     activeNodes: nodeCount,
     intelStreams: blogCount
   });
-});
-
-// Admin: Fetch all users for Management Panel
-app.get('/api/users', validateAdmin, async (req, res) => {
-  try {
-    const users = await User.find().select('-password');
-    res.status(200).json(users);
-  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Settings
@@ -139,44 +139,7 @@ app.get('/api/admin/blogs', validateAdmin, async (req, res) => {
 });
 
 // Destinations
-app.get('/api/destinations', async (req, res) => {
-  try {
-    // Fetches all real documents and natively returns a clean array
-    const allDestinations = await Destination.find().sort({ popularityScore: -1 });
-    res.status(200).json(allDestinations);
-  } catch (err) { res.status(500).json(err); }
-});
-
-app.get('/api/destinations/:id', async (req, res) => {
-  try {
-    const dest = await Destination.findById(req.params.id);
-    res.json(dest);
-  } catch (err) { res.status(404).json(err); }
-});
-
-app.post('/api/admin/destinations', validateAdmin, async (req, res) => {
-  try {
-    // Explicitly taking required input for the document
-    const { name, region, description, imageURL, terrainType } = req.body;
-    const newDest = new Destination({ name, region, description, imageURL, terrainType });
-    const savedDest = await newDest.save();
-    res.status(201).json(savedDest);
-  } catch (err) { res.status(400).json(err); }
-});
-
-app.put('/api/admin/destinations/:id', validateAdmin, async (req, res) => {
-  try {
-    const updatedDest = await Destination.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    res.json(updatedDest);
-  } catch (err) { res.status(400).json(err); }
-});
-
-app.delete('/api/admin/destinations/:id', validateAdmin, async (req, res) => {
-  try {
-    const deletedDest = await Destination.findByIdAndDelete(req.params.id);
-    res.json(deletedDest);
-  } catch (err) { res.status(400).json(err); }
-});
+app.use('/api/destinations', require('./routes/destinationRoutes'));
 
 // Blogs
 app.get('/api/blogs', async (req, res) => {

@@ -62,7 +62,7 @@ export default function AdminDashboard() {
             headers: { Authorization: `Bearer ${token}` }
           }),
           apiClient.get('/api/destinations'),
-          apiClient.get('/api/posts'),
+          apiClient.get('/api/admin/blogs'),
           apiClient.get('/api/users')
         ]);
 
@@ -83,8 +83,8 @@ export default function AdminDashboard() {
   }, [navigate, token]);
 
   const deletePost = async (id) => {
-    await apiClient.delete(`/api/posts/${id}`);
-    setBlogPosts(blogPosts.filter(p => p.id !== id));
+    await apiClient.delete(`/api/blogs/${id}`);
+    setBlogPosts(blogPosts.filter(p => p._id !== id));
   };
 
   const deleteDestination = async (rank) => {
