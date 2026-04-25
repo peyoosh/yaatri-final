@@ -115,9 +115,13 @@ app.get('/api/admin/stats', validateAdmin, async (req, res) => {
 // Admin: Fetch all users for Management Panel
 app.get('/api/users', validateAdmin, async (req, res) => {
   try {
+    // Query the yaatri.users collection and return the list excluding passwords
     const allUsers = await User.find().select('-password');
-    res.json(allUsers);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.status(200).json(allUsers);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ error: "Server error while retrieving users" });
+  }
 });
 
 // Settings
