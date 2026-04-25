@@ -6,8 +6,8 @@ const Destinations = ({ onSelectNode }) => {
   const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Use the env variable or the fallback Render URL
-  const API_URL = import.meta.env.VITE_API_URL || 'https://yaatri-final.onrender.com';
+  // Dynamic global uplink for the API
+  const API_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onrender.com';
 
   useEffect(() => {
     const fetchDestinations = async () => {

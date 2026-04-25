@@ -116,10 +116,8 @@ app.get('/api/admin/stats', validateAdmin, async (req, res) => {
 app.get('/api/users', validateAdmin, async (req, res) => {
   try {
     const users = await User.find().select('-password');
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    res.status(200).json(users);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Settings
