@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import axios from 'axios';
 import './DestinationManager.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
 
 const DestinationManager = () => {
     const [destinations, setDestinations] = useState([]);
@@ -25,14 +25,25 @@ const DestinationManager = () => {
     }, []);
 
     const fetchDestinations = async () => {
+        const token = localStorage.getItem('yaatri_token');
+        if (!token) {
+            navigate('/auth?mode=login');
+            return;
+        }
+
         try {
             setLoading(true);
-            const response = await axios.get(`${API_BASE_URL}/api/destinations`);
+            const response = await axios.get(`${API_BASE_URL}/api/destinations`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
             setDestinations(fetchedData);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching destinations:", error);
+            if (error.response?.status === 401 || error.response?.status === 403) {
+                navigate('/auth?mode=login');
+            }
             setLoading(false);
         }
     };
@@ -44,6 +55,10 @@ const DestinationManager = () => {
 
     const handleDeploy = async () => {
         const token = localStorage.getItem('yaatri_token'); // Fixed to match your auth system
+        if (!token) {
+            navigate('/auth?mode=login');
+            return;
+        }
         
         try {
             const response = await axios.post(`${API_BASE_URL}/api/admin/destinations`, formData, {
@@ -66,6 +81,9 @@ const DestinationManager = () => {
         } catch (error) {
             console.error("Deployment failure:", error);
             alert(`Access Denied: ${error.response?.data?.error || error.message}`);
+            if (error.response?.status === 401 || error.response?.status === 403) {
+                navigate('/auth?mode=login');
+            }
         }
     };
 
@@ -73,6 +91,11 @@ const DestinationManager = () => {
         if (!window.confirm("PURGE_PROTOCOL: Are you sure you want to delete this destination node?")) return;
         
         const token = localStorage.getItem('yaatri_token');
+        if (!token) {
+            navigate('/auth?mode=login');
+            return;
+        }
+
         try {
             await axios.delete(`${API_BASE_URL}/api/admin/destinations/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -82,6 +105,9 @@ const DestinationManager = () => {
             setDestinations(destinations.filter(d => d._id !== id));
         } catch (error) {
             console.error("Purge failure:", error);
+            if (error.response?.status === 401 || error.response?.status === 403) {
+                navigate('/auth?mode=login');
+            }
         }
     };
 

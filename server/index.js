@@ -112,6 +112,14 @@ app.get('/api/admin/stats', validateAdmin, async (req, res) => {
   });
 });
 
+// Admin: Fetch all users for Management Panel
+app.get('/api/users', validateAdmin, async (req, res) => {
+  try {
+    const allUsers = await User.find().select('-password');
+    res.json(allUsers);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Settings
 app.get('/api/settings', (req, res) => res.json({ marqueeTitle }));
 app.post('/api/settings', validateAdmin, (req, res) => {

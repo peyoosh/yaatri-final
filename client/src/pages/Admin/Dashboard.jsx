@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 // Layout and Core Components
 import AdminLayout from './AdminLayout';
@@ -32,6 +32,7 @@ apiClient.interceptors.request.use(config => {
 });
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [userList, setUserList] = useState([]);
@@ -48,6 +49,11 @@ export default function AdminDashboard() {
   const loggedInUser = JSON.parse(localStorage.getItem('yaatri_user'));
 
   useEffect(() => {
+    if (!token) {
+      navigate('/auth?mode=login');
+      return;
+    }
+
     const loadAdminData = async () => {
       try {
         setLoading(true);
@@ -64,12 +70,15 @@ export default function AdminDashboard() {
         setUserList(u.data);
       } catch (err) {
         console.error("ADMIN_AUTH_FAILED", err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          navigate('/auth?mode=login');
+        }
       } finally {
         setLoading(false);
       }
     };
     loadAdminData();
-  }, []);
+  }, [navigate, token]);
 
   const deletePost = async (id) => {
     await apiClient.delete(`/api/posts/${id}`);
