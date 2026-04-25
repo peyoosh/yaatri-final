@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import axios from 'axios';
 import './DestinationManager.css';
 
-const API_BASE_URL = "https://yaatri-final.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const DestinationManager = () => {
     const [destinations, setDestinations] = useState([]);
@@ -15,8 +15,9 @@ const DestinationManager = () => {
     const [formData, setFormData] = useState({
         name: '',
         region: '',
+        description: '',
         imageURL: '',
-        terrain: 'Himalayan'
+        terrainType: 'Himalayan'
     });
 
     useEffect(() => {
@@ -27,7 +28,8 @@ const DestinationManager = () => {
         try {
             setLoading(true);
             const response = await axios.get(`${API_BASE_URL}/api/destinations`);
-            setDestinations(response.data);
+            const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
+            setDestinations(fetchedData);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching destinations:", error);
@@ -56,8 +58,9 @@ const DestinationManager = () => {
                 setFormData({ // Clear the form for the next entry
                     name: '',
                     region: '',
+                    description: '',
                     imageURL: '',
-                    terrain: 'Himalayan'
+                    terrainType: 'Himalayan'
                 });
             }
         } catch (error) {
@@ -118,14 +121,14 @@ const DestinationManager = () => {
                             <tr key={dest._id}>
                                 <td>{dest.name}</td>
                                 <td>{dest.region}</td>
-                                <td>{dest.popularity || "0"}/10</td>
-                                <td>{dest.terrainType || "N/A"}</td>
+                                <td>{dest.popularityScore || "0"}/10</td>
+                                <td>{dest.terrainType || "Hill"}</td>
                                 <td>
                                     <button 
                                         className="btn-analyze"
                                         onClick={() => navigate(`/admin/destinations/reports/${dest._id}`, { 
                                             // Passing terrain data to the analytics view
-                                            state: { terrain: dest.terrain } 
+                                            state: { terrain: dest.terrainType } 
                                         })}
                                     >
                                         Analyze
@@ -159,12 +162,16 @@ const DestinationManager = () => {
                             <input type="text" name="region" value={formData.region} onChange={handleInputChange} placeholder="District/Zone" />
                         </div>
                         <div className="form-group">
+                            <label>Description</label>
+                            <textarea name="description" value={formData.description} onChange={handleInputChange} placeholder="Enter a brief description..." style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid #333', color: '#fff', borderRadius: '4px' }} rows="3"></textarea>
+                        </div>
+                        <div className="form-group">
                             <label>Image URL</label>
                             <input type="text" name="imageURL" value={formData.imageURL} onChange={handleInputChange} placeholder="Cloudinary or S3 link" />
                         </div>
                         <div className="form-group">
                             <label>Terrain Type</label>
-                            <select name="terrain" value={formData.terrain} onChange={handleInputChange} className="dark-select">
+                            <select name="terrainType" value={formData.terrainType} onChange={handleInputChange} className="dark-select">
                                 <option value="Himalayan">Himalayan</option>
                                 <option value="Hill">Hill</option>
                                 <option value="Terai">Terai</option>
