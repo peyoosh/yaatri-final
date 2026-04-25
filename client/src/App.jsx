@@ -10,7 +10,7 @@ import Auth from './Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/Admin/Dashboard';
 import UserDashboard from './UserDashboard';
-import Destinations from './Destinations';
+import Destinations from './destinations';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
