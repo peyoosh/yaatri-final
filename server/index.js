@@ -21,7 +21,10 @@ const Blog = require('./models/Blog');
 // --- MONGODB CONNECTION ---
 // Replace with your actual MongoDB URI string
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
-mongoose.connect(MONGO_URI)
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
   .then(() => {
     console.log(`YAATRI_DATABASE: CONNECTED TO [${mongoose.connection.name.toUpperCase()}]`);
     seedAdmin();
@@ -129,8 +132,9 @@ app.get('/api/admin/blogs', validateAdmin, async (req, res) => {
 // Destinations
 app.get('/api/destinations', async (req, res) => {
   try {
+    // Fetches all real documents and natively returns a clean array
     const allDestinations = await Destination.find().sort({ popularityScore: -1 });
-    res.json(allDestinations);
+    res.status(200).json(allDestinations);
   } catch (err) { res.status(500).json(err); }
 });
 
@@ -143,9 +147,11 @@ app.get('/api/destinations/:id', async (req, res) => {
 
 app.post('/api/admin/destinations', validateAdmin, async (req, res) => {
   try {
-    const newDest = new Destination(req.body);
+    // Explicitly taking required input for the document
+    const { name, region, description, imageURL, terrainType } = req.body;
+    const newDest = new Destination({ name, region, description, imageURL, terrainType });
     const savedDest = await newDest.save();
-    res.status(201).json(savedDest);
+    res.status(201).json({ message: "UPLINK_SUCCESS: Node stored in yaatri_db.", data: savedDest });
   } catch (err) { res.status(400).json(err); }
 });
 
