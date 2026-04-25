@@ -15,7 +15,7 @@ app.use(express.json());
 
 // --- USER SCHEMA & MODEL ---
 const User = require('./models/User');
-const Destination = require('./models/Destination');
+const Destination = require('./models/Destination.js');
 const Blog = require('./models/Blog');
 
 // --- MONGODB CONNECTION ---
@@ -102,22 +102,12 @@ const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
+const adminRoutes = require('./routes/adminRoute');
+app.use('/api/admin', adminRoutes);
 
 // Get Current User (Persistence Check)
 app.get('/api/auth/me', protect, (req, res) => {
   res.json(req.user);
-});
-
-// Admin Stats
-app.get('/api/admin/stats', validateAdmin, async (req, res) => {
-  const userCount = await User.countDocuments();
-  const nodeCount = await Destination.countDocuments();
-  const blogCount = await Blog.countDocuments();
-  res.json({
-    userCount: userCount,
-    activeNodes: nodeCount,
-    intelStreams: blogCount
-  });
 });
 
 // Settings
