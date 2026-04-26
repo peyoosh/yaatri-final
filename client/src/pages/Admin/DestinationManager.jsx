@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchDestinations, createDestination, deleteDestination } from '../../api/destinationsApi';
+import api from '../../api/axios';
 
 const DestinationManager = () => {
   const [destinations, setDestinations] = useState([]);
@@ -18,9 +18,9 @@ const DestinationManager = () => {
     return { Authorization: `Bearer ${token}` };
   };
 
-  const loadDestinations = async () => {
+  const fetchDestinations = async () => {
     try {
-      const response = await fetchDestinations();
+      const response = await api.get(`/destinations`);
       // Align fetch with potential payload variations
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setDestinations(fetchedData);
@@ -31,7 +31,7 @@ const DestinationManager = () => {
   };
 
   useEffect(() => {
-    loadDestinations();
+    fetchDestinations();
   }, []);
 
   const showFeedback = (type, text) => {
@@ -46,12 +46,14 @@ const DestinationManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await createDestination(formData, { headers: getAuthHeaders() });
+      const response = await api.post(`/admin/destinations`, formData, {
+        headers: getAuthHeaders()
+      });
       
       if (response.status === 201) {
         showFeedback('success', 'NODE_STORED_SUCCESSFULLY');
         setFormData({ name: '', region: '', description: '', imageURL: '', terrainType: 'Hill' });
-        loadDestinations();
+        fetchDestinations();
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'ERROR_STORING_NODE';
@@ -63,7 +65,9 @@ const DestinationManager = () => {
     if (!window.confirm('WARNING: Are you sure you want to permanently purge this node?')) return;
     
     try {
-      await deleteDestination(id, { headers: getAuthHeaders() });
+      await api.delete(`/admin/destinations/${id}`, {
+        headers: getAuthHeaders()
+      });
       showFeedback('success', 'NODE_PURGED_SUCCESSFULLY');
       // Optimistically update the UI by filtering out the purged node
       setDestinations((prev) => prev.filter(dest => dest._id !== id));

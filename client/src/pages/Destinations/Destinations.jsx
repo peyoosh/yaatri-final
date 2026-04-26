@@ -1,17 +1,20 @@
 // client/src/Destinations.jsx
 import React, { useState, useEffect } from 'react';
-import { fetchDestinations } from '../../api/destinationsApi';
+import axios from 'axios';
 
 const Destinations = ({ onSelectNode }) => {
   const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Dynamic global uplink for the API
+  const API_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onrender.com';
+
   useEffect(() => {
-    const loadDestinations = async () => {
+    const fetchDestinations = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('yaatri_token');
-        const res = await fetchDestinations({
+        const res = await axios.get(`${API_URL}/api/destinations`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         // We store the RAW data here. No double-mapping.
@@ -22,8 +25,8 @@ const Destinations = ({ onSelectNode }) => {
         setLoading(false);
       }
     };
-    loadDestinations();
-  }, []); 
+    fetchDestinations();
+  }, []); // Empty array because API_URL is static
 
   const recommended = ["Langtang Valley", "Upper Mustang", "Rara Lake", "Shey Phoksundo"];
 
