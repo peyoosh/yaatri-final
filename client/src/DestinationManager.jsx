@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../api/axios';
+import api from './api/axios';
 
 const DestinationManager = () => {
   const [destinations, setDestinations] = useState([]);
@@ -153,7 +153,7 @@ const DestinationManager = () => {
                       <td className="border-b border-gray-800 p-3 text-right">
                         <button 
                           onClick={() => handleDelete(dest._id)} 
-                          className="text-red-500 hover:text-red-400 text-sm font-semibold border border-red-800 hover:border-red-50 px-3 py-1 rounded transition duration-200"
+                          className="text-red-500 hover:text-red-400 text-sm font-semibold border border-red-800 hover:border-red-500 px-3 py-1 rounded transition duration-200"
                         >
                           Delete Node
                         </button>
