@@ -9,9 +9,7 @@ import ProtectedRoute from './components/Common/ProtectedRoute';
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import Destinations from './pages/Destinations/Destinations';
 import Contact from './pages/Contact/Contact';
-import DestinationManager from './pages/Admin/DestinationManager';
-import BlogManager from './pages/Admin/BlogManager';
-import AdminLayout from './pages/Admin/AdminLayout';
+import AdminDashboard from './pages/Admin/Dashboard';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './index.css';
@@ -76,15 +74,11 @@ const App = () => {
               <UserDashboard user={loggedInUser} />
             </ProtectedRoute>
           } />
-          {/* ADMIN ROUTING: Nested Layout */}
-          <Route path="/admin" element={
+          {/* ADMIN ROUTING: Wildcard delegates all sub-routes to the AdminDashboard router */}
+          <Route path="/admin/*" element={
             <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
-              <AdminLayout />
+              <AdminDashboard />
             </ProtectedRoute>
-          }>
-            <Route index element={<BlogManager />} />
-            <Route path="blogs" element={<BlogManager />} />
-            <Route path="destinations" element={<DestinationManager />} />
           </Route>
         </Routes>
       </main>

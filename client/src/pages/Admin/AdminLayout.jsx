@@ -1,10 +1,10 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { FileText, MapPin, ChevronLeft } from 'lucide-react';
+import { FileText, MapPin, ChevronLeft, Users, Home, Compass } from 'lucide-react';
 // Re-use your existing dashboard styling
 import '../UserDashboard/UserDashboard.css'; 
 
-const AdminLayout = () => {
+const AdminLayout = ({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -16,16 +16,34 @@ const AdminLayout = () => {
         
         <div className="sidebar-menu">
           <button 
-            className={`menu-item ${location.pathname === '/admin' || location.pathname.includes('/blogs') ? 'active' : ''}`}
-            onClick={() => navigate('/admin/blogs')}
+            className={`menu-item ${location.pathname.includes('/usermanagement') ? 'active' : ''}`}
+            onClick={() => navigate('/admin/usermanagement')}
           >
-            <FileText size={18} /> Blog Intel
+            <Users size={18} /> Users
           </button>
           <button 
-            className={`menu-item ${location.pathname.includes('/destinations') ? 'active' : ''}`}
-            onClick={() => navigate('/admin/destinations')}
+            className={`menu-item ${location.pathname.includes('/destinationmanagement') ? 'active' : ''}`}
+            onClick={() => navigate('/admin/destinationmanagement')}
           >
             <MapPin size={18} /> Destinations
+          </button>
+          <button 
+            className={`menu-item ${location.pathname.includes('/blogmanagement') ? 'active' : ''}`}
+            onClick={() => navigate('/admin/blogmanagement')}
+          >
+            <FileText size={18} /> Blogs
+          </button>
+          <button 
+            className={`menu-item ${location.pathname.includes('/hotelmanagement') ? 'active' : ''}`}
+            onClick={() => navigate('/admin/hotelmanagement')}
+          >
+            <Home size={18} /> Hotels
+          </button>
+          <button 
+            className={`menu-item ${location.pathname.includes('/userguidemanagement') ? 'active' : ''}`}
+            onClick={() => navigate('/admin/userguidemanagement')}
+          >
+            <Compass size={18} /> Guides
           </button>
         </div>
 
