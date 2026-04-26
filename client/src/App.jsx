@@ -79,9 +79,9 @@ const App = () => {
             <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
               <AdminDashboard />
             </ProtectedRoute>
-          </Route>
-        </Routes>
-      </main>
+        } />
+      </Routes>
+    </main>
 
       {!isManagementView && (
         <>
