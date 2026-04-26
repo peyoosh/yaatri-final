@@ -28,7 +28,6 @@ mongoose.connect(process.env.MONGO_URI, {
 // Auth Routes (Modular)
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
-app.use('/api/auth/me', require('./routes/authMeRoutes'));
 
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);

@@ -6,10 +6,11 @@ import DestinationDetail from './pages/Destinations/DestinationDetail';
 import BlogModal from './components/common/BlogModal';
 import Auth from './pages/Auth/Auth';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import AdminDashboard from './pages/Admin/Dashboard';
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import Destinations from './pages/Destinations/Destinations';
 import Contact from './pages/Contact/Contact';
+import DestinationManager from './DestinationManager';
+import BlogManager from './BlogManager';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
 import './index.css';
@@ -74,10 +75,20 @@ const App = () => {
               <UserDashboard user={loggedInUser} />
             </ProtectedRoute>
           } />
-          {/* ADMIN ROUTING: Wildcard delegates all sub-routes (usermanagement, etc.) to the AdminDashboard router */}
-          <Route path="/admin/*" element={
+          {/* ADMIN ROUTING: Explicitly linking your Management tools */}
+          <Route path="/admin" element={
             <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
-              <AdminDashboard />
+              <BlogManager /> {/* Default Admin Dashboard View */}
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/blogs" element={
+            <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
+              <BlogManager />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/destinations" element={
+            <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
+              <DestinationManager />
             </ProtectedRoute>
           } />
         </Routes>
