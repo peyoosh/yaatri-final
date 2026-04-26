@@ -22,9 +22,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [userList, setUserList] = useState([]);
-  const [destinations, setDestinations] = useState([]);
-  const [blogPosts, setBlogPosts] = useState([]);
-  const [editingDest, setEditingDest] = useState(null);
   const [safetyConcerns] = useState([
     { id: 1, name: 'Suman Gurung', region: 'Khumbu Node', severity: 'High', log: 'Uplink failure during ascent.' },
     { id: 2, name: 'Rita Tamang', region: 'Mustang', severity: 'Low', log: 'Supply drop delay at node 04.' }
@@ -44,17 +41,14 @@ export default function AdminDashboard() {
     const loadAdminData = async () => {
       try {
         setLoading(true);
-        const [s, d, b, u] = await Promise.all([
+        // Use allSettled so if one fails, the others still succeed
+        const [s, u] = await Promise.allSettled([
           api.get('/admin/stats'),
-          api.get('/destinations'),
-          api.get('/admin/blogs'),
           api.get('/users')
         ]);
 
-        setStats(prev => ({ ...prev, ...s.data }));
-        setDestinations(d.data);
-        setBlogPosts(b.data);
-        setUserList(u.data);
+        if (s.status === 'fulfilled') setStats(prev => ({ ...prev, ...s.value.data }));
+        if (u.status === 'fulfilled') setUserList(u.value.data);
       } catch (err) {
         console.error("ADMIN_AUTH_FAILED", err);
         if (err.response?.status === 401 || err.response?.status === 403) {
@@ -67,35 +61,6 @@ export default function AdminDashboard() {
     loadAdminData();
   }, []); // Empty array ensures this only runs ONCE on mount
 
-  const deletePost = async (id) => {
-    await api.delete(`/blogs/${id}`);
-    setBlogPosts(blogPosts.filter(p => p._id !== id));
-  };
-
-  const deleteDestination = async (rank) => {
-    if (window.confirm(`CONFIRM_DELETION: NODE_${rank}`)) {
-      await api.delete(`/destinations/${rank}`);
-      setDestinations(destinations.filter(d => d.rank !== rank));
-    }
-  };
-
-  const saveDestination = async (e) => {
-    e.preventDefault();
-    if (!editingDest) return;
-
-    const method = editingDest.isNew ? 'post' : 'put';
-    const url = `/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
-
-    try {
-      await apimethod;
-      const d = await api.get('/destinations');
-      setDestinations(d.data);
-      setEditingDest(null);
-    } catch (err) {
-      console.error("SAVE_FAILED", err);
-    }
-  };
-
   const blockUser = (id) => {
     setUserList(userList.map(u => u.id === id ? { ...u, status: u.status === 'Blocked' ? 'Active' : 'Blocked' } : u));
   };
@@ -104,19 +69,6 @@ export default function AdminDashboard() {
     if (window.confirm("PURGE_PROTOCOL: CONFIRM_USER_DELETION? This action is irreversible.")) {
       setUserList(userList.filter(u => u.id !== id));
     }
-  };
-
-  const handleProtocolChange = (index, field, value) => {
-    const newProtocols = [...(editingDest.protocols || [])];
-    newProtocols[index] = { ...newProtocols[index], [field]: value };
-    setEditingDest({ ...editingDest, protocols: newProtocols });
-  };
-
-  const addProtocol = () => {
-    setEditingDest({ 
-      ...editingDest, 
-      protocols: [...(editingDest.protocols || []), { title: '', desc: '' }] 
-    });
   };
 
   // Check for Test Environment
@@ -155,7 +107,7 @@ export default function AdminDashboard() {
           } />
           <Route path="blogmanagement" element={
             <ErrorBoundary>
-              <BlogManager blogPosts={blogPosts} deletePost={deletePost} />
+            <BlogManager />
             </ErrorBoundary>
           } />
           <Route path="hotelmanagement" element={<ErrorBoundary><HotelManager /></ErrorBoundary>} />
