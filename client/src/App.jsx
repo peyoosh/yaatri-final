@@ -11,6 +11,7 @@ import Destinations from './pages/Destinations/Destinations';
 import Contact from './pages/Contact/Contact';
 import DestinationManager from './pages/Admin/DestinationManager';
 import BlogManager from './pages/Admin/BlogManager';
+import AdminLayout from './pages/Admin/AdminLayout';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './index.css';
@@ -75,22 +76,16 @@ const App = () => {
               <UserDashboard user={loggedInUser} />
             </ProtectedRoute>
           } />
-          {/* ADMIN ROUTING: Explicitly linking your Management tools */}
+          {/* ADMIN ROUTING: Nested Layout */}
           <Route path="/admin" element={
             <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
-              <BlogManager /> {/* Default Admin Dashboard View */}
+              <AdminLayout />
             </ProtectedRoute>
-          } />
-          <Route path="/admin/blogs" element={
-            <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
-              <BlogManager />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/destinations" element={
-            <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
-              <DestinationManager />
-            </ProtectedRoute>
-          } />
+          }>
+            <Route index element={<BlogManager />} />
+            <Route path="blogs" element={<BlogManager />} />
+            <Route path="destinations" element={<DestinationManager />} />
+          </Route>
         </Routes>
       </main>
 
