@@ -1,6 +1,7 @@
 // client/src/Destinations.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { fetchDestinations } from '../../api/destinationsApi';
 
 const Destinations = ({ onSelectNode }) => {
   const [sectors, setSectors] = useState([]);
@@ -11,10 +12,12 @@ const Destinations = ({ onSelectNode }) => {
 
   useEffect(() => {
     const fetchDestinations = async () => {
+    const loadDestinations = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('yaatri_token');
         const res = await axios.get(`${API_URL}/api/destinations`, {
+        const res = await fetchDestinations({
           headers: { Authorization: `Bearer ${token}` }
         });
         // We store the RAW data here. No double-mapping.
@@ -27,6 +30,8 @@ const Destinations = ({ onSelectNode }) => {
     };
     fetchDestinations();
   }, []); // Empty array because API_URL is static
+    loadDestinations();
+  }, []); 
 
   const recommended = ["Langtang Valley", "Upper Mustang", "Rara Lake", "Shey Phoksundo"];
 
