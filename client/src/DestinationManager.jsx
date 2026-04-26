@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api/axios';
 
 const DestinationManager = () => {
   const [destinations, setDestinations] = useState([]);
@@ -12,9 +12,6 @@ const DestinationManager = () => {
   });
   const [feedback, setFeedback] = useState(null);
 
-  // Dynamic Uplink for Production
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onrender.com/api';
-
   // Utility to get auth token headers for your validateAdmin protected routes
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token'); 
@@ -23,7 +20,7 @@ const DestinationManager = () => {
 
   const fetchDestinations = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/destinations`);
+      const response = await api.get(`/destinations`);
       // Align fetch with potential payload variations
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setDestinations(fetchedData);
@@ -49,7 +46,7 @@ const DestinationManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API_BASE_URL}/admin/destinations`, formData, {
+      const response = await api.post(`/admin/destinations`, formData, {
         headers: getAuthHeaders()
       });
       
@@ -68,7 +65,7 @@ const DestinationManager = () => {
     if (!window.confirm('WARNING: Are you sure you want to permanently purge this node?')) return;
     
     try {
-      await axios.delete(`${API_BASE_URL}/admin/destinations/${id}`, {
+      await api.delete(`/admin/destinations/${id}`, {
         headers: getAuthHeaders()
       });
       showFeedback('success', 'NODE_PURGED_SUCCESSFULLY');

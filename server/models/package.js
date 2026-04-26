@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const packageSchema = new mongoose.Schema({
     title: String,
     destination: { type: mongoose.Schema.Types.ObjectId, ref: 'Destination' },
@@ -6,3 +8,5 @@ const packageSchema = new mongoose.Schema({
     itinerary: [{ day: Number, activity: String }],
     isVerified: { type: Boolean, default: false } // For "verified local packages"
 });
+
+module.exports = mongoose.model('Package', packageSchema);

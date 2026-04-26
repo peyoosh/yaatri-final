@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api/axios';
 
 const BlogManager = () => {
   const [blogs, setBlogs] = useState([]);
   const [feedback, setFeedback] = useState(null);
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onrender.com/api';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -14,7 +12,7 @@ const BlogManager = () => {
 
   const fetchBlogs = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/blogs`, {
+      const response = await api.get(`/admin/blogs`, {
         headers: getAuthHeaders()
       });
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
@@ -38,7 +36,7 @@ const BlogManager = () => {
     if (!window.confirm('WARNING: Are you sure you want to permanently purge this blog?')) return;
     
     try {
-      await axios.delete(`${API_BASE_URL}/blogs/${id}`, {
+      await api.delete(`/blogs/${id}`, {
         headers: getAuthHeaders()
       });
       showFeedback('success', 'BLOG_PURGED_SUCCESSFULLY');
@@ -52,7 +50,7 @@ const BlogManager = () => {
     if (!window.confirm('Notice: Flagging this blog will hide it from the public feed.')) return;
 
     try {
-      await axios.patch(`${API_BASE_URL}/admin/blogs/${id}/flag`, {}, {
+      await api.patch(`/admin/blogs/${id}/flag`, {}, {
         headers: getAuthHeaders()
       });
       showFeedback('success', 'BLOG_FLAGGED_SUCCESSFULLY');
