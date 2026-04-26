@@ -1,29 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Destination = require('../models/Destination');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-
-const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
-
-// --- REUSABLE MIDDLEWARE ---
-const validateAdmin = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: "NO_TOKEN_PROVIDED" });
-
-    const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    const user = await User.findById(decoded.id);
-    if (!user || !user.isAdmin) {
-      return res.status(403).json({ error: "ADMIN_PRIVILEGES_REQUIRED" });
-    }
-    next();
-  } catch (err) {
-    res.status(401).json({ error: "AUTH_SESSION_EXPIRED" });
-  }
-};
+const { validateAdmin } = require('../middleware/authMiddleware');
 
 // --- PUBLIC: FETCH ALL NODES ---
 router.get('/', async (req, res) => {

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Blog = require('../models/Blog');
+const { protect } = require('../middleware/authMiddleware');
 
 // GET: Fetch all published blogs for the public feed
 router.get('/', async (req, res) => {
@@ -13,13 +14,13 @@ router.get('/', async (req, res) => {
 });
 
 // POST: Create a new blog
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
   try {
     const { title, content, images, locationNode } = req.body;
     const newBlog = new Blog({
       title,
       content,
-      authorId: req.user ? req.user._id : null, // If using auth middleware
+      authorId: req.user._id, // Safely guaranteed by protect middleware
       locationNode,
       images,
       status: 'published'
@@ -30,7 +31,7 @@ router.post('/', async (req, res) => {
 });
 
 // PATCH: Report a blog
-router.patch('/:id/report', async (req, res) => {
+router.patch('/:id/report', protect, async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
