@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useAnimationFrame } from 'framer-motion';
 import { MapPin, Eye, Headset, Calendar, Award, Compass, CloudSun } from 'lucide-react';
-import api from '../../api/axios';
+import { fetchDestinations } from '../../api/destinationsApi';
+import { fetchSettings } from '../../api/settingsApi';
 
 const fadeIn = {
   initial: { opacity: 0, y: 30 },
@@ -18,8 +19,8 @@ const Home = ({ onNavigate, onSelectNode }) => {
   
   useEffect(() => {
     const fetchData = async () => {
-      const dests = await api.get(`/destinations`);
-      const settings = await api.get(`/settings`);
+      const dests = await fetchDestinations();
+      const settings = await fetchSettings();
       setTopModules(dests.data);
       setMarqueeTitle(settings.data.marqueeTitle);
     };

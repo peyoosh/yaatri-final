@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../api/axios';
+import { fetchAdminBlogs, flagAdminBlog } from '../../api/adminBlogsApi';
+import { deleteBlog } from '../../api/blogsApi';
 
 const BlogManager = () => {
   const [blogs, setBlogs] = useState([]);
@@ -10,11 +11,9 @@ const BlogManager = () => {
     return { Authorization: `Bearer ${token}` };
   };
 
-  const fetchBlogs = async () => {
+  const loadBlogs = async () => {
     try {
-      const response = await api.get(`/admin/blogs`, {
-        headers: getAuthHeaders()
-      });
+      const response = await fetchAdminBlogs({ headers: getAuthHeaders() });
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setBlogs(fetchedData);
     } catch (error) {
@@ -24,7 +23,7 @@ const BlogManager = () => {
   };
 
   useEffect(() => {
-    fetchBlogs();
+    loadBlogs();
   }, []);
 
   const showFeedback = (type, text) => {
@@ -36,9 +35,7 @@ const BlogManager = () => {
     if (!window.confirm('WARNING: Are you sure you want to permanently purge this blog?')) return;
     
     try {
-      await api.delete(`/blogs/${id}`, {
-        headers: getAuthHeaders()
-      });
+      await deleteBlog(id, { headers: getAuthHeaders() });
       showFeedback('success', 'BLOG_PURGED_SUCCESSFULLY');
       setBlogs((prev) => prev.filter(blog => blog._id !== id));
     } catch (error) {
@@ -50,9 +47,7 @@ const BlogManager = () => {
     if (!window.confirm('Notice: Flagging this blog will hide it from the public feed.')) return;
 
     try {
-      await api.patch(`/admin/blogs/${id}/flag`, {}, {
-        headers: getAuthHeaders()
-      });
+      await flagAdminBlog(id, { headers: getAuthHeaders() });
       showFeedback('success', 'BLOG_FLAGGED_SUCCESSFULLY');
       // Optimistically update the UI to show the blog as flagged
       setBlogs((prev) => prev.map(blog => blog._id === id ? { ...blog, status: 'flagged' } : blog));

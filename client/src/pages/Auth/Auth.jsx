@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
-import api from '../../api/axios';
+import { loginUser, registerUser } from '../../api/authApi';
 
 const Auth = ({ onLoginSuccess }) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,7 +19,6 @@ const Auth = ({ onLoginSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const endpoint = isLogin ? 'login' : 'register';
     
     // If login, we send email/phone as 'identifier' to match the server logic
     const payload = isLogin 
@@ -27,7 +26,7 @@ const Auth = ({ onLoginSuccess }) => {
       : formData;
 
     try {
-      const res = await api.post(`/auth/${endpoint}`, payload);
+      const res = await (isLogin ? loginUser(payload) : registerUser(payload));
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
         localStorage.setItem('yaatri_user', JSON.stringify(res.data.user));
