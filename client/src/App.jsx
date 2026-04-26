@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Globe, Map, Compass, User, LogOut } from 'lucide-react';
 import Home from './Home';
 import Blog from './Blog';
 import DestinationDetail from './DestinationDetail';
@@ -12,12 +10,12 @@ import AdminDashboard from './pages/Admin/Dashboard';
 import UserDashboard from './UserDashboard';
 import Destinations from './Destinations';
 import { AuthProvider } from './context/AuthContext';
+import Navbar from './Navbar';
 import './index.css';
 
 const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isExploreOpen, setIsExploreOpen] = useState(false);
   // Initialize state directly from localStorage to prevent redirect flickers
   const [loggedInUser, setLoggedInUser] = useState(() => {
     const saved = localStorage.getItem('yaatri_user');
@@ -87,88 +85,7 @@ const App = () => {
     <AuthProvider>
     <div className={isManagementView ? "management-shell" : "app-shell"}>
       {!isManagementView && (
-      <nav className="navbar-main">
-        {/* LEFT: BRANDING */}
-        <div 
-          className="nav-brand"
-          onClick={() => navigate('/')}
-        >
-          YAATRI
-        </div>
-
-        {/* RIGHT: NAVIGATION & ACTIONS */}
-        <div className="nav-actions">
-          <div className="nav-links-container">
-            <span className={`nav-link-block ${location.pathname === '/destinations' ? 'active' : ''}`} onClick={() => navigate('/destinations')}>Destinations</span>
-            <span className={`nav-link-block ${location.pathname === '/blog' ? 'active' : ''}`} onClick={() => navigate('/blog')}>Blog</span>
-            <span className={`nav-link-block ${location.pathname === '/contact' ? 'active' : ''}`} onClick={() => navigate('/contact')}>Contact</span>
-            <div 
-              className="relative"
-              onMouseEnter={() => setIsExploreOpen(true)}
-              onMouseLeave={() => setIsExploreOpen(false)}
-            >
-              <span className="nav-link-block flex items-center gap-2">
-                Explore <ChevronDown size={14} className={`transition-transform duration-300 ${isExploreOpen ? 'rotate-180' : ''}`} />
-              </span>
-              <AnimatePresence>
-                {isExploreOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="nav-dropdown"
-                  >
-                    <div className="nav-link-block" style={{ fontSize: '0.7rem' }}>Safari Expeditions</div>
-                    <div className="nav-link-block" style={{ fontSize: '0.7rem' }}>Mountain Treks</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-          {loggedInUser?.role === 'author' && (
-            <span className="nav-link-block" style={{ color: 'var(--terai-harvest)', cursor: 'pointer' }} onClick={() => navigate('/admin')}>
-              ADMIN_DASHBOARD
-            </span>
-          )}
-          {loggedInUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-              <div 
-                className="nav-link-block flex items-center gap-2" 
-                style={{ color: 'var(--hill-green)', cursor: 'pointer' }} 
-                onClick={() => navigate('/dashboard')}
-              >
-                <User size={18} />
-                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                  @{loggedInUser.username.toUpperCase()}
-                </span>
-              </div>
-              <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                <LogOut size={16} />
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', gap: '1.5rem' }}>
-              {(() => {
-                const isAuthPage = location.pathname === '/auth';
-                const isLoginMode = new URLSearchParams(location.search).get('mode') !== 'signup';
-                
-                if (isAuthPage) {
-                  return isLoginMode ? (
-                    <span className="nav-link-block" onClick={() => navigate('/auth?mode=signup')}>Sign up</span>
-                  ) : (
-                    <span className="nav-link-block" onClick={() => navigate('/auth?mode=login')}>Sign in</span>
-                  );
-                }
-
-                return [
-                  <span key="in" className="nav-link-block" onClick={() => navigate('/auth?mode=login')}>Sign in</span>,
-                  <span key="up" className="nav-link-block" onClick={() => navigate('/auth?mode=signup')}>Sign up</span>
-                ];
-              })()}
-            </div>
-          )}
-        </div>
-      </nav>
+        <Navbar loggedInUser={loggedInUser} handleLogout={handleLogout} />
       )}
 
       <main className={isManagementView ? "management-main" : "main-content animate-alive"}>
