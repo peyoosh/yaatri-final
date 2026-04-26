@@ -12,7 +12,7 @@ import Contact from './pages/Contact/Contact';
 import DestinationManager from './pages/Admin/DestinationManager';
 import BlogManager from './pages/Admin/BlogManager';
 import { AuthProvider } from './context/AuthContext';
-import Navbar from './components/layout/Navbar';
+import Navbar from './components/Layout/Navbar';
 import './index.css';
 
 const App = () => {
