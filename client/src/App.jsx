@@ -1,30 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-<<<<<<< HEAD
-import Home from './Home';
-import Blog from './Blog';
-import DestinationDetail from './DestinationDetail';
-import BlogModal from './BlogModal';
-import Auth from './Auth';
-import ProtectedRoute from './components/ProtectedRoute';
-=======
 import Home from './pages/Home/Home';
 import Blog from './pages/Blog/Blog';
 import DestinationDetail from './pages/Destinations/DestinationDetail';
 import BlogModal from './components/common/BlogModal';
 import Auth from './pages/Auth/Auth';
 import ProtectedRoute from './components/common/ProtectedRoute';
->>>>>>> 5b1aa70e02203f3b3fb4c16d3f5d54b19eb8c3af
 import AdminDashboard from './pages/Admin/Dashboard';
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import Destinations from './pages/Destinations/Destinations';
 import Contact from './pages/Contact/Contact';
 import { AuthProvider } from './context/AuthContext';
-<<<<<<< HEAD
-import Navbar from './Navbar';
-=======
 import Navbar from './components/layout/Navbar';
->>>>>>> 5b1aa70e02203f3b3fb4c16d3f5d54b19eb8c3af
 import './index.css';
 
 const App = () => {
