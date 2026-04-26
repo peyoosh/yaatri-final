@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 // Layout and Core Components
@@ -16,20 +15,7 @@ import GuideManager from './GuideManager';
 import HotelManager from './HotelManager';
 
 import './Dashboard.css';
-
-// Setup Axios Global Interceptor
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yaatri-backend.onrender.com/api';
-const apiClient = axios.create({ baseURL: API_BASE_URL });
-
-apiClient.interceptors.request.use(config => {
-  const token = localStorage.getItem('yaatri_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-}, error => {
-  return Promise.reject(error);
-});
+import api from '../../api/axios';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -59,12 +45,10 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const [s, d, b, u] = await Promise.all([
-          apiClient.get('/admin/stats', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          apiClient.get('/destinations'),
-          apiClient.get('/admin/blogs'),
-          apiClient.get('/users')
+          api.get('/admin/stats'),
+          api.get('/destinations'),
+          api.get('/admin/blogs'),
+          api.get('/users')
         ]);
 
         setStats(prev => ({ ...prev, ...s.data }));
@@ -84,13 +68,13 @@ export default function AdminDashboard() {
   }, []); // Empty array ensures this only runs ONCE on mount
 
   const deletePost = async (id) => {
-    await apiClient.delete(`/blogs/${id}`);
+    await api.delete(`/blogs/${id}`);
     setBlogPosts(blogPosts.filter(p => p._id !== id));
   };
 
   const deleteDestination = async (rank) => {
     if (window.confirm(`CONFIRM_DELETION: NODE_${rank}`)) {
-      await apiClient.delete(`/destinations/${rank}`);
+      await api.delete(`/destinations/${rank}`);
       setDestinations(destinations.filter(d => d.rank !== rank));
     }
   };
@@ -103,8 +87,8 @@ export default function AdminDashboard() {
     const url = `/destinations${editingDest.isNew ? '' : '/' + editingDest.rank}`;
 
     try {
-      await apiClientmethod;
-      const d = await apiClient.get('/destinations');
+      await apimethod;
+      const d = await api.get('/destinations');
       setDestinations(d.data);
       setEditingDest(null);
     } catch (err) {
@@ -136,7 +120,7 @@ export default function AdminDashboard() {
   };
 
   // Check for Test Environment
-  const isTestEnv = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
+  const isTestEnv = api.defaults.baseURL.includes('localhost') || api.defaults.baseURL.includes('127.0.0.1');
   const notificationMessage = isTestEnv ? "[TEST] environment active. Data is not reflective of the live [YAATRI] database." : null;
 
   if (loading) {
