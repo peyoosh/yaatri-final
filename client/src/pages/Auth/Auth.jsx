@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, UserPlus, LogIn } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import api from '../../api/axios';
 
 const Auth = ({ onLoginSuccess }) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -10,8 +10,6 @@ const Auth = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({ username: '', email: '', phoneNumber: '', password: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
 
   useEffect(() => {
     const mode = searchParams.get('mode');
@@ -21,7 +19,6 @@ const Auth = ({ onLoginSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const BASE_URL = `${API_BASE_URL}/api/auth`;
     const endpoint = isLogin ? 'login' : 'register';
     
     // If login, we send email/phone as 'identifier' to match the server logic
@@ -30,7 +27,7 @@ const Auth = ({ onLoginSuccess }) => {
       : formData;
 
     try {
-      const res = await axios.post(`${BASE_URL}/${endpoint}`, payload);
+      const res = await api.post(`/auth/${endpoint}`, payload);
       if (isLogin) {
         localStorage.setItem('yaatri_token', res.data.token);
         localStorage.setItem('yaatri_user', JSON.stringify(res.data.user));

@@ -1,5 +1,5 @@
 .user-dashboard-layout { display: flex; min-height: 100vh; background: #0d0a02; color: #fff; font-family: 'Inter', sans-serif; }
-.user-sidebar { width: 240px; background: rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.05); padding: 2rem 1.5rem; display: flex; flexDirection: column; }
+.user-sidebar { width: 240px; background: rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.05); padding: 2rem 1.5rem; display: flex; flex-direction: column; }
 .sidebar-brand { font-size: 1.5rem; font-weight: 900; letter-spacing: 4px; color: var(--hill-green); margin-bottom: 3rem; cursor: pointer; }
 .sidebar-menu { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
 .menu-item { background: none; border: none; color: rgba(255,255,255,0.6); padding: 12px 1rem; text-align: left; display: flex; align-items: center; gap: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; border-radius: 6px; }
