@@ -15,7 +15,7 @@ app.use(express.json());
 
 // --- MONGODB CONNECTION ---
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
-mongoose.connect(process.env.MONGO_URI, {
+mongoose.connect(MONGO_URI, {
   dbName: 'yaatri'
 })
   .then(() => {
@@ -23,27 +23,37 @@ mongoose.connect(process.env.MONGO_URI, {
   })
   .catch(err => console.error("DATABASE_CONNECTION_ERROR:", err));
 
+// --- SAFE ROUTE LOADER ---
+// Prevents deployment crashes by ignoring missing route files until you create them.
+const safeRoute = (routePath) => {
+  try {
+    return require(routePath);
+  } catch (err) {
+    if (err.code === 'MODULE_NOT_FOUND') {
+      console.warn(`[WARNING] Missing route file: ${routePath}. Returning placeholder.`);
+      return express.Router();
+    }
+    throw err;
+  }
+};
+
 // --- ENDPOINTS ---
 
 // Auth Routes (Modular)
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
-
-const userRoutes = require('./routes/userRoutes');
-app.use('/api/users', userRoutes);
-const adminRoutes = require('./routes/adminRoute');
-app.use('/api/admin', adminRoutes);
+app.use('/api/auth', safeRoute('./routes/auth'));
+app.use('/api/users', safeRoute('./routes/userRoutes'));
+app.use('/api/admin', safeRoute('./routes/adminRoute'));
 
 // Settings
-app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/settings', safeRoute('./routes/settingsRoutes'));
 
 // Admin Blog Routes
-app.use('/api/admin/blogs', require('./routes/adminBlogRoutes'));
+app.use('/api/admin/blogs', safeRoute('./routes/adminBlogRoutes'));
 
 // Destinations
-app.use('/api/destinations', require('./routes/destinationRoutes'));
+app.use('/api/destinations', safeRoute('./routes/destinationRoutes'));
 
 // Blogs
-app.use('/api/blogs', require('./routes/blogRoutes'));
+app.use('/api/blogs', safeRoute('./routes/blogRoutes'));
 
 app.listen(PORT, () => console.log(`YAATRI_HUB online at port ${PORT}`));
