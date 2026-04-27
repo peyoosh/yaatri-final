@@ -56,7 +56,11 @@ const Destinations = ({ onSelectNode }) => {
           ) : sectors.length === 0 ? (
             <p className="sidebar-kicker">ZERO_NODES_ACTIVE. POPULATE_VIA_ADMIN_PANEL.</p>
           ) : (
-            sectors.map((dest, index) => (
+            sectors.map((dest, index) => {
+              // Force description to be an empty string if it comes back null from MongoDB
+              const safeDescription = dest.description || "";
+              
+              return (
               <div 
                 key={dest._id} 
                 className="rank-card" 
@@ -78,11 +82,11 @@ const Destinations = ({ onSelectNode }) => {
                   <p className="rank-region">{dest.region}</p>
                   <h3 className="rank-title">{dest.name}</h3>
                   <p className="rank-stats">
-                    {dest.description ? `${dest.description.substring(0, 60)}...` : 'NO_DATA_PULLED'}
+                    {safeDescription ? `${safeDescription.substring(0, 60)}...` : 'NO_DATA_PULLED'}
                   </p>
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
       </main>
