@@ -3,7 +3,13 @@ import axios from 'axios';
 // 1. FOOLPROOF URL NORMALIZER: 
 // Strips trailing slashes and guarantees '/api' is attached, 
 // protecting against typos in your .env deployment variables.
-let rawBaseURL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+
+// DYNAMIC FALLBACK: If Vite doesn't find an env variable, check the browser's URL.
+const fallbackURL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://yaatri-backend.onrender.com'; // ⚠️ Replace this with your actual live backend Render URL!
+
+let rawBaseURL = (import.meta.env.VITE_API_URL || fallbackURL).replace(/\/+$/, '');
 if (!rawBaseURL.endsWith('/api')) {
   rawBaseURL += '/api';
 }

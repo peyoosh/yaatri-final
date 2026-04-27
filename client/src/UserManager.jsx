@@ -57,18 +57,22 @@ export default function UserManager({
               </tr>
             </thead>
             <tbody>
-              {userList.map(u => (
-                <tr key={u.id}>
-                  <td>#{u.id.toString().padStart(3, '0')}</td>
-                  <td className="highlight-text" onClick={() => setViewingProfile(u)}>{u.username}</td>
-                  <td>{u.role.toUpperCase()}</td>
+              {userList.map(u => {
+                // Fallback to _id if id is undefined (common with MongoDB data)
+                const userId = u.id || u._id || '000';
+                
+                return (
+                <tr key={userId}>
+                  <td>#{userId.toString().padStart(3, '0')}</td>
+                  <td className="highlight-text" onClick={() => setViewingProfile(u)}>{u.username || 'UNKNOWN'}</td>
+                  <td>{u.role?.toUpperCase() || 'UNKNOWN'}</td>
                   <td className="actions-cell">
-                    <button onClick={() => navigate(`/admin/blogmanagement?id=${u.id}`)} className="action-btn info">VIEW_BLOGS</button>
-                    <button onClick={() => blockUser(u.id)} className="action-btn warn">{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
-                    <button onClick={() => deleteUser(u.id)} className="action-btn danger">PURGE</button>
+                    <button onClick={() => navigate(`/admin/blogmanagement?id=${userId}`)} className="action-btn info">VIEW_BLOGS</button>
+                    <button onClick={() => blockUser(userId)} className="action-btn warn">{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
+                    <button onClick={() => deleteUser(userId)} className="action-btn danger">PURGE</button>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
