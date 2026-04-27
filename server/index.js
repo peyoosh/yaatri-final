@@ -45,4 +45,7 @@ app.use('/api/destinations', require('./routes/destinationRoutes'));
 // Blogs
 app.use('/api/blogs', require('./routes/blogRoutes'));
 
+// AI Authentic Guide
+app.use('/api/ai', require('./routes/aiRoute'));
+
 app.listen(PORT, () => console.log(`YAATRI_HUB online at port ${PORT}`));
