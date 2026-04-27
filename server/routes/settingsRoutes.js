@@ -1,17 +1,32 @@
 const express = require('express');
 const router = express.Router();
 const { validateAdmin } = require('../middleware/authMiddleware');
+const Setting = require('../models/Setting');
 
-// In-memory storage for the marquee title
-let marqueeTitle = "SYNCING_ATMOSPHERE... REAL-TIME TERRAIN ANALYSIS ACTIVE";
-
-router.get('/', (req, res) => {
-  res.json({ marqueeTitle });
+router.get('/', async (req, res) => {
+  try {
+    let settings = await Setting.findOne();
+    if (!settings) {
+      settings = await Setting.create({});
+    }
+    res.json({ marqueeTitle: settings.marqueeTitle });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch settings" });
+  }
 });
 
-router.post('/', validateAdmin, (req, res) => {
-  if (req.body.marqueeTitle) marqueeTitle = req.body.marqueeTitle;
-  res.json({ success: true, marqueeTitle });
+router.post('/', validateAdmin, async (req, res) => {
+  try {
+    let settings = await Setting.findOne();
+    if (!settings) {
+      settings = new Setting();
+    }
+    if (req.body.marqueeTitle) settings.marqueeTitle = req.body.marqueeTitle;
+    await settings.save();
+    res.json({ success: true, marqueeTitle: settings.marqueeTitle });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update settings" });
+  }
 });
 
 module.exports = router;

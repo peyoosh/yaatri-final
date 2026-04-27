@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Destination = require('../models/Destination');
+const { validateAdmin } = require('../middleware/authMiddleware');
 
 // @route   GET /api/destinations
 // @desc    Get all destinations (sorted by popularity)
@@ -34,7 +35,7 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/destinations
 // @desc    Create a new destination node
 // @access  Private/Admin
-router.post('/', async (req, res) => {
+router.post('/', validateAdmin, async (req, res) => {
   try {
     const newDestination = new Destination(req.body);
     const savedDestination = await newDestination.save();
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
 // @route   PUT /api/destinations/:id
 // @desc    Update an existing destination node
 // @access  Private/Admin
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateAdmin, async (req, res) => {
   try {
     const updatedDestination = await Destination.findByIdAndUpdate(
       req.params.id,
@@ -68,7 +69,7 @@ router.put('/:id', async (req, res) => {
 // @route   DELETE /api/destinations/:id
 // @desc    Purge a destination node
 // @access  Private/Admin
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', validateAdmin, async (req, res) => {
   try {
     const deletedDestination = await Destination.findByIdAndDelete(req.params.id);
     if (!deletedDestination) {
@@ -82,4 +83,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-export default Destinations;
