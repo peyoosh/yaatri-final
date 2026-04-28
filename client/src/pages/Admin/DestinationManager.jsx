@@ -12,16 +12,14 @@ const DestinationManager = () => {
   });
   const [feedback, setFeedback] = useState(null);
 
-  // Utility to get auth token headers for your validateAdmin protected routes
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token'); 
+    const token = localStorage.getItem('token') || localStorage.getItem('yaatri_token'); 
     return { Authorization: `Bearer ${token}` };
   };
 
   const fetchDestinations = async () => {
     try {
       const response = await api.get(`/destinations`);
-      // Align fetch with potential payload variations
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setDestinations(fetchedData);
     } catch (error) {
@@ -69,7 +67,6 @@ const DestinationManager = () => {
         headers: getAuthHeaders()
       });
       showFeedback('success', 'NODE_PURGED_SUCCESSFULLY');
-      // Optimistically update the UI by filtering out the purged node
       setDestinations((prev) => prev.filter(dest => dest._id !== id));
     } catch (error) {
       showFeedback('error', 'ERROR_PURGING_NODE');
@@ -77,100 +74,94 @@ const DestinationManager = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 p-8 font-sans">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-green-500 border-b border-green-800 pb-2">
-          Destination Hub Manager
-        </h1>
+    <>
+      <h2 className="page-title">DESTINATION_HUB_MANAGER</h2>
 
-        {/* Real-time Feedback Banner */}
-        {feedback && (
-          <div className={`mb-6 p-4 rounded border font-mono tracking-tight ${feedback.type === 'success' ? 'bg-green-900 border-green-500 text-green-100' : 'bg-red-900 border-red-500 text-red-100'}`}>
-             [SYSTEM_STATUS]: {feedback.text}
-          </div>
-        )}
+      {feedback && (
+        <div className={`notification-bar`} style={{ 
+          marginBottom: '2rem', 
+          borderRadius: '4px',
+          backgroundColor: feedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+          color: feedback.type === 'success' ? 'var(--hill-green)' : 'var(--danger-red)',
+          border: `1px solid ${feedback.type === 'success' ? 'var(--hill-green)' : 'var(--danger-red)'}`
+        }}>
+          [SYSTEM_STATUS]: {feedback.text}
+        </div>
+      )}
 
-        {/* Grid-Based Data Entry Form */}
-        <div className="bg-gray-900 p-6 rounded-lg border border-green-700 shadow-lg shadow-green-900/20 mb-10">
-          <h2 className="text-xl font-semibold mb-4 text-green-400">Populate New Node</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 mb-1">Name</label>
-              <input type="text" name="name" value={formData.name} onChange={handleChange} required className="bg-gray-800 border border-green-800 rounded p-2 focus:outline-none focus:border-green-500 text-white" />
+      <section className="table-section destination-editor">
+        <h3 className="section-title">Populate New Node</h3>
+        <div className="table-wrapper" style={{ padding: '1.5rem' }}>
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Name</label>
+                <input type="text" name="name" value={formData.name} onChange={handleChange} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Region</label>
+                <input type="text" name="region" value={formData.region} onChange={handleChange} required />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Description</label>
+                <textarea name="description" value={formData.description} onChange={handleChange} required rows="3"></textarea>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Image URL</label>
+                <input type="url" name="imageURL" value={formData.imageURL} onChange={handleChange} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Terrain Type</label>
+                <select name="terrainType" value={formData.terrainType} onChange={handleChange} style={{ width: '100%', background: 'var(--border-light-1)', border: '1px solid var(--border-light-3)', color: 'var(--himalayan-mist)', padding: '10px 1rem', borderRadius: '4px', fontSize: '0.8rem', minHeight: '38px' }}>
+                  <option value="Himalayan" style={{ background: 'var(--obsidian)' }}>Himalayan</option>
+                  <option value="Hill" style={{ background: 'var(--obsidian)' }}>Hill</option>
+                  <option value="Terai" style={{ background: 'var(--obsidian)' }}>Terai</option>
+                </select>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 mb-1">Region</label>
-              <input type="text" name="region" value={formData.region} onChange={handleChange} required className="bg-gray-800 border border-green-800 rounded p-2 focus:outline-none focus:border-green-500 text-white" />
-            </div>
-            <div className="flex flex-col md:col-span-2">
-              <label className="text-sm text-gray-400 mb-1">Description</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} required rows="3" className="bg-gray-800 border border-green-800 rounded p-2 focus:outline-none focus:border-green-500 text-white"></textarea>
-            </div>
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 mb-1">Image URL</label>
-              <input type="url" name="imageURL" value={formData.imageURL} onChange={handleChange} required className="bg-gray-800 border border-green-800 rounded p-2 focus:outline-none focus:border-green-500 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-400 mb-1">Terrain Type</label>
-              <select name="terrainType" value={formData.terrainType} onChange={handleChange} className="bg-gray-800 border border-green-800 rounded p-2 focus:outline-none focus:border-green-500 text-white">
-                <option value="Himalayan">Himalayan</option>
-                <option value="Hill">Hill</option>
-                <option value="Terai">Terai</option>
-              </select>
-            </div>
-            <div className="md:col-span-2 flex justify-end mt-2">
-              <button type="submit" className="bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-6 rounded transition duration-200 border border-green-500">
-                Store Node
-              </button>
+            <div className="form-actions">
+              <button type="submit" className="action-btn info" style={{ border: '1px solid var(--hill-green)', padding: '0.5rem 1rem', borderRadius: '4px' }}>STORE_NODE</button>
             </div>
           </form>
         </div>
+      </section>
 
-        {/* Management Table */}
-        <div className="bg-gray-900 p-6 rounded-lg border border-green-700 shadow-lg shadow-green-900/20">
-          <h2 className="text-xl font-semibold mb-4 text-green-400">Active Destinations</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-800 text-gray-300">
-                  <th className="border-b border-green-800 p-3">Name</th>
-                  <th className="border-b border-green-800 p-3">Region</th>
-                  <th className="border-b border-green-800 p-3">Terrain</th>
-                  <th className="border-b border-green-800 p-3">Score</th>
-                  <th className="border-b border-green-800 p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {destinations.length > 0 ? (
-                  destinations.map((dest) => (
-                    <tr key={dest._id} className="hover:bg-gray-800/50 transition duration-150">
-                      <td className="border-b border-gray-800 p-3 font-medium text-gray-200">{dest.name}</td>
-                      <td className="border-b border-gray-800 p-3 text-gray-400">{dest.region}</td>
-                      <td className="border-b border-gray-800 p-3 text-gray-400">
-                        <span className="bg-gray-800 px-2 py-1 rounded text-xs border border-green-900 text-green-300">{dest.terrainType}</span>
-                      </td>
-                      <td className="border-b border-gray-800 p-3 text-gray-400">{dest.popularityScore || 0}</td>
-                      <td className="border-b border-gray-800 p-3 text-right">
-                        <button 
-                          onClick={() => handleDelete(dest._id)} 
-                          className="text-red-500 hover:text-red-400 text-sm font-semibold border border-red-800 hover:border-red-50 px-3 py-1 rounded transition duration-200"
-                        >
-                          Delete Node
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="p-4 text-center text-gray-500 italic">No nodes currently populated.</td>
+      <section className="table-section">
+        <h3 className="section-title">Active Destinations</h3>
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>NAME</th>
+                <th>REGION</th>
+                <th>TERRAIN</th>
+                <th>SCORE</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {destinations.length > 0 ? (
+                destinations.map((dest) => (
+                  <tr key={dest._id}>
+                    <td className="highlight-text">{dest.name}</td>
+                    <td>{dest.region}</td>
+                    <td><span className="severity-tag low">{dest.terrainType}</span></td>
+                    <td>{dest.popularityScore || 0}</td>
+                    <td className="actions-cell">
+                      <button onClick={() => handleDelete(dest._id)} className="action-btn danger">Delete Destination</button>
+                    </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No nodes currently populated.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
-    </div>
+      </section>
+    </>
   );
 };
 

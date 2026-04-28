@@ -92,7 +92,7 @@ const App = () => {
       />
 
       <footer className="system-footer">
-        YAATRI.NP | RESEARCH_NODE_2431491 | LALITPUR, NEPAL
+        YAATRI.NP | FYP | LALITPUR, NEPAL
       </footer>
         </>
       )}

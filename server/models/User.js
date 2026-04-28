@@ -9,6 +9,18 @@ const userSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   status: { type: String, default: 'Active' },
   bio: { type: String, default: 'New Explorer' },
+  preferences: { type: String, default: 'Adventure, Nature' },
+  tripHistory: [
+    {
+      id: { type: String },
+      date: { type: String },
+      dest: { type: String },
+      hotel: { type: String },
+      status: { type: String, default: 'Completed' },
+      rating: { type: Number },
+      comment: { type: String }
+    }
+  ],
   joinDate: { type: Date, default: Date.now }
 });
 

@@ -23,15 +23,15 @@ export default function UserManager({
       <div className="summary-grid">
         <div className="summary-card">
           <span className="card-label">TOTAL_REVENUE</span>
-          <span className="card-value">{stats.revenue}</span>
+          <span className="card-value">{stats.revenue || '0'}</span>
         </div>
         <div className="summary-card">
           <span className="card-label">MONTHLY_TRAFFIC</span>
-          <span className="card-value">{stats.traffic}</span>
+          <span className="card-value">{stats.traffic || '0'}</span>
         </div>
         <div className="summary-card">
           <span className="card-label">ACTIVE_GUIDES</span>
-          <span className="card-value">{stats.activeGuides}</span>
+          <span className="card-value">{stats.activeGuides || '0'}</span>
         </div>
       </div>
 
@@ -69,7 +69,7 @@ export default function UserManager({
                   <td className="actions-cell">
                     <button onClick={() => navigate(`/admin/blogmanagement?id=${userId}`)} className="action-btn info">VIEW_BLOGS</button>
                     <button onClick={() => blockUser(userId)} className="action-btn warn">{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
-                    <button onClick={() => deleteUser(userId)} className="action-btn danger">PURGE</button>
+                    <button onClick={() => deleteUser(userId)} className="action-btn danger">Delete User</button>
                   </td>
                 </tr>
               )})}

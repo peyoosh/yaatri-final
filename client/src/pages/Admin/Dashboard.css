@@ -69,10 +69,13 @@
   border-radius: 4px;
   transition: all 0.2s;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .nav-item:hover, .nav-item.active {
-  background-color: rgba(5, 157, 114, 0.1); /* Cannot use var here due to opacity */
+  background-color: rgba(16, 185, 129, 0.15); /* Cannot use var here due to opacity */
   color: var(--hill-green);
 }
 
@@ -85,12 +88,13 @@
 }
 
 .admin-header {
-  height: 70px;
+  flex-shrink: 0;
+  min-height: 80px;
   border-bottom: 1px solid var(--border-light-1);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
+  padding: 1.5rem 2rem 1rem 2rem;
 }
 
 .search-bar input {
@@ -133,7 +137,7 @@
 .page-title { font-size: 1.25rem; font-weight: 900; letter-spacing: 2px; color: var(--hill-green); margin-bottom: 2.5rem; }
 
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
-.summary-card { background: var(--bg-light-2); border: 1px solid var(--border-light-2); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.summary-card { background: var(--bg-light-2); border: 1px solid var(--border-light-2); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; min-height: 105px; justify-content: center; }
 .card-label { font-size: 0.65rem; color: var(--text-muted-light); letter-spacing: 1px; }
 .card-value { font-size: 1.5rem; font-weight: 800; color: var(--himalayan-mist); }
 
