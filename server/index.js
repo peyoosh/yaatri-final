@@ -44,7 +44,10 @@ app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/admin/blogs', require('./routes/adminBlogRoutes'));
 
 // Destinations
-app.use('/api/destinations', require('./routes/destinationRoutes'));
+app.use('/api/destinations', require('./routes/destinations')); // Note: it looks like destinations.js has the code from your previous update
+
+// Hotels
+app.use('/api/hotels', require('./routes/hotelRoutes'));
 
 // Blogs
 app.use('/api/blogs', require('./routes/blogRoutes'));

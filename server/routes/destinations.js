@@ -3,6 +3,8 @@ const router = express.Router();
 const Destination = require('../models/Destination');
 const { validateAdmin } = require('../middleware/authMiddleware');
 
+const { getTravelAdvice, checkMountainClarity } = require('../utils/weatherLogic');
+
 // @route   GET /api/destinations
 // @desc    Get all destinations (sorted by popularity)
 // @access  Public
@@ -25,7 +27,31 @@ router.get('/:id', async (req, res) => {
     if (!destination) {
       return res.status(404).json({ message: 'Destination not found' });
     }
-    res.status(200).json(destination);
+
+    // Mock weather data based on destination coordinates
+    // In a real app, you would use destination.latitude and destination.longitude to call a weather API
+    const mockTemp = Math.floor(Math.random() * 35); // Random temp between 0 and 35
+    const mockWeatherCondition = Math.random() > 0.5 ? 'Clear' : 'Rain';
+    const mockPastPrecipitation = Math.random() > 0.5;
+    const isWaterBody = destination.environmentalTips?.isNaturalWaterBody || false;
+
+    const clothingAdvice = getTravelAdvice(mockTemp, mockWeatherCondition, isWaterBody);
+    const visibilityStatus = checkMountainClarity(mockWeatherCondition, mockPastPrecipitation);
+
+    const liveAdvice = {
+      weather: {
+        temp: mockTemp,
+        condition: mockWeatherCondition
+      },
+      clothingTips: clothingAdvice,
+      visibilityStatus: visibilityStatus
+    };
+
+    // Convert mongoose document to plain object to attach liveAdvice
+    const destinationObj = destination.toObject();
+    destinationObj.liveAdvice = liveAdvice;
+
+    res.status(200).json(destinationObj);
   } catch (err) {
     console.error('Error fetching destination:', err);
     res.status(500).json({ error: 'Server error while retrieving the destination' });

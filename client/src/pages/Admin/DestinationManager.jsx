@@ -8,7 +8,13 @@ const DestinationManager = () => {
     region: '',
     description: '',
     imageURL: '',
-    terrainType: 'Hill' // Default matching the Enum
+    terrainType: 'Hill', // Default matching the Enum
+    experienceProtocols: {
+      adventure: '',
+      tradition: '',
+      landscape: '',
+      tours: ''
+    }
   });
   const [feedback, setFeedback] = useState(null);
 
@@ -38,7 +44,14 @@ const DestinationManager = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (['adventure', 'tradition', 'landscape', 'tours'].includes(e.target.name)) {
+      setFormData({
+        ...formData,
+        experienceProtocols: { ...formData.experienceProtocols, [e.target.name]: e.target.value }
+      });
+    } else {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -50,7 +63,10 @@ const DestinationManager = () => {
       
       if (response.status === 201) {
         showFeedback('success', 'NODE_STORED_SUCCESSFULLY');
-        setFormData({ name: '', region: '', description: '', imageURL: '', terrainType: 'Hill' });
+        setFormData({ 
+          name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
+          experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }
+        });
         fetchDestinations();
       }
     } catch (error) {
@@ -117,6 +133,27 @@ const DestinationManager = () => {
                   <option value="Hill" style={{ background: 'var(--obsidian)' }}>Hill</option>
                   <option value="Terai" style={{ background: 'var(--obsidian)' }}>Terai</option>
                 </select>
+              </div>
+              <div style={{ gridColumn: '1 / -1', marginTop: '1rem', borderTop: '1px dashed var(--border-light-3)', paddingTop: '1rem' }}>
+                <h4 style={{ fontSize: '0.9rem', color: 'var(--hill-green)', marginBottom: '1rem' }}>Experience Protocols</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Adventure on Foot</label>
+                    <textarea name="adventure" value={formData.experienceProtocols.adventure} onChange={handleChange} rows="2" placeholder="Expert-led trekking modules..."></textarea>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Living Traditions</label>
+                    <textarea name="tradition" value={formData.experienceProtocols.tradition} onChange={handleChange} rows="2" placeholder="Connect with heritage..."></textarea>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Landscape that Moves</label>
+                    <textarea name="landscape" value={formData.experienceProtocols.landscape} onChange={handleChange} rows="2" placeholder="Dynamic topographic tracking..."></textarea>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Guided Cultural Tours</label>
+                    <textarea name="tours" value={formData.experienceProtocols.tours} onChange={handleChange} rows="2" placeholder="Structured sector exploration..."></textarea>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="form-actions">
