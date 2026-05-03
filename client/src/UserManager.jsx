@@ -8,7 +8,8 @@ export default function UserManager({
   deleteUser
 }) {
   const navigate = useNavigate();
-  const filteredUsers = userList.filter(u => u.role === 'user');
+  // Default role in backend is 'explorer', not 'user'
+  const filteredUsers = userList.filter(u => u.role === 'explorer' || u.role === 'user' || !u.isAdmin);
 
   return (
     <>
@@ -34,7 +35,7 @@ export default function UserManager({
                 
                 return (
                 <tr key={userId}>
-                  <td>#{userId.toString().padStart(3, '0')}</td>
+                  <td>#{userId.toString().substring(userId.toString().length - 4).padStart(4, '0')}</td>
                   <td className="highlight-text" onClick={() => navigate(`/profile/${userId}`)} style={{ cursor: 'pointer' }}>{u.username || 'UNKNOWN'}</td>
                   <td>{u.role?.toUpperCase() || 'UNKNOWN'}</td>
                   <td className="actions-cell">

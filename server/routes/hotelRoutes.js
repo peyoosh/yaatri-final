@@ -7,11 +7,11 @@ const Hotel = require('../models/Hotel');
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const hotels = await Hotel.find();
-    
+    const hotels = await Hotel.find().lean();
+
     // Automatically label hotels as FULL if isFull is true
     const labeledHotels = hotels.map(hotel => {
-      const hotelObj = hotel.toObject({ virtuals: true });
+      const hotelObj = hotel;
       if (hotelObj.isFull) {
         hotelObj.statusLabel = "FULL";
       } else {

@@ -78,7 +78,12 @@ const DestinationManager = () => {
       setDestinations(destinations.filter(d => d._id !== id));
     } catch (err) {
       console.error("Error deleting destination:", err);
-      alert("Failed to delete destination.");
+      if (err.response && err.response.status === 404) {
+        alert("Destination not found or already deleted.");
+        setDestinations(destinations.filter(d => d._id !== id));
+      } else {
+        alert("Failed to delete destination.");
+      }
     }
   };
 

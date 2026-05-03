@@ -6,7 +6,7 @@ const { validateAdmin, protect } = require('../middleware/authMiddleware');
 // GET: Fetch all users for Admin Panel
 router.get('/', validateAdmin, async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find().select('-password').lean();
     res.json(users);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -40,6 +40,35 @@ router.put('/:id', protect, async (req, res) => {
     
     if (!updatedUser) return res.status(404).json({ error: 'User not found' });
     res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE: Purge a user node
+router.delete('/:id', validateAdmin, async (req, res) => {
+  try {
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    if (!deletedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.status(200).json({ message: 'User node purged successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH: Toggle block status of a user
+router.patch('/:id/status', validateAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).select('-password');
+    if (!updatedUser) return res.status(404).json({ error: 'User not found' });
+    res.status(200).json(updatedUser);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

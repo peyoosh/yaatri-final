@@ -62,13 +62,34 @@ export default function AdminDashboard() {
     loadAdminData();
   }, []); // Empty array ensures this only runs ONCE on mount
 
-  const blockUser = (id) => {
-    setUserList(userList.map(u => u.id === id ? { ...u, status: u.status === 'Blocked' ? 'Active' : 'Blocked' } : u));
+  const blockUser = async (id) => {
+    const userToBlock = userList.find(u => u.id === id || u._id === id);
+    if (!userToBlock) return;
+    
+    const newStatus = userToBlock.status === 'Blocked' ? 'Active' : 'Blocked';
+    try {
+      await api.patch(`/users/${id}/status`, { status: newStatus });
+      setUserList(userList.map(u => (u.id === id || u._id === id) ? { ...u, status: newStatus } : u));
+    } catch (err) {
+      console.error("Error updating user status:", err);
+      alert("Failed to update user status in the database.");
+    }
   };
 
-  const deleteUser = (id) => {
+  const deleteUser = async (id) => {
     if (window.confirm("PURGE_PROTOCOL: CONFIRM_USER_DELETION? This action is irreversible.")) {
-      setUserList(userList.filter(u => u.id !== id));
+      try {
+        await api.delete(`/users/${id}`);
+        setUserList(userList.filter(u => u.id !== id && u._id !== id));
+      } catch (err) {
+        console.error("Error deleting user:", err);
+        if (err.response && err.response.status === 404) {
+          alert("User not found or already deleted.");
+          setUserList(userList.filter(u => u.id !== id && u._id !== id));
+        } else {
+          alert("Failed to purge user from the database.");
+        }
+      }
     }
   };
 

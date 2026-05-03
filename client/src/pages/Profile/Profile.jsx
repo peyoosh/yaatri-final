@@ -27,18 +27,23 @@ const Profile = () => {
   if (!profileUser) return <div className="p-8 text-white">User not found.</div>;
 
   return (
-    <div className="p-8 min-h-screen bg-obsidian text-white">
-      <button onClick={() => navigate(-1)} className="mb-4 text-toxic-lime hover:underline">
-        &larr; Back
-      </button>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-toxic-lime uppercase tracking-wider">{profileUser.username}'s Profile</h1>
-        <p className="text-sm opacity-80 mt-2">{profileUser.bio || 'New Explorer'}</p>
-        <span className="inline-block mt-2 px-3 py-1 bg-teal-steel/50 border border-toxic-lime/30 rounded-full text-xs font-bold uppercase text-toxic-lime">
-          Role: {profileUser.role}
-        </span>
+    <div className="min-h-screen bg-obsidian text-white">
+      <div className="p-8 pb-0">
+        <button onClick={() => navigate(-1)} className="mb-4 text-toxic-lime hover:underline">
+          &larr; Back
+        </button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-toxic-lime uppercase tracking-wider">{profileUser.username}'s Profile</h1>
+          <p className="text-sm opacity-80 mt-2">{profileUser.bio || 'New Explorer'}</p>
+          <span className="inline-block mt-2 px-3 py-1 bg-teal-steel/50 border border-toxic-lime/30 rounded-full text-xs font-bold uppercase text-toxic-lime">
+            Role: {profileUser.role}
+          </span>
+        </div>
       </div>
-      <ProfileBento role={profileUser.role} data={{}} />
+      {/* 100% width parent for Bento Grid without padding */}
+      <div className="w-full">
+        <ProfileBento role={profileUser.role} data={{}} />
+      </div>
     </div>
   );
 };

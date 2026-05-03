@@ -6,7 +6,7 @@ const { validateAdmin } = require('../middleware/authMiddleware');
 // --- PUBLIC: FETCH ALL NODES ---
 router.get('/', async (req, res) => {
   try {
-    const allDestinations = await Destination.find().sort({ popularityScore: -1 });
+    const allDestinations = await Destination.find().sort({ popularityScore: -1 }).lean();
     res.status(200).json(allDestinations);
   } catch (err) {
     res.status(500).json({ error: "DATA_STREAM_FAILURE" });

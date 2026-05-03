@@ -20,8 +20,9 @@ const upload = multer({ storage: storage });
 router.get('/', async (req, res) => {
   try {
     const publishedBlogs = await Blog.find({ status: 'published' })
-      .populate('authorId', 'username') 
-      .sort({ timestamp: -1 });
+      .populate('authorId', 'username')
+      .sort({ timestamp: -1 })
+      .lean();
     res.json(publishedBlogs);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

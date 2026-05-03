@@ -8,7 +8,8 @@ router.get('/', validateAdmin, async (req, res) => {
   try {
     const allBlogs = await Blog.find()
       .populate('authorId', 'username email')
-      .sort({ timestamp: -1 });
+      .sort({ timestamp: -1 })
+      .lean();
     res.json(allBlogs || []);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

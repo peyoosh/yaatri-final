@@ -87,6 +87,8 @@ const Destinations = ({ onSelectNode }) => {
             filteredSectors.map((dest, index) => {
               // Force description to be an empty string if it comes back null from MongoDB
               const safeDescription = dest.description || "";
+              // Check if backend applied a personalized score boost
+              const isPersonalized = dest.personalizedScore !== undefined && dest.personalizedScore > (dest.popularityScore || 0);
               
               return (
               <div 
@@ -106,8 +108,15 @@ const Destinations = ({ onSelectNode }) => {
                   <div className="rank-overlay" />
                 </div>
 
-                <div className="rank-content">
-                  <p className="rank-region">{dest.region}</p>
+                <div className="rank-content relative">
+                  <p className="rank-region flex items-center gap-2">
+                    {dest.region}
+                    {isPersonalized && (
+                      <span className="text-[0.55rem] font-bold bg-[#A2D729]/10 text-[#A2D729] px-2 py-0.5 rounded uppercase tracking-widest border border-[#A2D729]/30">
+                        Top Match
+                      </span>
+                    )}
+                  </p>
                   <h3 className="rank-title">{dest.name}</h3>
                   <p className="rank-stats">
                     {safeDescription ? `${safeDescription.substring(0, 60)}...` : 'NO_DATA_PULLED'}

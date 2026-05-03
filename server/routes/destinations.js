@@ -1,16 +1,62 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Destination = require('../models/Destination');
+const User = require('../models/User');
 const { validateAdmin } = require('../middleware/authMiddleware');
 
 const { getTravelAdvice, checkMountainClarity } = require('../utils/weatherLogic');
 
+const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
+
+const calculatePersonalizedScore = (destination, userPreferences) => {
+  let score = destination.popularityScore || 0;
+  if (!userPreferences) return score;
+
+  const prefs = userPreferences.toLowerCase().split(',').map(p => p.trim()).filter(Boolean);
+  const destString = `${destination.name} ${destination.region} ${destination.description} ${destination.terrainType}`.toLowerCase();
+
+  prefs.forEach(pref => {
+    if (destString.includes(pref)) {
+      score += 15; // Significant boost for preference match
+    }
+  });
+
+  return score;
+};
+
 // @route   GET /api/destinations
-// @desc    Get all destinations (sorted by popularity)
+// @desc    Get all destinations (personalized if logged in, otherwise sorted by popularity)
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const destinations = await Destination.find().sort({ popularityScore: -1 });
+    let user = null;
+    
+    // Check for optional auth token to personalize results
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        user = await User.findById(decoded.id);
+      } catch (e) {
+        console.warn("Invalid token for personalization, falling back to public ranking.");
+      }
+    }
+
+    const destinations = await Destination.find().lean();
+
+    if (user && user.preferences) {
+      // Personalize ranking based on user preferences
+      destinations.forEach(dest => {
+        dest.personalizedScore = calculatePersonalizedScore(dest, user.preferences);
+      });
+      destinations.sort((a, b) => b.personalizedScore - a.personalizedScore);
+    } else {
+      // Default ranking by popularity
+      destinations.sort((a, b) => (b.popularityScore || 0) - (a.popularityScore || 0));
+    }
+
     res.status(200).json(destinations);
   } catch (err) {
     console.error('Error fetching destinations:', err);
