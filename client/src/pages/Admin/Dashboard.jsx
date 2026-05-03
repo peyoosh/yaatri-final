@@ -13,6 +13,7 @@ import UserManager from '../../UserManager';
 import BlogManager from './BlogManager';
 import GuideManager from './GuideManager';
 import HotelManager from './HotelManager';
+import DashboardOverview from './DashboardOverview';
 
 import './Dashboard.css';
 import api from '../../api/axios';
@@ -94,10 +95,15 @@ export default function AdminDashboard() {
       <NotificationBar message={notificationMessage} />
       <Routes>
         <Route element={<AdminLayout user={loggedInUser} />}>
-          <Route index element={<Navigate to="usermanagement" replace />} />
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={
+            <ErrorBoundary>
+              <DashboardOverview stats={stats} />
+            </ErrorBoundary>
+          } />
           <Route path="usermanagement" element={
             <ErrorBoundary>
-              <UserManager stats={stats} userList={userList} blockUser={blockUser} deleteUser={deleteUser} />
+              <UserManager userList={userList} blockUser={blockUser} deleteUser={deleteUser} />
             </ErrorBoundary>
           } />
           <Route path="destinationmanagement" element={

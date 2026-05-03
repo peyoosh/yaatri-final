@@ -10,6 +10,7 @@ import UserDashboard from './pages/UserDashboard/UserDashboard';
 import Destinations from './pages/Destinations/Destinations';
 import Contact from './pages/Contact/Contact';
 import AdminDashboard from './pages/Admin/Dashboard';
+import Profile from './pages/Profile/Profile';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './index.css';
@@ -56,7 +57,7 @@ const App = () => {
 
   return (
     <AuthProvider>
-    <div className={isManagementView ? "management-shell" : "app-shell"}>
+    <div className={`${isManagementView ? "management-shell" : "app-shell"} font-global`}>
       {!isManagementView && (
         <Navbar loggedInUser={loggedInUser} handleLogout={handleLogout} />
       )}
@@ -69,6 +70,7 @@ const App = () => {
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/auth" element={<Auth onLoginSuccess={setLoggedInUser} />} />
+          <Route path="/profile/:id" element={<Profile />} />
           <Route path="/dashboard" element={
             <ProtectedRoute user={loggedInUser}>
               <UserDashboard user={loggedInUser} />

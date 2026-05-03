@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 // import BlogCard from '../components/BlogCard'; 
 
 const BlogPage = () => {
@@ -12,13 +12,11 @@ const BlogPage = () => {
   const [content, setContent] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   // Fetch published blogs on component mount
   const fetchBlogs = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/blogs`);
+      const res = await api.get(`/blogs`);
       setBlogs(res.data);
       setError(null);
     } catch (err) {
@@ -31,7 +29,7 @@ const BlogPage = () => {
 
   useEffect(() => {
     fetchBlogs();
-  }, [API_URL]);
+  }, []);
 
   // Handle submitting a new blog
   const handleSubmit = async (e) => {
@@ -40,17 +38,10 @@ const BlogPage = () => {
 
     try {
       setIsPublishing(true);
-      
-      // Retrieve your auth token (adjust this based on how you store user sessions)
-      const token = localStorage.getItem('yaatri_token'); 
-      const config = {
-        headers: { Authorization: `Bearer ${token}` }
-      };
-
       const newBlogData = { title, content, images: [] };
 
       // 1. Send the POST request to create the blog
-      const res = await axios.post(`${API_URL}/api/blogs`, newBlogData, config);
+      const res = await api.post(`/blogs`, newBlogData);
 
       // 2. Trigger an immediate re-fetch of the blog list
       await fetchBlogs();

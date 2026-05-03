@@ -1,5 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+@theme {
+  --color-obsidian: #0D0A02;
+  --color-teal-steel: #1A434E;
+  --color-toxic-lime: #A2D729;
+}
 
 :root {
   --obsidian: #0D0A02;
@@ -14,9 +20,8 @@
 }
 
 body {
+  @apply bg-obsidian text-white;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--obsidian);
-  color: var(--himalayan-mist);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }

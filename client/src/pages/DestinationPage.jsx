@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 // Make sure you have this component created, or update the path to match yours
 import DestinationCard from '../components/DestinationCard'; 
 
@@ -8,15 +8,12 @@ const DestinationPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Uses Vite environment variable or defaults to your local server
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   useEffect(() => {
     const fetchDestinations = async () => {
       try {
         setLoading(true);
         // Fetches destinations (which are already sorted by popularity in your backend)
-        const res = await axios.get(`${API_URL}/api/destinations`);
+        const res = await api.get(`/destinations`);
         setDestinations(res.data);
         setError(null);
       } catch (err) {
@@ -28,7 +25,7 @@ const DestinationPage = () => {
     };
 
     fetchDestinations();
-  }, [API_URL]);
+  }, []);
 
   // 1. Loading State
   if (loading) {

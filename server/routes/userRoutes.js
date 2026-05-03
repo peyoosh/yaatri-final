@@ -11,6 +11,17 @@ router.get('/', validateAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET: Fetch user by ID for profile view
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT: Update user profile settings
 router.put('/:id', protect, async (req, res) => {
   try {

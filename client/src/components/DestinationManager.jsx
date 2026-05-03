@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 
 const DestinationManager = () => {
   // 1. State Management
@@ -15,13 +15,11 @@ const DestinationManager = () => {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   // Fetch destinations
   const fetchDestinations = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/api/destinations`);
+      const res = await api.get(`/destinations`);
       setDestinations(res.data);
     } catch (err) {
       console.error("Error fetching destinations:", err);
@@ -34,7 +32,7 @@ const DestinationManager = () => {
   // Fetch destinations on mount
   useEffect(() => {
     fetchDestinations();
-  }, [API_URL]);
+  }, []);
 
   // Handle input changes for the form
   const handleInputChange = (e) => {
@@ -54,10 +52,8 @@ const DestinationManager = () => {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('yaatri_token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      const res = await axios.post(`${API_URL}/api/admin/destinations`, newDestination, config);
+      const res = await api.post(`/admin/destinations`, newDestination);
       
       if (res.status === 201 || res.status === 200) {
         await fetchDestinations();
@@ -78,10 +74,7 @@ const DestinationManager = () => {
     if (!window.confirm("Are you sure you want to delete this destination?")) return;
     
     try {
-      const token = localStorage.getItem('yaatri_token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
-      await axios.delete(`${API_URL}/api/admin/destinations/${id}`, config);
+      await api.delete(`/admin/destinations/${id}`);
       setDestinations(destinations.filter(d => d._id !== id));
     } catch (err) {
       console.error("Error deleting destination:", err);
@@ -99,7 +92,7 @@ const DestinationManager = () => {
   if (error) return <div className="text-red-500 bg-obsidian p-4 min-h-screen">{error}</div>;
 
   return (
-    <div className="bg-obsidian min-h-screen p-6 md:p-10 font-sans text-hill-green">
+    <div className="bg-obsidian min-h-screen p-6 md:p-10 text-hill-green font-global">
       <h2 className="text-3xl font-bold mb-8 border-b border-hill-green pb-4">Destination Management</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">

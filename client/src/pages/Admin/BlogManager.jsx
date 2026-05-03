@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 
 const BlogManager = () => {
   const [blogs, setBlogs] = useState([]);
   const [feedback, setFeedback] = useState(null);
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('yaatri_token');
-    return { Authorization: `Bearer ${token}` };
-  };
-
   const fetchBlogs = async () => {
     try {
-      const response = await api.get(`/admin/blogs`, {
-        headers: getAuthHeaders()
-      });
+      const response = await api.get(`/admin/blogs`);
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setBlogs(fetchedData);
     } catch (error) {
@@ -33,16 +27,25 @@ const BlogManager = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!id) {
+      showFeedback('error', 'INVALID_BLOG_ID');
+      return;
+    }
+
     if (!window.confirm('WARNING: Are you sure you want to permanently purge this blog?')) return;
     
     try {
-      await api.delete(`/blogs/${id}`, {
-        headers: getAuthHeaders()
-      });
+      await api.delete(`/admin/blogs/${id}`);
       showFeedback('success', 'BLOG_PURGED_SUCCESSFULLY');
       setBlogs((prev) => prev.filter(blog => blog._id !== id));
     } catch (error) {
-      showFeedback('error', 'ERROR_PURGING_BLOG');
+      console.error('Error deleting blog:', error);
+      if (error.response && error.response.status === 404) {
+        showFeedback('error', 'BLOG_NOT_FOUND_OR_ALREADY_DELETED');
+        setBlogs((prev) => prev.filter(blog => blog._id !== id));
+      } else {
+        showFeedback('error', 'ERROR_PURGING_BLOG');
+      }
     }
   };
 
@@ -50,13 +53,15 @@ const BlogManager = () => {
     if (!window.confirm('Notice: Flagging this blog will hide it from the public feed.')) return;
 
     try {
-      await api.patch(`/admin/blogs/${id}/flag`, {}, {
-        headers: getAuthHeaders()
-      });
+      await api.patch(`/admin/blogs/${id}/flag`);
       showFeedback('success', 'BLOG_FLAGGED_SUCCESSFULLY');
       setBlogs((prev) => prev.map(blog => blog._id === id ? { ...blog, status: 'flagged' } : blog));
     } catch (error) {
-      showFeedback('error', 'ERROR_FLAGGING_BLOG');
+      if (error.response && error.response.status === 404) {
+        showFeedback('error', 'BLOG_NOT_FOUND');
+      } else {
+        showFeedback('error', 'ERROR_FLAGGING_BLOG');
+      }
     }
   };
 
@@ -94,7 +99,15 @@ const BlogManager = () => {
                 blogs.map((blog) => (
                   <tr key={blog._id}>
                     <td className="highlight-text">{blog.title}</td>
-                    <td>{blog.authorId?.username || 'UNKNOWN'}</td>
+                    <td>
+                      {blog.authorId?._id ? (
+                        <Link to={`/profile/${blog.authorId._id}`} className="hover:text-toxic-lime hover:underline">
+                          {blog.authorId.username}
+                        </Link>
+                      ) : (
+                        'UNKNOWN'
+                      )}
+                    </td>
                     <td>
                       <span className={`severity-tag ${blog.status === 'published' ? 'low' : 'high'}`}>
                         {blog.status?.toUpperCase() || 'UNKNOWN'}
@@ -105,7 +118,7 @@ const BlogManager = () => {
                       {blog.status === 'published' && (
                         <button onClick={() => handleFlag(blog._id)} className="action-btn warn">FLAG</button>
                       )}
-                      <button onClick={() => handleDelete(blog._id)} className="action-btn danger">Delete Blog</button>
+                      <button onClick={() => handleDelete(blog._id)} className="action-btn danger bg-toxic-lime text-obsidian px-2 py-1 rounded">Delete Blog</button>
                     </td>
                   </tr>
                 ))

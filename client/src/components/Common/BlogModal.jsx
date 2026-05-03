@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const BlogModal = ({ isOpen, onClose, post }) => {
@@ -40,7 +41,7 @@ const BlogModal = ({ isOpen, onClose, post }) => {
               {post.title}
             </h2>
             <div style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '2rem', display: 'flex', gap: '1rem', fontFamily: 'monospace' }}>
-              <span>AUTHOR: @{post.authorId?.username || 'UNKNOWN'}</span>
+              <span>AUTHOR: <Link to={post.authorId?._id ? `/profile/${post.authorId._id}` : '#'} onClick={(e) => { e.stopPropagation(); onClose(); }} style={{ color: '#A2D729', textDecoration: 'underline' }}>@{post.authorId?.username || 'UNKNOWN'}</Link></span>
               <span>DATE: {new Date(post.timestamp).toLocaleDateString()}</span>
               <span>STATUS: [{post.status?.toUpperCase() || 'PUBLISHED'}]</span>
             </div>

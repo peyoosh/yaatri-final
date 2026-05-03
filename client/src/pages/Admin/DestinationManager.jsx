@@ -3,6 +3,7 @@ import api from '../../api/axios';
 
 const DestinationManager = () => {
   const [destinations, setDestinations] = useState([]);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     region: '',
@@ -54,20 +55,53 @@ const DestinationManager = () => {
     }
   };
 
+  const handleEdit = (dest) => {
+    setEditingId(dest._id);
+    setFormData({
+      name: dest.name || '',
+      region: dest.region || '',
+      description: dest.description || '',
+      imageURL: dest.imageURL || '',
+      terrainType: dest.terrainType || 'Hill',
+      experienceProtocols: {
+        adventure: dest.experienceProtocols?.adventure || '',
+        tradition: dest.experienceProtocols?.tradition || '',
+        landscape: dest.experienceProtocols?.landscape || '',
+        tours: dest.experienceProtocols?.tours || ''
+      }
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await api.post(`/destinations`, formData, {
-        headers: getAuthHeaders()
-      });
-      
-      if (response.status === 201) {
-        showFeedback('success', 'NODE_STORED_SUCCESSFULLY');
-        setFormData({ 
-          name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
-          experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }
+      if (editingId) {
+        const response = await api.put(`/destinations/${editingId}`, formData, {
+          headers: getAuthHeaders()
         });
-        fetchDestinations();
+        if (response.status === 200) {
+          showFeedback('success', 'NODE_UPDATED_SUCCESSFULLY');
+          setEditingId(null);
+          setFormData({ 
+            name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
+            experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }
+          });
+          fetchDestinations();
+        }
+      } else {
+        const response = await api.post(`/destinations`, formData, {
+          headers: getAuthHeaders()
+        });
+        
+        if (response.status === 201) {
+          showFeedback('success', 'NODE_STORED_SUCCESSFULLY');
+          setFormData({ 
+            name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
+            experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }
+          });
+          fetchDestinations();
+        }
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.response?.data?.error || 'ERROR_STORING_NODE';
@@ -157,7 +191,13 @@ const DestinationManager = () => {
               </div>
             </div>
             <div className="form-actions">
-              <button type="submit" className="action-btn info" style={{ border: '1px solid var(--hill-green)', padding: '0.5rem 1rem', borderRadius: '4px' }}>STORE_NODE</button>
+              {editingId && (
+                <button type="button" onClick={() => {
+                  setEditingId(null);
+                  setFormData({ name: '', region: '', description: '', imageURL: '', terrainType: 'Hill', experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }});
+                }} className="action-btn" style={{ padding: '0.5rem 1rem', color: 'var(--text-muted)' }}>CANCEL</button>
+              )}
+              <button type="submit" className="action-btn info" style={{ border: '1px solid var(--hill-green)', padding: '0.5rem 1rem', borderRadius: '4px' }}>{editingId ? 'UPDATE_NODE' : 'STORE_NODE'}</button>
             </div>
           </form>
         </div>
@@ -185,7 +225,8 @@ const DestinationManager = () => {
                     <td><span className="severity-tag low">{dest.terrainType}</span></td>
                     <td>{dest.popularityScore || 0}</td>
                     <td className="actions-cell">
-                      <button onClick={() => handleDelete(dest._id)} className="action-btn danger">Delete Destination</button>
+                      <button onClick={() => handleEdit(dest)} className="action-btn bg-toxic-lime text-obsidian px-2 py-1 rounded mr-2">Edit</button>
+                      <button onClick={() => handleDelete(dest._id)} className="action-btn danger bg-toxic-lime text-obsidian px-2 py-1 rounded">Delete Destination</button>
                     </td>
                   </tr>
                 ))

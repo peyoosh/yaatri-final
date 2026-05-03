@@ -5,6 +5,7 @@ import api from '../../api/axios';
 const Destinations = ({ onSelectNode }) => {
   const [sectors, setSectors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchDestinations = async () => {
@@ -24,19 +25,46 @@ const Destinations = ({ onSelectNode }) => {
 
   const recommended = ["Langtang Valley", "Upper Mustang", "Rara Lake", "Shey Phoksundo"];
 
+  const handleRecommendedClick = (name) => {
+    const dest = sectors.find(s => s.name.toLowerCase() === name.toLowerCase());
+    if (dest) {
+      onSelectNode(dest);
+    } else {
+      alert(`${name} is not currently available in the system.`);
+    }
+  };
+
+  const filteredSectors = sectors.filter(dest => 
+    dest.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (dest.region && dest.region.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
     <section className="destinations-split-layout">
       {/* SIDEBAR REMAINS THE SAME */}
       <aside className="dest-sidebar">
         <div className="sidebar-group">
           <p className="sidebar-kicker">SYSTEM_SEARCH</p>
-          <input type="text" placeholder="INPUT_DESTINATION_QUERY..." className="yaatri-search-input" />
+          <input 
+            type="text" 
+            placeholder="INPUT_DESTINATION_QUERY..." 
+            className="yaatri-search-input" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
         <div className="sidebar-group" style={{ marginTop: '3rem' }}>
           <p className="sidebar-kicker">RECOMMENDED_NODES</p>
           <ul className="recommended-list">
             {recommended.map((item, index) => (
-              <li key={index} className="recommended-item"><span className="dot" /> {item}</li>
+              <li 
+                key={index} 
+                className="recommended-item" 
+                onClick={() => handleRecommendedClick(item)}
+                style={{ cursor: 'pointer' }}
+              >
+                <span className="dot" /> {item}
+              </li>
             ))}
           </ul>
         </div>
@@ -53,10 +81,10 @@ const Destinations = ({ onSelectNode }) => {
         <div className="ranking-stack">
           {loading ? (
             <p className="sidebar-kicker animate-pulse">SYSTEM_SYNCHRONIZING...</p>
-          ) : sectors.length === 0 ? (
-            <p className="sidebar-kicker">ZERO_NODES_ACTIVE. POPULATE_VIA_ADMIN_PANEL.</p>
+          ) : filteredSectors.length === 0 ? (
+            <p className="sidebar-kicker">ZERO_NODES_ACTIVE. POPULATE_VIA_ADMIN_PANEL OR REVISE SEARCH.</p>
           ) : (
-            sectors.map((dest, index) => {
+            filteredSectors.map((dest, index) => {
               // Force description to be an empty string if it comes back null from MongoDB
               const safeDescription = dest.description || "";
               

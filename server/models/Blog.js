@@ -19,6 +19,10 @@ const blogSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  image: {
+    type: String,
+    default: ''
+  },
   images: [{
     type: String
   }],
@@ -28,6 +32,10 @@ const blogSchema = new mongoose.Schema({
     default: 'published'
   },
   reportCount: {
+    type: Number,
+    default: 0
+  },
+  likeCount: {
     type: Number,
     default: 0
   },

@@ -22,7 +22,7 @@
   overflow: hidden;
   background-color: var(--obsidian);
   color: var(--himalayan-mist);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
 
 .admin-sidebar {
@@ -146,7 +146,7 @@
 .chart-placeholder { height: 250px; background: rgba(5, 157, 114, 0.03); border: 1px dashed rgba(5, 157, 114, 0.2); display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 0.75rem; color: var(--hill-green); }
 
 .table-section { margin-bottom: 4rem; }
-.table-wrapper { background: var(--bg-light-1); border: 1px solid var(--border-light-1); border-radius: 4px; overflow-x: auto; }
+.table-wrapper { background: var(--teal-steel, #1A434E); border: 1px solid var(--border-light-1); border-radius: 4px; overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .data-table th { text-align: left; padding: 1rem; background: var(--bg-light-3); font-size: 0.7rem; letter-spacing: 1px; color: var(--hill-green); border-bottom: 1px solid var(--border-light-3); }
 .data-table td { padding: 1rem; font-size: 0.85rem; border-bottom: 1px solid var(--border-light-1); }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { Link } from 'react-router-dom';
+import api from '../../api/axios';
 import { motion } from 'framer-motion';
 import { Heart, Camera, ShieldAlert } from 'lucide-react';
 
@@ -8,17 +9,15 @@ const Blog = ({ onSeeBlog }) => {
   const [newCaption, setNewCaption] = useState('');
   const [newLocation, setNewLocation] = useState('');
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://yaatri-backend.onrender.com";
-
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/blogs`).then(res => setPosts(res.data));
+    api.get(`/blogs`).then(res => setPosts(res.data));
   }, []);
 
   const handleLike = async (id) => {
     try {
-      await axios.patch(`${API_BASE_URL}/api/blogs/${id}/like`);
+      await api.patch(`/blogs/${id}/like`);
     } catch (e) { console.warn("Liking requires backend support", e); }
-    setPosts(posts.map(p => p._id === id ? { ...p, likes: (p.likes || 0) + 1 } : p));
+    setPosts(posts.map(p => p._id === id ? { ...p, likes: (p.likeCount || 0) + 1 } : p));
   };
 
   const handlePost = async () => {
@@ -30,12 +29,8 @@ const Blog = ({ onSeeBlog }) => {
       images: ['https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800']
     };
     try {
-      const token = localStorage.getItem('yaatri_token');
-      await axios.post(`${API_BASE_URL}/api/blogs`, postData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // Re-fetch to guarantee we get the populated author profile instantly
-      const updated = await axios.get(`${API_BASE_URL}/api/blogs`);
+      await api.post(`/blogs`, postData);
+      const updated = await api.get(`/blogs`);
       setPosts(updated.data);
       setNewCaption('');
       setNewLocation('');
@@ -46,127 +41,127 @@ const Blog = ({ onSeeBlog }) => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: 'calc(100vh - 6rem)', background: 'var(--obsidian)' }}>
-      {/* LEFT SIDEBAR: 20% - DATA ANALYSIS */}
-      <aside className="blog-sidebar" style={{ width: '20%', borderRight: '1px solid rgba(255,255,255,0.05)', padding: '2rem 1.5%', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
-        <div className="sidebar-section">
-          <p className="sidebar-kicker" style={{ color: 'var(--hill-green)', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '2px', marginBottom: '1rem' }}>TRENDING_NODES</p>
-          <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.8rem', opacity: 0.7 }}>
-            <li style={{ marginBottom: '0.8rem', cursor: 'pointer' }} className="hover:text-[var(--hill-green)] transition-colors">#KHUMBU_ASCENT</li>
-            <li style={{ marginBottom: '0.8rem', cursor: 'pointer' }} className="hover:text-[var(--hill-green)] transition-colors">#MUSTANG_TRAILS</li>
-            <li style={{ marginBottom: '0.8rem', cursor: 'pointer' }} className="hover:text-[var(--hill-green)] transition-colors">#LALITPUR_HISTORY</li>
+    <div className="flex min-h-[calc(100vh-6rem)] bg-obsidian text-white">
+      {/* LEFT SIDEBAR */}
+      <aside className="w-1/5 border-r border-white/5 p-8 flex flex-col gap-12 bg-teal-steel">
+        <div>
+          <p className="text-[#059D72] text-[0.65rem] font-extrabold tracking-widest mb-4">TRENDING_NODES</p>
+          <ul className="list-none p-0 text-sm opacity-70">
+            <li className="mb-3 cursor-pointer hover:text-[#059D72] transition-colors">#KHUMBU_ASCENT</li>
+            <li className="mb-3 cursor-pointer hover:text-[#059D72] transition-colors">#MUSTANG_TRAILS</li>
+            <li className="mb-3 cursor-pointer hover:text-[#059D72] transition-colors">#LALITPUR_HISTORY</li>
           </ul>
         </div>
 
-        <div className="sidebar-section">
-          <p className="sidebar-kicker" style={{ color: 'var(--hill-green)', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '2px', marginBottom: '1rem' }}>MOST_LIKED_DATA</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {[...posts].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 2).map(p => (
-            <div key={p._id} style={{ fontSize: '0.75rem', borderLeft: '1px solid var(--hill-green)', paddingLeft: '10px' }}>
-              <p style={{ fontWeight: 700 }}>{p.authorId?.username?.toUpperCase() || 'UNKNOWN'}</p>
-              <p style={{ opacity: 0.5 }}>{p.likes || 0} DATA_POINTS</p>
-              </div>
+        <div>
+          <p className="text-[#059D72] text-[0.65rem] font-extrabold tracking-widest mb-4">MOST_LIKED_DATA</p>
+          <div className="flex flex-col gap-4">
+          {[...posts].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0)).slice(0, 2).map(p => (
+            <div key={p._id} className="text-xs border-l border-[#059D72] pl-2.5">
+              <Link to={p.authorId?._id ? `/profile/${p.authorId._id}` : '#'} className="font-bold hover:text-toxic-lime hover:underline block">{p.authorId?.username?.toUpperCase() || 'UNKNOWN'}</Link>
+              <p className="opacity-50">{p.likeCount || 0} DATA_POINTS</p>
+            </div>
             ))}
           </div>
         </div>
 
-        <div className="sidebar-section">
-          <p className="sidebar-kicker" style={{ color: 'var(--hill-green)', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '2px', marginBottom: '1rem' }}>REGIONAL_BROADCASTS</p>
-          <p style={{ fontSize: '0.7rem', opacity: 0.4, fontStyle: 'italic' }}>Detecting nodes in your current sector...</p>
-          <div style={{ marginTop: '1rem', padding: '10px', background: 'rgba(5, 157, 114, 0.05)', border: '1px solid rgba(5, 157, 114, 0.1)', borderRadius: '2px' }}>
-            <p style={{ fontSize: '0.75rem', fontWeight: 700 }}>RECENT: LALITPUR_HUB</p>
-            <p style={{ fontSize: '0.65rem', opacity: 0.6 }}>2 active streams in last 10m</p>
+        <div>
+          <p className="text-[#059D72] text-[0.65rem] font-extrabold tracking-widest mb-4">REGIONAL_BROADCASTS</p>
+          <p className="text-[0.7rem] opacity-40 italic">Detecting nodes in your current sector...</p>
+          <div className="mt-4 p-2.5 bg-[#059D72]/5 border border-[#059D72]/10 rounded-sm">
+            <p className="text-xs font-bold">RECENT: LALITPUR_HUB</p>
+            <p className="text-[0.65rem] opacity-60">2 active streams in last 10m</p>
           </div>
         </div>
       </aside>
 
-      {/* MAIN FEED: 80% */}
-      <main style={{ flex: 1, padding: '4rem 2rem', overflowY: 'auto', maxHeight: 'calc(100vh - 6rem)' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '3rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '4px', color: 'var(--hill-green)' }}>SYSTEM_BLOG</h2>
-        <p style={{ fontSize: '0.7rem', opacity: 0.5, fontFamily: 'monospace' }}>DATA_STREAM: ENCRYPTED // SOURCE: USER_NODES</p>
-      </div>
-
-      {/* BROADCAST INPUT */}
-      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '3rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <Camera size={20} style={{ color: 'var(--hill-green)' }} />
-            <input 
-              type="text" 
-              placeholder="LOCATION_OF_EXPEDITION..." 
-              value={newLocation}
-              onChange={(e) => setNewLocation(e.target.value)}
-              style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.5rem', outline: 'none', fontSize: '0.85rem' }}
-            />
+      {/* MAIN FEED */}
+      <main className="flex-1 p-16 overflow-y-auto max-h-[calc(100vh-6rem)]">
+        <div className="max-w-[600px] mx-auto">
+          <div className="mb-12 border-b border-white/10 pb-4">
+            <h2 className="text-2xl font-extrabold tracking-widest text-[#059D72]">SYSTEM_BLOG</h2>
+            <p className="text-[0.7rem] opacity-50 font-mono">DATA_STREAM: ENCRYPTED // SOURCE: USER_NODES</p>
           </div>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <input 
-              type="text" 
-              placeholder="INITIATE_CAPTION_SCAN..." 
-              value={newCaption}
-              onChange={(e) => setNewCaption(e.target.value)}
-              style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.5rem', outline: 'none', fontSize: '0.85rem' }}
-            />
-          </div>
-          <div style={{ textAlign: 'right', marginTop: '1rem' }}>
-            <button onClick={handlePost} className="btn-primary-white" style={{ padding: '0.5rem 1rem', fontSize: '0.6rem' }}>SEND_BROADCAST</button>
-          </div>
-        </div>
-      </div>
 
-      {/* INTEL STREAM */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
-        {posts.map(post => (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            key={post._id}
-            onClick={() => onSeeBlog(post)}
-            style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)', marginBottom: '4rem', cursor: 'pointer' }}
-          >
-            <div style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--hill-green)' }} />
-                <div>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px', margin: 0 }}>{post.authorId?.username?.toUpperCase() || 'UNKNOWN'}</p>
-                  <p style={{ fontSize: '0.65rem', opacity: 0.6, margin: 0, color: 'var(--terai-harvest)' }}>{post.locationNode}</p>
-                </div>
-              </div>
-              {post.status === 'flagged' && <ShieldAlert size={16} style={{ color: 'orange' }} />}
-            </div>
-            
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden' }}>
-              <img src={post.images?.[0] || 'https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800'} alt="Intel" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(20%)' }} />
-            </div>
-
-            <div style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem' }}>
-                <Heart 
-                  size={24}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike(post._id);
-                  }}
-                  style={{ cursor: 'pointer', color: 'var(--hill-green)', transition: 'transform 0.2s' }} 
-                  className="hover:scale-110"
+          {/* BROADCAST INPUT */}
+          <div className="bg-teal-steel/50 p-6 border border-white/5 mb-12">
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-4 items-center">
+                <Camera size={20} className="text-[#059D72]" />
+                <input 
+                  type="text" 
+                  placeholder="LOCATION_OF_EXPEDITION..." 
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  className="flex-1 bg-transparent border-none border-b border-white/10 text-white p-2 outline-none text-sm"
                 />
               </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--hill-green)', marginBottom: '0.5rem' }}>{post.likes || 0} DATA_POINTS</p>
-                <span style={{ fontSize: '0.6rem', opacity: 0.3, fontFamily: 'monospace' }}>NODE_ID: {post._id}</span>
+              <div className="flex gap-4 items-center">
+                <input 
+                  type="text" 
+                  placeholder="INITIATE_CAPTION_SCAN..." 
+                  value={newCaption}
+                  onChange={(e) => setNewCaption(e.target.value)}
+                  className="flex-1 bg-transparent border-none border-b border-white/10 text-white p-2 outline-none text-sm"
+                />
               </div>
-
-              <p style={{ fontSize: '0.85rem', lineHeight: '1.5', opacity: 0.8 }}>
-                <span style={{ fontWeight: 900, marginRight: '0.5rem', color: 'var(--himalayan-mist)' }}>{post.authorId?.username || 'UNKNOWN'}</span>
-                {post.content}
-              </p>
+              <div className="text-right mt-4">
+                <button onClick={handlePost} className="btn-primary-white py-2 px-4 text-[0.6rem]">SEND_BROADCAST</button>
+              </div>
             </div>
-          </motion.div>
-        ))}
-      </div>
+          </div>
+
+          {/* INTEL STREAM */}
+          <div className="flex flex-col gap-16">
+            {posts.map(post => (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                key={post._id}
+                onClick={() => onSeeBlog(post)}
+                className="border border-white/5 mb-16 cursor-pointer bg-teal-steel"
+              >
+                <div className="p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#059D72]" />
+                    <div>
+                      <Link to={post.authorId?._id ? `/profile/${post.authorId._id}` : '#'} onClick={(e) => e.stopPropagation()} className="text-sm font-bold tracking-widest m-0 hover:text-toxic-lime hover:underline block">{post.authorId?.username?.toUpperCase() || 'UNKNOWN'}</Link>
+                      <p className="text-[0.65rem] opacity-60 m-0 text-[#A6A180]">{post.locationNode}</p>
+                    </div>
+                  </div>
+                  {post.status === 'flagged' && <ShieldAlert size={16} className="text-orange-500" />}
+                </div>
+                
+                <div className="relative w-full aspect-square overflow-hidden">
+                  <img src={post.images?.[0] || 'https://images.unsplash.com/photo-1582650845100-3057102e3532?w=800'} alt="Intel" className="w-full h-full object-cover grayscale-[20%]" />
+                </div>
+
+                <div className="p-6">
+                  <div className="flex gap-6 mb-4">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(post._id);
+                      }}
+                      className="bg-toxic-lime text-obsidian px-3 py-1 rounded flex items-center gap-2 hover:scale-105 transition-transform font-bold text-xs"
+                    >
+                      <Heart size={16} className="fill-current" /> LIKE
+                    </button>
+                  </div>
+                  
+                  <div className="flex justify-between items-baseline">
+                    <p className="text-xs font-extrabold text-[#059D72] mb-2">{post.likeCount || 0} DATA_POINTS</p>
+                    <span className="text-[0.6rem] opacity-30 font-mono">NODE_ID: {post._id}</span>
+                  </div>
+
+                  <p className="text-sm leading-relaxed opacity-80">
+                    <Link to={post.authorId?._id ? `/profile/${post.authorId._id}` : '#'} onClick={(e) => e.stopPropagation()} className="font-extrabold mr-2 text-[#F4F2F3] hover:text-toxic-lime hover:underline">{post.authorId?.username || 'UNKNOWN'}</Link>
+                    {post.content}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </main>
     </div>

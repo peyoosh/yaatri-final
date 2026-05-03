@@ -16,13 +16,19 @@ const AdminLayout = ({ user }) => {
       {isSidebarOpen && <div className="sidebar-overlay" onClick={toggleSidebar}></div>}
 
       {/* Admin Sidebar */}
-      <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+      <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''} bg-teal-steel`}>
         <div className="sidebar-header">
           <div className="sidebar-brand" onClick={() => { navigate('/'); setIsSidebarOpen(false); }}>YAATRI_ADMIN</div>
           <button className="mobile-close-btn" onClick={toggleSidebar}><X size={24} /></button>
         </div>
         
         <nav className="sidebar-nav">
+          <button 
+            className={`nav-item ${location.pathname.includes('/overview') ? 'active' : ''}`}
+            onClick={() => { navigate('/admin/overview'); setIsSidebarOpen(false); }}
+          >
+            <Home size={18} /> <span>Overview</span>
+          </button>
           <button 
             className={`nav-item ${location.pathname.includes('/usermanagement') ? 'active' : ''}`}
             onClick={() => { navigate('/admin/usermanagement'); setIsSidebarOpen(false); }}
