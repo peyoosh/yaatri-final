@@ -83,11 +83,10 @@ const Home = ({ onNavigate, onSelectNode }) => {
         />
         
         <motion.div {...fadeIn} className="hero-content">
-          <p className="hero-kicker">Founded in Lalitpur</p>
-          <h1 className="hero-title">TRUE NEPAL.</h1>
-          <p className="hero-description">A high-fidelity replica exploration of the mountains through real-time terrain analysis.</p>
+          <p className="hero-kicker">Yaatri</p>
+          <h1 className="hero-title">Defintion of the one who travels originates from Sanskrit, deriving from the word yātrā (journey) or yātrin (traveler)</h1>
           <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-primary-white" onClick={() => onNavigate('Destinations')}>Initialize System</button>
+            <button className="btn-primary-white" onClick={() => onNavigate('Destinations')}>Browse Destinations</button>
             <button className="btn-secondary-outline" onClick={() => onNavigate('Planner')}>Open Pathfinder</button>
           </div>
         </motion.div>
@@ -100,7 +99,7 @@ const Home = ({ onNavigate, onSelectNode }) => {
             <p className="hero-kicker" style={{ color: 'var(--hill-green)', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <CloudSun size={16} /> REAL-TIME ATMOSPHERIC SYNC
             </p>
-            <h2 className="hero-title" style={{ fontSize: '3rem' }}>{marqueeTitle}</h2>
+            <h2 className="hero-title text-4xl md:text-[3rem] font-bold text-[#F4F2F3]">{marqueeTitle}</h2>
           </motion.div>
         </div>
 
@@ -127,12 +126,9 @@ const Home = ({ onNavigate, onSelectNode }) => {
             {scrollItems.map((item, index) => (
               <motion.div 
                 key={`${item.rank}-${index}`} 
-                className="analysis-node" 
+                className="analysis-node w-[85%] md:w-[49%] mr-[4%] md:mr-[1%] shrink-0" 
                 onTap={() => onSelectNode(item)}
                 style={{ 
-                  width: '49%', 
-                  marginRight: '1%', 
-                  flexShrink: 0,
                   background: 'rgba(255,255,255,0.02)',
                   border: '1px solid rgba(255,255,255,0.05)',
                   padding: '40px',
