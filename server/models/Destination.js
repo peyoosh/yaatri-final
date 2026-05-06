@@ -45,12 +45,39 @@ const DestinationSchema = new mongoose.Schema(
       tradition: { type: String, default: 'Connect with heritage through neural-mapped cultural immersion protocols.' },
       landscape: { type: String, default: 'Dynamic topographic tracking optimized for shifting regional weather nodes.' },
       tours: { type: String, default: 'Structured sector exploration focusing on historical and Newari lineage markers.' }
-    }
+    },
+    assignedHotels: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' }],
+    assignedGuides: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
   },
   {
     timestamps: true,
     collection: 'destinations' // Explicitly linking to the 'destinations' collection
   }
 );
+
+DestinationSchema.pre('save', async function(next) {
+  try {
+    const User = mongoose.model('User');
+    const Hotel = mongoose.model('Hotel');
+    
+    if (this.isModified('assignedHotels') && this.assignedHotels && this.assignedHotels.length > 0) {
+      const hotels = await Hotel.find({ _id: { $in: this.assignedHotels } });
+      if (hotels.length !== this.assignedHotels.length) {
+        return next(new Error('One or more assigned hotels are invalid.'));
+      }
+    }
+    
+    if (this.isModified('assignedGuides') && this.assignedGuides && this.assignedGuides.length > 0) {
+      const guides = await User.find({ _id: { $in: this.assignedGuides } });
+      const invalidGuides = guides.filter(g => g.role !== 'guide');
+      if (invalidGuides.length > 0) {
+        return next(new Error('One or more assigned guides do not have the guide role.'));
+      }
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = mongoose.model('Destination', DestinationSchema);

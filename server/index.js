@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const dns = require('dns');
+const helmet = require('helmet');
 
 // Fix for Node 17+ and MongoDB Atlas DNS resolution issues on some Windows machines
 dns.setDefaultResultOrder('ipv4first');
@@ -10,15 +11,15 @@ dns.setDefaultResultOrder('ipv4first');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.use(helmet());
+
 app.use(cors({
-  // FOOLPROOF CORS: Allows your API to be hit from any frontend deployment URL automatically
-  origin: true, 
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-// FOOLPROOF PAYLOADS: Increased limit to 50MB to prevent crashes if Base64 images are uploaded
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // Serve uploads directory
 const path = require('path');
@@ -58,5 +59,9 @@ app.use('/api/blogs', require('./routes/blogRoutes'));
 
 // AI Authentic Guide
 app.use('/api/ai', require('./routes/aiRoute'));
+
+// Global Error Handler
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 app.listen(PORT, () => console.log(`YAATRI_HUB online at port ${PORT}`));

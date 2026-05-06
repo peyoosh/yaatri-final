@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 import api from '../../api/axios';
+import { AuthContext } from '../../context/AuthContext';
 
-const Auth = ({ onLoginSuccess }) => {
+const Auth = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [formData, setFormData] = useState({ username: '', email: '', phoneNumber: '', password: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
   useEffect(() => {
     const mode = searchParams.get('mode');
@@ -27,13 +29,11 @@ const Auth = ({ onLoginSuccess }) => {
       : formData;
 
     try {
-      const res = await api.post(`/auth/${endpoint}`, payload);
       if (isLogin) {
-        localStorage.setItem('yaatri_token', res.data.token);
-        localStorage.setItem('yaatri_user', JSON.stringify(res.data.user));
-        if (onLoginSuccess) onLoginSuccess(res.data.user);
+        await login(payload);
         navigate('/');
       } else {
+        await api.post(`/auth/${endpoint}`, payload);
         setSearchParams({ mode: 'login' });
         alert("REGISTRATION_COMPLETE: Please login to verify uplink.");
       }

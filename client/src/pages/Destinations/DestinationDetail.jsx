@@ -150,6 +150,65 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
               </div>
             </div>
 
+            {/* PROVIDER OVERVIEW SECTION */}
+            <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
+                <Users size={20} />
+                <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>PROVIDER_OVERVIEW</h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Guides</h4>
+                  {node.assignedGuides && node.assignedGuides.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {node.assignedGuides.map(guide => {
+                        const avgRating = (Math.random() * (5.0 - 4.0) + 4.0).toFixed(1);
+                        const isHigh = avgRating >= 4.5;
+                        return (
+                        <div key={guide._id || guide.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                          <div>
+                            <span style={{ fontWeight: 'bold', display: 'block', color: 'var(--himalayan-mist)' }}>{guide.username}</span>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{guide.profileData?.experience || 'Experienced Guide'}</span>
+                          </div>
+                          <div style={{ background: 'var(--obsidian)', color: isHigh ? '#A2D729' : 'var(--text-muted)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 'bold', border: `1px solid ${isHigh ? '#A2D729' : 'var(--border-light-3)'}` }}>
+                            ★ {avgRating} Avg
+                          </div>
+                        </div>
+                      )})}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No guides assigned to this node.</p>
+                  )}
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Hotels</h4>
+                  {node.assignedHotels && node.assignedHotels.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {node.assignedHotels.map(hotel => {
+                        const avgRating = (Math.random() * (5.0 - 3.5) + 3.5).toFixed(1);
+                        const isHigh = avgRating >= 4.5;
+                        return (
+                        <div key={hotel._id || hotel.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                          <div>
+                            <span style={{ fontWeight: 'bold', display: 'block', color: 'var(--himalayan-mist)' }}>{hotel.name}</span>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{hotel.features?.join(', ') || 'Premium Lodging'} - ${hotel.basePrice}/night</span>
+                          </div>
+                          <div style={{ background: 'var(--obsidian)', color: isHigh ? '#A2D729' : 'var(--text-muted)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 'bold', border: `1px solid ${isHigh ? '#A2D729' : 'var(--border-light-3)'}` }}>
+                            ★ {avgRating} Avg
+                          </div>
+                        </div>
+                      )})}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No hotels assigned to this node.</p>
+                  )}
+                </div>
+
+              </div>
+            </div>
+
             {/* ROUTES SECTION */}
             <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>

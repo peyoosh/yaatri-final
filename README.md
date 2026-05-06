@@ -12,9 +12,10 @@ Yaatri Hub is a full-stack MERN travel and destination guide application. It fea
 
 ## ✨ Features
 
-*   **AI Authentic Guide:** Chatbot that utilizes real MongoDB database context to recommend travel destinations.
+*   **Yaatri Intelligence (AI Authentic Guide):** An integrated Gemini 1.5 Flash AI chatbot that functions as a highly-knowledgeable local guide. Utilizing Retrieval-Augmented Generation (RAG), it analyzes real-time MongoDB context (destination specs, user preferences, weather logic) to recommend tailored travel sectors, ensuring dynamic, data-driven responses rather than generic advice.
 *   **Dynamic Destinations:** Browse and rank travel sectors pulled directly from the database.
-*   **Admin Dashboard:** Manage users, purge nodes, view live statistics, and update system marquee settings.
+*   **Admin Dashboard:** Manage users, purge nodes, assign guide/hotel roles, view live statistics, and update system marquee settings.
+*   **User Character Assignments:** Dynamic relational assignment of specialized 'Guide' and 'Hotel_Owner' roles directly to travel destinations.
 *   **Robust Error Handling:** Frontend UI is fortified against missing database fields to prevent rendering crashes.
 *   **Dynamic Environment Routing:** Axios automatically routes to `localhost` for local development and securely routes to the live Render URL in production.
 

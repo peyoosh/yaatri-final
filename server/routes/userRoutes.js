@@ -11,6 +11,35 @@ router.get('/', validateAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET: Fetch filtered users by role for the admin panel
+router.get('/role/:role', validateAdmin, async (req, res) => {
+  try {
+    const users = await User.find({ role: req.params.role }).select('-password').lean();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT: Update user role for character assignment
+router.put('/:id/role', validateAdmin, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['explorer', 'hotel_owner', 'guide', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true, runValidators: true }
+    ).select('-password');
+    if (!updatedUser) return res.status(404).json({ error: 'User not found' });
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET: Fetch user by ID for profile view
 router.get('/:id', async (req, res) => {
   try {

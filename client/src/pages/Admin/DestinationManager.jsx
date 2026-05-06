@@ -3,6 +3,9 @@ import api from '../../api/axios';
 
 const DestinationManager = () => {
   const [destinations, setDestinations] = useState([]);
+  const [availableGuides, setAvailableGuides] = useState([]);
+  const [availableHotels, setAvailableHotels] = useState([]);
+  
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -15,7 +18,9 @@ const DestinationManager = () => {
       tradition: '',
       landscape: '',
       tours: ''
-    }
+    },
+    assignedGuides: [],
+    assignedHotels: []
   });
   const [feedback, setFeedback] = useState(null);
 
@@ -35,8 +40,23 @@ const DestinationManager = () => {
     }
   };
 
+  const fetchProviders = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const [guidesRes, hotelsRes] = await Promise.all([
+        api.get('/admin/providers?role=guide', { headers }),
+        api.get('/hotels') // Fetch actual Hotel structures
+      ]);
+      setAvailableGuides(guidesRes.data);
+      setAvailableHotels(hotelsRes.data);
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+    }
+  };
+
   useEffect(() => {
     fetchDestinations();
+    fetchProviders();
   }, []);
 
   const showFeedback = (type, text) => {
@@ -55,6 +75,11 @@ const DestinationManager = () => {
     }
   };
 
+  const handleMultiSelectChange = (e, type) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    setFormData({ ...formData, [type]: selectedOptions });
+  };
+
   const handleEdit = (dest) => {
     setEditingId(dest._id);
     setFormData({
@@ -68,7 +93,9 @@ const DestinationManager = () => {
         tradition: dest.experienceProtocols?.tradition || '',
         landscape: dest.experienceProtocols?.landscape || '',
         tours: dest.experienceProtocols?.tours || ''
-      }
+      },
+      assignedGuides: dest.assignedGuides ? dest.assignedGuides.map(g => g._id || g) : [],
+      assignedHotels: dest.assignedHotels ? dest.assignedHotels.map(h => h._id || h) : []
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -85,7 +112,8 @@ const DestinationManager = () => {
           setEditingId(null);
           setFormData({ 
             name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
-            experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }
+            experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' },
+            assignedGuides: [], assignedHotels: []
           });
           fetchDestinations();
         }
@@ -98,7 +126,8 @@ const DestinationManager = () => {
           showFeedback('success', 'NODE_STORED_SUCCESSFULLY');
           setFormData({ 
             name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
-            experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }
+            experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' },
+            assignedGuides: [], assignedHotels: []
           });
           fetchDestinations();
         }
@@ -168,6 +197,42 @@ const DestinationManager = () => {
                   <option value="Terai" style={{ background: 'var(--obsidian)' }}>Terai</option>
                 </select>
               </div>
+              <div style={{ gridColumn: '1 / -1', marginTop: '1rem', borderTop: '1px dashed var(--border-light-3)', paddingTop: '1rem' }}>
+                <h4 style={{ fontSize: '0.9rem', color: 'var(--hill-green)', marginBottom: '1rem' }}>Provider Assignments</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Link Guides</label>
+                    <select 
+                      multiple 
+                      value={formData.assignedGuides} 
+                      onChange={(e) => handleMultiSelectChange(e, 'assignedGuides')}
+                      style={{ width: '100%', background: 'var(--border-light-1)', border: '1px solid var(--border-light-3)', color: 'var(--himalayan-mist)', padding: '10px 1rem', borderRadius: '4px', fontSize: '0.8rem', minHeight: '100px' }}
+                    >
+                      {availableGuides.map(guide => (
+                        <option key={guide._id} value={guide._id} style={{ padding: '4px', background: 'var(--obsidian)' }}>
+                          {guide.username} ({guide.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Link Hotels</label>
+                    <select 
+                      multiple 
+                      value={formData.assignedHotels} 
+                      onChange={(e) => handleMultiSelectChange(e, 'assignedHotels')}
+                      style={{ width: '100%', background: 'var(--border-light-1)', border: '1px solid var(--border-light-3)', color: 'var(--himalayan-mist)', padding: '10px 1rem', borderRadius: '4px', fontSize: '0.8rem', minHeight: '100px' }}
+                    >
+                      {availableHotels.map(hotel => (
+                        <option key={hotel._id} value={hotel._id} style={{ padding: '4px', background: 'var(--obsidian)' }}>
+                          {hotel.username} ({hotel.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div style={{ gridColumn: '1 / -1', marginTop: '1rem', borderTop: '1px dashed var(--border-light-3)', paddingTop: '1rem' }}>
                 <h4 style={{ fontSize: '0.9rem', color: 'var(--hill-green)', marginBottom: '1rem' }}>Experience Protocols</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -244,3 +309,4 @@ const DestinationManager = () => {
 };
 
 export default DestinationManager;
+ager;

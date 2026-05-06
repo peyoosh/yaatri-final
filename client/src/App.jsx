@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home/Home';
 import Blog from './pages/Blog/Blog';
@@ -11,26 +11,20 @@ import Destinations from './pages/Destinations/Destinations';
 import Contact from './pages/Contact/Contact';
 import AdminDashboard from './pages/Admin/Dashboard';
 import Profile from './pages/Profile/Profile';
-import { AuthProvider } from './context/AuthContext';
+import { AuthContext } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './index.css';
 
 const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Initialize state directly from localStorage to prevent redirect flickers
-  const [loggedInUser, setLoggedInUser] = useState(() => {
-    const saved = localStorage.getItem('yaatri_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const { user: loggedInUser, logout } = useContext(AuthContext);
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedBlogNode, setSelectedBlogNode] = useState(null);
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('yaatri_token');
-    localStorage.removeItem('yaatri_user');
-    setLoggedInUser(null);
+    logout();
     navigate('/');
   };
 
@@ -56,7 +50,6 @@ const App = () => {
   const isManagementView = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
 
   return (
-    <AuthProvider>
     <div className={`${isManagementView ? "management-shell" : "app-shell"} font-global`}>
       {!isManagementView && (
         <Navbar loggedInUser={loggedInUser} handleLogout={handleLogout} />
@@ -69,7 +62,7 @@ const App = () => {
           <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/auth" element={<Auth onLoginSuccess={setLoggedInUser} />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/dashboard" element={
             <ProtectedRoute user={loggedInUser}>
@@ -99,7 +92,6 @@ const App = () => {
         </>
       )}
     </div>
-    </AuthProvider>
   );
 };
 

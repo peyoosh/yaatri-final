@@ -7,7 +7,7 @@ const User = require('../models/User');
 const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
 
 // POST: Register User
-router.post('/register', async (req, res) => {
+router.post('/register', async (req, res, next) => {
   try {
     const { username, email, phoneNumber, password } = req.body;
     
@@ -29,12 +29,12 @@ router.post('/register', async (req, res) => {
     await newUser.save();
     res.status(201).json({ success: true, message: "User registered successfully." });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // POST: Login User
-router.post('/login', async (req, res) => {
+router.post('/login', async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
 
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
     delete userObj.password;
 
     res.json({ token, user: userObj });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

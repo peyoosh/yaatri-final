@@ -5,10 +5,19 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phoneNumber: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, default: 'explorer' },
+  role: { 
+    type: String, 
+    enum: ['explorer', 'hotel_owner', 'guide', 'admin'],
+    default: 'explorer' 
+  },
   isAdmin: { type: Boolean, default: false },
   status: { type: String, default: 'Active' },
   bio: { type: String, default: 'New Explorer' },
+  profileData: {
+    experience: String,
+    amenities: [String],
+    bio: String
+  },
   preferences: { type: String, default: 'Adventure, Nature' },
   tripHistory: [
     {

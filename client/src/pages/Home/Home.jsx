@@ -84,7 +84,7 @@ const Home = ({ onNavigate, onSelectNode }) => {
         
         <motion.div {...fadeIn} className="hero-content">
           <p className="hero-kicker">Yaatri</p>
-          <h1 className="hero-title">Defintion of the one who travels originates from Sanskrit, deriving from the word yātrā (journey) or yātrin (traveler)</h1>
+          <h1 className="hero-title">Definition of the one who travels originates from Sanskrit, deriving from the word yātrā (journey) or yātrin (traveler)</h1>
           <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-primary-white" onClick={() => onNavigate('Destinations')}>Browse Destinations</button>
             <button className="btn-secondary-outline" onClick={() => onNavigate('Planner')}>Open Pathfinder</button>

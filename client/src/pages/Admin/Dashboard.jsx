@@ -93,6 +93,16 @@ export default function AdminDashboard() {
     }
   };
 
+  const updateUserRole = async (id, newRole) => {
+    try {
+      await api.patch(`/admin/users/${id}/role`, { role: newRole });
+      setUserList(userList.map(u => (u.id === id || u._id === id) ? { ...u, role: newRole } : u));
+    } catch (err) {
+      console.error("Error updating user role:", err);
+      alert("Failed to update user role.");
+    }
+  };
+
   // Check for Test Environment
   const isTestEnv = api.defaults.baseURL.includes('localhost') || api.defaults.baseURL.includes('127.0.0.1');
   const notificationMessage = isTestEnv ? "[TEST] environment active. Data is not reflective of the live [YAATRI] database." : null;
@@ -124,7 +134,7 @@ export default function AdminDashboard() {
           } />
           <Route path="usermanagement" element={
             <ErrorBoundary>
-              <UserManager userList={userList} blockUser={blockUser} deleteUser={deleteUser} />
+              <UserManager userList={userList} blockUser={blockUser} deleteUser={deleteUser} updateUserRole={updateUserRole} />
             </ErrorBoundary>
           } />
           <Route path="destinationmanagement" element={
