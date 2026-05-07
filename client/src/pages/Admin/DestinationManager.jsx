@@ -309,4 +309,3 @@ const DestinationManager = () => {
 };
 
 export default DestinationManager;
-ager;
