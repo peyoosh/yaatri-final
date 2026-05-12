@@ -1,6 +1,6 @@
 # Yaatri Hub
-
-Yaatri Hub is a full-stack MERN travel and destination guide application. It features real-time destination rankings, user-generated blogs, an administrative dashboard, and an integrated AI "Authentic Guide" powered by Google's Gemini.
+   http://localhost:5173
+Yaatri Hub is a full-stack MERN travel and destination guide application. It features real-time destination rankings, user-generated blogs, an administrative dashboard.
 
 ## 🚀 Tech Stack
 
@@ -12,7 +12,7 @@ Yaatri Hub is a full-stack MERN travel and destination guide application. It fea
 
 ## ✨ Features
 
-*   **Yaatri Intelligence (AI Authentic Guide):** An integrated Gemini 1.5 Flash AI chatbot that functions as a highly-knowledgeable local guide. Utilizing Retrieval-Augmented Generation (RAG), it analyzes real-time MongoDB context (destination specs, user preferences, weather logic) to recommend tailored travel sectors, ensuring dynamic, data-driven responses rather than generic advice.
+<!-- *   **Yaatri Intelligence (AI Authentic Guide):** An integrated Gemini 1.5 Flash AI chatbot that functions as a highly-knowledgeable local guide. Utilizing Retrieval-Augmented Generation (RAG), it analyzes real-time MongoDB context (destination specs, user preferences, weather logic) to recommend tailored travel sectors, ensuring dynamic, data-driven responses rather than generic advice. -->
 *   **Dynamic Destinations:** Browse and rank travel sectors pulled directly from the database.
 *   **Admin Dashboard:** Manage users, purge nodes, assign guide/hotel roles, view live statistics, and update system marquee settings.
 *   **User Character Assignments:** Dynamic relational assignment of specialized 'Guide' and 'Hotel_Owner' roles directly to travel destinations.

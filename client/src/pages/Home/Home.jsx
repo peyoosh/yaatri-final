@@ -125,7 +125,7 @@ const Home = ({ onNavigate, onSelectNode }) => {
           >
             {scrollItems.map((item, index) => (
               <motion.div 
-                key={`${item.rank}-${index}`} 
+                key={`${item._id}-${index}`} 
                 className="analysis-node w-[85%] md:w-[49%] mr-[4%] md:mr-[1%] shrink-0" 
                 onTap={() => onSelectNode(item)}
                 style={{ 
@@ -141,26 +141,32 @@ const Home = ({ onNavigate, onSelectNode }) => {
                   cursor: 'pointer'
                 }}
               >
-                {item.type === 'destination' && (
-                  <div 
-                    style={{ 
-                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                      backgroundImage: `linear-gradient(rgba(13,10,2,0.8), var(--obsidian)), url(${item.image})`,
-                      backgroundSize: 'cover', zIndex: -1, opacity: 0.4 
-                    }} 
-                  />
-                )}
+                <div 
+                  style={{ 
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                    backgroundImage: `linear-gradient(rgba(13,10,2,0.6), rgba(13,10,2,0.8)), url(${item.imageURL})`,
+                    backgroundSize: 'cover', backgroundPosition: 'center', zIndex: -1
+                  }} 
+                />
 
                 <div className="node-content">
                   <div style={{ color: 'var(--hill-green)', marginBottom: '20px' }}>
                     <p style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '3px' }}>{item.region}</p>
                   </div>
-                  <h3 style={{ fontSize: '2rem', fontWeight: '900', marginBottom: '15px', color: 'var(--himalayan-mist)' }}>{item.title}</h3>
-                  <p style={{ color: 'var(--terai-harvest)', maxWidth: '80%', lineHeight: '1.6' }}>{item.stats}</p>
+                  <h3 style={{ fontSize: '2rem', fontWeight: '900', marginBottom: '15px', color: 'var(--himalayan-mist)' }}>{item.name}</h3>
+                  <p style={{ color: 'var(--terai-harvest)', maxWidth: '80%', lineHeight: '1.6' }}>{item.description}</p>
+                  <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--hill-green)', fontWeight: 'bold' }}>
+                      {item.terrainType}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--terai-harvest)' }}>
+                      Popularity: {item.popularityScore}/100
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="node-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px' }}>
-                  <span style={{ fontSize: '0.6rem', opacity: 0.4, fontFamily: 'monospace' }}>[ NODE_STATUS: OPTIMAL ]</span>
+                  <span style={{ fontSize: '0.6rem', opacity: 0.4, fontFamily: 'monospace' }}>[ NODE_STATUS: ACTIVE ]</span>
                   <button 
                     className="btn-link" 
                     style={{ 
@@ -171,8 +177,13 @@ const Home = ({ onNavigate, onSelectNode }) => {
                       cursor: 'pointer', 
                       fontSize: '0.7rem', 
                       fontWeight: 'bold' 
-                    }}>
-                    EXPAND_DATA
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onNavigate('Destinations');
+                    }}
+                  >
+                    EXPLORE_DESTINATION
                   </button>
                 </div>
               </motion.div>

@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { protect } = require('../middleware/authMiddleware');
 
 const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
 
@@ -42,7 +43,7 @@ router.post('/login', async (req, res, next) => {
     const user = await User.findOne({ 
       $or: [{ email: identifier }, { phoneNumber: identifier }, { username: identifier }] 
     });
-    if (!user) return res.status(404).json({ error: "User not found. Please check your credentials." });
+    if (!user) return res.status(401).json({ error: "Invalid credentials. Please check your username and password." });
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
@@ -51,10 +52,21 @@ router.post('/login', async (req, res, next) => {
     // Generate Token & Remove password from response
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
     const userObj = user.toObject();
+    userObj.isAdmin = user.isAdmin; // Manually include the virtual property
     delete userObj.password;
 
     res.json({ token, user: userObj });
   } catch (err) { next(err); }
+});
+
+// GET: /api/auth/me - Get current user profile
+router.get('/me', protect, async (req, res) => {
+  if (!req.user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  const userObj = req.user.toObject();
+  userObj.isAdmin = req.user.isAdmin; // Ensure virtual is included
+  res.json(userObj);
 });
 
 module.exports = router;

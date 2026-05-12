@@ -1,103 +1,89 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../api/axios';
 
-export default function GuideManager({ safetyConcerns }) {
-  const transactions = [
-    { id: 'GTX-001', guide: 'Suman Gurung', user: 'trekker_88', amount: '$150', status: 'Completed' },
-    { id: 'GTX-002', guide: 'Rita Tamang', user: 'kathmandu_eyes', amount: '$200', status: 'Pending' }
-  ];
+export default function GuideManager() {
+  const [guides, setGuides] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const profileReports = [
-    { id: 'GREP-001', guide: 'Suman Gurung', report: 'Excellent local knowledge and pacing.', rating: '5/5' }
-  ];
+  useEffect(() => {
+    const fetchGuides = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/guides');
+        setGuides(res.data || []);
+      } catch (err) {
+        console.error("Failed to fetch guides:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGuides();
+  }, []);
 
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="page-title">USER_GUIDE_MANAGEMENT</h2>
+        <h2 className="page-title">GUIDE_MANAGEMENT_SYSTEM</h2>
       </div>
 
-      {/* PROFILE REPORTS */}
+      {/* ACTIVE GUIDES */}
       <section className="table-section">
-        <h3 className="section-title">Profile Reports</h3>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>REPORT_ID</th>
-                <th>GUIDE_NODE</th>
-                <th>REPORT_EXTRACT</th>
-                <th>RATING</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profileReports.map(r => (
-                <tr key={r.id}>
-                  <td>{r.id}</td>
-                  <td className="highlight-text">{r.guide}</td>
-                  <td>{r.report}</td>
-                  <td>{r.rating}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* TOTAL TRANSACTIONS */}
-      <section className="table-section">
-        <h3 className="section-title">Total Transactions</h3>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>TXN_ID</th>
-                <th>GUIDE_NODE</th>
-                <th>USER</th>
-                <th>AMOUNT</th>
-                <th>STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map(t => (
-                <tr key={t.id}>
-                  <td>{t.id}</td>
-                  <td className="highlight-text">{t.guide}</td>
-                  <td>@{t.user}</td>
-                  <td>{t.amount}</td>
-                  <td><span className={`severity-tag ${t.status === 'Pending' ? 'high' : 'low'}`}>{t.status.toUpperCase()}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* SAFETY CONCERNS */}
-      <section className="table-section">
-        <h3 className="section-title">Guide Safety Concerns</h3>
+        <h3 className="section-title">Active Guides</h3>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
                 <th>GUIDE_NAME</th>
-                <th>REGION</th>
-                <th>SEVERITY</th>
-                <th>INCIDENT_LOG</th>
+                <th>USER_ACCOUNT</th>
+                <th>DAILY_FEE</th>
+                <th>RATING</th>
+                <th>VERIFIED</th>
+                <th>COMPLETED_TOURS</th>
+                <th>STATUS</th>
               </tr>
             </thead>
             <tbody>
-              {safetyConcerns.map(c => (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td>{c.region}</td>
-                  <td><span className={`severity-tag ${c.severity.toLowerCase()}`}>{c.severity}</span></td>
-                  <td>{c.log}</td>
+              {loading ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <tr key={`skeleton-${index}`}>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-24"></div></td>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-20"></div></td>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-16"></div></td>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-12"></div></td>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-16"></div></td>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-20"></div></td>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-16"></div></td>
+                  </tr>
+                ))
+              ) : guides.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No guides registered yet.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                guides.map(guide => (
+                  <tr key={guide._id}>
+                    <td className="highlight-text">{guide.guideName || 'Unnamed Guide'}</td>
+                    <td>{guide.userId?.username || 'Unknown'}</td>
+                    <td>${guide.dailyFee || 0}/day</td>
+                    <td>{guide.rating ? `${guide.rating}/5` : 'Not rated'}</td>
+                    <td>
+                      <span className={`status-badge ${guide.isVerified ? 'status-published' : 'status-pending'}`}>
+                        {guide.isVerified ? 'VERIFIED' : 'PENDING'}
+                      </span>
+                    </td>
+                    <td>{guide.completedTours || 0}</td>
+                    <td>
+                      <span className="status-badge status-published">ACTIVE</span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </section>
     </>
   );
-}
+};

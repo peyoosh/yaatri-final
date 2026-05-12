@@ -13,10 +13,22 @@ const PORT = process.env.PORT || 5000;
 
 app.use(helmet());
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5175'
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`Blocked CORS request from origin: ${origin}`);
+    return callback(new Error('CORS policy does not allow access from this origin.'), false);
+  },
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization']
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
@@ -53,6 +65,15 @@ app.use('/api/destinations', require('./routes/destinations')); // Note: it look
 
 // Hotels
 app.use('/api/hotels', require('./routes/hotelRoutes'));
+
+// Hotel Profile Management
+app.use('/api/hotel-profile', require('./routes/hotelProfileRoutes'));
+
+// Guide Profile Management
+app.use('/api/guides', require('./routes/guideProfileRoutes'));
+
+// Billing and invoices
+app.use('/api/billing', require('./routes/billingRoutes'));
 
 // Blogs
 app.use('/api/blogs', require('./routes/blogRoutes'));

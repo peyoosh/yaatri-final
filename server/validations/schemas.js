@@ -27,10 +27,30 @@ const destinationSchema = z.object({
 const userRoleUpdateSchema = z.object({
   role: z.enum(['explorer', 'hotel_owner', 'guide', 'admin'], {
     errorMap: () => ({ message: "Invalid role" })
-  })
+  }),
+  pricePerNight: z.number().positive().optional(),
+  dailyFee: z.number().positive().optional()
+});
+
+const blogSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  content: z.string().min(10, 'Content must be at least 10 characters'),
+  locationNode: z.string().max(100).optional(),
+  images: z.preprocess((value) => {
+    if (!value) return undefined;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [value];
+      }
+    }
+    return value;
+  }, z.array(z.string()).optional())
 });
 
 module.exports = {
   destinationSchema,
-  userRoleUpdateSchema
+  userRoleUpdateSchema,
+  blogSchema
 };

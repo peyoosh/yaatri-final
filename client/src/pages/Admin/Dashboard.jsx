@@ -23,6 +23,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [userList, setUserList] = useState([]);
+  const [blogList, setBlogList] = useState([]);
+  const [isLoadingBlogs, setIsLoadingBlogs] = useState(true);
   const [safetyConcerns] = useState([
     { id: 1, name: 'Suman Gurung', region: 'Khumbu Node', severity: 'High', log: 'Uplink failure during ascent.' },
     { id: 2, name: 'Rita Tamang', region: 'Mustang', severity: 'Low', log: 'Supply drop delay at node 04.' }
@@ -30,6 +32,12 @@ export default function AdminDashboard() {
 
   // SECURE CONFIG
   const loggedInUser = JSON.parse(localStorage.getItem('yaatri_user'));
+
+  // Immediate Admin Check: If no user or user is not an admin, redirect immediately.
+  if (!loggedInUser?.isAdmin) {
+    // Using Navigate component is the idiomatic way to redirect in React Router v6 during render.
+    return <Navigate to="/auth?mode=login" replace />;
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('yaatri_token');
@@ -43,13 +51,20 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         // Use allSettled so if one fails, the others still succeed
-        const [s, u] = await Promise.allSettled([
+        const [s, u, b] = await Promise.allSettled([
           api.get('/admin/stats'),
-          api.get('/users')
+          api.get('/users'),
+          api.get('/admin/blogs') // Fetch all blogs for the admin panel
         ]);
 
         if (s.status === 'fulfilled') setStats(prev => ({ ...prev, ...s.value.data }));
         if (u.status === 'fulfilled') setUserList(u.value.data);
+        if (b.status === 'fulfilled') {
+          setBlogList(b.value.data);
+          setIsLoadingBlogs(false);
+        } else {
+          setIsLoadingBlogs(false);
+        }
       } catch (err) {
         console.error("ADMIN_AUTH_FAILED", err);
         if (err.response?.status === 401 || err.response?.status === 403) {
@@ -93,13 +108,42 @@ export default function AdminDashboard() {
     }
   };
 
-  const updateUserRole = async (id, newRole) => {
+  const updateUserRole = async (id, payload) => {
     try {
-      await api.patch(`/admin/users/${id}/role`, { role: newRole });
-      setUserList(userList.map(u => (u.id === id || u._id === id) ? { ...u, role: newRole } : u));
+      const response = await api.patch(`/admin/users/${id}/role`, payload);
+      setUserList(userList.map(u => (u.id === id || u._id === id) ? { ...u, ...response.data } : u));
     } catch (err) {
       console.error("Error updating user role:", err);
-      alert("Failed to update user role.");
+      throw err;
+    }
+  };
+
+  const updateBlogStatus = async (id, newStatus) => {
+    try {
+      await api.patch(`/admin/blogs/${id}/status`, { status: newStatus });
+      // Update the local state to reflect the change immediately
+      setBlogList(blogList.map(b => (b._id === id) ? { ...b, status: newStatus } : b));
+    } catch (err) {
+      console.error("Error updating blog status:", err);
+      alert("Failed to update blog status.");
+    }
+  };
+
+  const deleteBlog = async (id) => {
+    if (window.confirm("CONFIRM_DELETION: Are you sure you want to delete this blog post? This action cannot be undone.")) {
+      try {
+        await api.delete(`/admin/blogs/${id}`);
+        setBlogList(blogList.filter(b => b._id !== id));
+        alert("Blog deleted successfully.");
+      } catch (err) {
+        console.error("Error deleting blog:", err);
+        if (err.response?.status === 404) {
+          alert("Blog not found or already deleted.");
+          setBlogList(blogList.filter(b => b._id !== id));
+        } else {
+          alert("Failed to delete blog from database.");
+        }
+      }
     }
   };
 
@@ -144,7 +188,7 @@ export default function AdminDashboard() {
           } />
           <Route path="blogmanagement" element={
             <ErrorBoundary>
-            <BlogManager />
+            <BlogManager blogList={blogList} updateBlogStatus={updateBlogStatus} deleteBlog={deleteBlog} loading={isLoadingBlogs} />
             </ErrorBoundary>
           } />
           <Route path="hotelmanagement" element={<ErrorBoundary><HotelManager /></ErrorBoundary>} />

@@ -94,7 +94,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
           </div>
         </div>
         
-        {loggedInUser?.role === 'author' && (
+        {loggedInUser?.isAdmin && (
           <span className="nav-link-block text-[#A6A180] cursor-pointer hover:text-white" onClick={() => navigate('/admin')}>
             ADMIN
           </span>
@@ -153,7 +153,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
               <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/blog' ? 'text-[#059D72]' : 'text-white'}`} onClick={() => navigate('/blog')}>JOURNALS</span>
               <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/contact' ? 'text-[#059D72]' : 'text-white'}`} onClick={() => navigate('/contact')}>CONTACT</span>
               
-              {loggedInUser?.role === 'author' && (
+              {loggedInUser?.isAdmin && (
                 <span className="text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 text-[#A6A180]" onClick={() => navigate('/admin')}>
                   ADMIN DASHBOARD
                 </span>

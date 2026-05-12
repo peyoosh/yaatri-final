@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import RoleBadge from './components/Common/RoleBadge';
+import RoleAssignmentModal from './components/Common/RoleAssignmentModal';
+import { useToast, Toast } from './utils/Toast';
 
 export default function UserManager({
   userList,
@@ -9,16 +12,41 @@ export default function UserManager({
   updateUserRole
 }) {
   const navigate = useNavigate();
-  const [selectedRoles, setSelectedRoles] = useState({});
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toasts, showToast, removeToast } = useToast();
 
-  const handleRoleChange = (userId, role) => {
-    setSelectedRoles(prev => ({...prev, [userId]: role}));
+  const handleOpenModal = (user) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
   };
 
-  const handleUpdate = (userId) => {
-    const role = selectedRoles[userId];
-    if (role) {
-      updateUserRole(userId, role);
+  const handleSaveRole = async (payload) => {
+    if (!selectedUser) return;
+    
+    const userId = selectedUser.id || selectedUser._id;
+    setIsLoading(true);
+    
+    try {
+      await updateUserRole(userId, payload);
+      
+      // Determine the success message
+      let successMessage = `Promoted to ${payload.role.replace('_', ' ').toUpperCase()}`;
+      if (payload.role === 'hotel_owner') {
+        successMessage = `Registered as Hotel Owner (${payload.pricePerNight}/night)`;
+      } else if (payload.role === 'guide') {
+        successMessage = `Promoted to Guide (${payload.dailyFee}/day)`;
+      }
+      
+      showToast(`✓ ${selectedUser.username}: ${successMessage}`, 'success');
+      setIsModalOpen(false);
+      setSelectedUser(null);
+    } catch (err) {
+      console.error("Error saving role:", err);
+      showToast('Failed to assign character', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -29,6 +57,29 @@ export default function UserManager({
     <>
       <h2 className="page-title" style={{ fontFamily: "'Poppins', sans-serif" }}>AUTHOR_MANAGEMENT_FRONT</h2>
       
+      {/* Toast Notifications */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          id={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={removeToast}
+        />
+      ))}
+
+      {/* Role Assignment Modal */}
+      <RoleAssignmentModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedUser(null);
+        }}
+        user={selectedUser}
+        onSave={handleSaveRole}
+        loading={isLoading}
+      />
+      
       {/* USER REGISTRY */}
       <section className="table-section">
         <h3 className="section-title">System User Registry</h3>
@@ -38,7 +89,7 @@ export default function UserManager({
               <tr>
                 <th>USER_ID</th>
                 <th>IDENTIFIER</th>
-                <th>CHARACTER ASSIGNMENT</th>
+                <th>CURRENT ROLE</th>
                 <th>OPERATIONS</th>
               </tr>
             </thead>
@@ -52,33 +103,10 @@ export default function UserManager({
                   <td>#{userId.toString().substring(userId.toString().length - 4).padStart(4, '0')}</td>
                   <td className="highlight-text" onClick={() => navigate(`/profile/${userId}`)} style={{ cursor: 'pointer' }}>{u.username || 'UNKNOWN'}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <select 
-                        value={selectedRoles[userId] || u.role || 'explorer'} 
-                        onChange={(e) => handleRoleChange(userId, e.target.value)}
-                        style={{ 
-                          backgroundColor: '#1A434E', 
-                          color: '#fff',
-                          padding: '4px 8px',
-                          border: '1px solid #1A434E',
-                          borderRadius: '4px',
-                          outline: 'none'
-                        }}
-                      >
-                        <option value="explorer">Explorer</option>
-                        <option value="hotel_owner">Hotel Owner</option>
-                        <option value="guide">Guide</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <button 
-                        onClick={() => handleUpdate(userId)}
-                        style={{ backgroundColor: '#A2D729', color: '#000', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.75rem' }}
-                      >
-                        Update
-                      </button>
-                    </div>
+                    <RoleBadge role={u.role || 'explorer'} />
                   </td>
                   <td className="actions-cell">
+                    <button onClick={() => handleOpenModal(u)} className="action-btn info">ASSIGN CHARACTER</button>
                     <button onClick={() => navigate(`/admin/blogmanagement?id=${userId}`)} className="action-btn info">VIEW_BLOGS</button>
                     <button onClick={() => blockUser(userId)} className="action-btn warn">{u.status === 'Blocked' ? 'UNBLOCK' : 'BLOCK'}</button>
                     <button 

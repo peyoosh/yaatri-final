@@ -34,6 +34,124 @@ const getAllDestinations = async (user) => {
   return destinations;
 };
 
+const classifyDestinationType = (destination) => {
+  const text = `${destination.name} ${destination.region} ${destination.description} ${destination.terrainType}`.toLowerCase();
+  if (/culture|heritage|temple|tradition|spiritual|village|historical|festival/.test(text)) {
+    return 'Cultural';
+  }
+  if (/trek|hike|summit|climb|adventure|river|rafting|trail|camp|mountain|wild/.test(text)) {
+    return 'Adventure';
+  }
+  return 'Mixed';
+};
+
+const classifyDifficulty = (destination) => {
+  const altitude = destination.altitude || 0;
+  if (altitude >= 5000) return 'Extreme';
+  if (altitude >= 3500) return 'Hard';
+  if (altitude >= 2000) return 'Moderate';
+  return 'Easy';
+};
+
+const buildPreferenceProfile = (user) => {
+  const preferences = (user.preferences || '')
+    .split(',')
+    .map(pref => pref.trim().toLowerCase())
+    .filter(Boolean);
+
+  const historyKeywords = (user.tripHistory || [])
+    .flatMap(entry => [entry.dest || '', entry.comment || ''])
+    .join(' ')
+    .toLowerCase();
+
+  const preferenceKeywords = [...new Set([...preferences, ...historyKeywords.split(/\s+/)])].filter(Boolean);
+
+  const typePreferences = [];
+  if (preferences.some(pref => /culture|heritage|tradition|village|spiritual/.test(pref))) {
+    typePreferences.push('Cultural');
+  }
+  if (preferences.some(pref => /adventure|trek|hike|summit|climb|river|rafting/.test(pref))) {
+    typePreferences.push('Adventure');
+  }
+
+  return {
+    keywords: preferenceKeywords,
+    typePreferences: [...new Set(typePreferences)],
+    historyDestinations: (user.tripHistory || []).map(entry => entry.dest).filter(Boolean),
+    ratedDestinations: (user.tripHistory || []).filter(entry => Number(entry.rating) >= 4).map(entry => entry.dest)
+  };
+};
+
+const scoreDestination = (destination, profile) => {
+  let score = destination.popularityScore || 0;
+  const text = `${destination.name} ${destination.region} ${destination.description} ${destination.terrainType}`.toLowerCase();
+
+  profile.keywords.forEach(keyword => {
+    if (keyword.length > 2 && text.includes(keyword)) {
+      score += 12;
+    }
+  });
+
+  const destinationType = classifyDestinationType(destination);
+  if (profile.typePreferences.includes(destinationType)) {
+    score += 20;
+  }
+
+  if (profile.historyDestinations.some(name => name && text.includes(name.toLowerCase()))) {
+    score += 18;
+  }
+
+  if (profile.ratedDestinations.some(name => name && text.includes(name.toLowerCase()))) {
+    score += 15;
+  }
+
+  score += destinationType === 'Adventure' ? 5 : 8;
+  score += classifyDifficulty(destination) === 'Extreme' ? 10 : classifyDifficulty(destination) === 'Hard' ? 7 : 4;
+
+  return score;
+};
+
+const getPersonalizedRecommendations = async (user, limit = 6) => {
+  const destinations = await Destination.find().lean();
+  const profile = buildPreferenceProfile(user);
+
+  const recommendations = destinations.map(dest => {
+    const processed = {
+      ...dest,
+      experienceType: classifyDestinationType(dest),
+      difficulty: classifyDifficulty(dest)
+    };
+
+    const score = scoreDestination(processed, profile);
+    const reasons = [];
+
+    if (profile.typePreferences.includes(processed.experienceType)) {
+      reasons.push(`Matches your preferred ${processed.experienceType.toLowerCase()} travel style.`);
+    }
+    if (profile.historyDestinations.some(name => name && processed.name.toLowerCase().includes(name.toLowerCase()))) {
+      reasons.push('Similar to destinations you enjoyed before.');
+    }
+    if (processed.difficulty === 'Easy' && profile.keywords.includes('easy')) {
+      reasons.push('Great for a relaxed, accessible trip.');
+    }
+    if (processed.difficulty === 'Extreme') {
+      reasons.push('Ideal for high-altitude adventure seekers.');
+    }
+
+    return {
+      destination: processed,
+      score,
+      reasons: reasons.length ? reasons : ['Strong match based on your travel profile.']
+    };
+  });
+
+  recommendations.sort((a, b) => b.score - a.score);
+  return {
+    preferenceProfile: profile,
+    recommendations: recommendations.slice(0, limit)
+  };
+};
+
 const getDestinationById = async (id) => {
   const destination = await Destination.findById(id)
     .populate('assignedHotels', 'name basePrice totalRooms features')
@@ -63,6 +181,8 @@ const getDestinationById = async (id) => {
 
   const destinationObj = destination.toObject();
   destinationObj.liveAdvice = liveAdvice;
+  destinationObj.experienceType = classifyDestinationType(destinationObj);
+  destinationObj.difficulty = classifyDifficulty(destinationObj);
 
   return destinationObj;
 };
@@ -87,6 +207,7 @@ const deleteDestination = async (id) => {
 module.exports = {
   calculatePersonalizedScore,
   getAllDestinations,
+  getPersonalizedRecommendations,
   getDestinationById,
   createDestination,
   updateDestination,

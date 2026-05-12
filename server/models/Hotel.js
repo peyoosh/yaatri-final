@@ -8,7 +8,7 @@ const HotelSchema = new mongoose.Schema(
     },
     totalRooms: {
       type: Number,
-      required: true
+      default: 10 // Default for user-owned hotels
     },
     bookedRooms: {
       type: Number,
@@ -23,6 +23,15 @@ const HotelSchema = new mongoose.Schema(
     }],
     phoneNumber: {
       type: String
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      sparse: true // Allow null values, but unique when present
+    },
+    isUserOwned: {
+      type: Boolean,
+      default: false
     }
   },
   {

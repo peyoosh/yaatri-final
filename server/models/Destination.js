@@ -46,6 +46,10 @@ const DestinationSchema = new mongoose.Schema(
       landscape: { type: String, default: 'Dynamic topographic tracking optimized for shifting regional weather nodes.' },
       tours: { type: String, default: 'Structured sector exploration focusing on historical and Newari lineage markers.' }
     },
+    totalVisits: { 
+      type: Number, 
+      default: 0 
+    },
     assignedHotels: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' }],
     assignedGuides: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
   },

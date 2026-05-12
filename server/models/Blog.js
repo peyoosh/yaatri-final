@@ -19,17 +19,37 @@ const blogSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  locationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Destination',
+    default: null
+  },
   image: {
+    type: String,
+    default: ''
+  },
+  imagePublicId: {
     type: String,
     default: ''
   },
   images: [{
     type: String
   }],
+  imagesPublicIds: [{
+    type: String
+  }],
+  taggedHotels: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hotel'
+  }],
+  taggedGuides: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Guide'
+  }],
   status: {
     type: String,
-    enum: ['published', 'reported', 'flagged'],
-    default: 'published'
+    enum: ['pending', 'published', 'reported', 'flagged'],
+    default: 'pending'
   },
   reportCount: {
     type: Number,

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const destinationService = require('../services/destinationService');
 const { validateAdmin, protect } = require('../middleware/authMiddleware');
 
 // GET: Fetch all users for Admin Panel
@@ -21,22 +22,21 @@ router.get('/role/:role', validateAdmin, async (req, res) => {
   }
 });
 
-// PUT: Update user role for character assignment
-router.put('/:id/role', validateAdmin, async (req, res) => {
+// GET: Fetch personalized recommendations for a user
+router.get('/:id/recommendations', protect, async (req, res) => {
   try {
-    const { role } = req.body;
-    if (!['explorer', 'hotel_owner', 'guide', 'admin'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+    if (req.user.id !== req.params.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to view recommendations for this user' });
     }
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true, runValidators: true }
-    ).select('-password');
-    if (!updatedUser) return res.status(404).json({ error: 'User not found' });
-    res.json(updatedUser);
+
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const recommendations = await destinationService.getPersonalizedRecommendations(user);
+    res.json(recommendations);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Recommendations error:', err);
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
   }
 });
 

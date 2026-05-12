@@ -7,7 +7,7 @@ const Hotel = require('../models/Hotel');
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const hotels = await Hotel.find().lean();
+    const hotels = await Hotel.find().populate('userId', 'username email').lean();
 
     // Automatically label hotels as FULL if isFull is true
     const labeledHotels = hotels.map(hotel => {
@@ -17,6 +17,13 @@ router.get('/', async (req, res) => {
       } else {
         hotelObj.statusLabel = "AVAILABLE";
       }
+      
+      // For user-owned hotels, add username and email fields for compatibility
+      if (hotelObj.userId) {
+        hotelObj.username = hotelObj.userId.username;
+        hotelObj.email = hotelObj.userId.email;
+      }
+      
       return hotelObj;
     });
 

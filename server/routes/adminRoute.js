@@ -6,6 +6,8 @@ const { userRoleUpdateSchema } = require('../validations/schemas');
 const User = require('../models/User');
 const Destination = require('../models/Destination');
 const Blog = require('../models/Blog');
+const Hotel = require('../models/Hotel');
+const Guide = require('../models/Guide');
 
 router.get('/stats', validateAdmin, async (req, res, next) => {
   try {
@@ -26,19 +28,101 @@ router.get('/stats', validateAdmin, async (req, res, next) => {
 // PATCH: Change a user's character/role
 router.patch('/users/:id/role', validateAdmin, validate(userRoleUpdateSchema), async (req, res, next) => {
   try {
-    const { role } = req.body;
-    
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true, runValidators: true }
-    ).select('-password');
-    
-    if (!updatedUser) {
+    const { role, pricePerNight, dailyFee } = req.body;
+
+    // Get the user first to check current role
+    const currentUser = await User.findById(req.params.id);
+    if (!currentUser) {
       const err = new Error('User not found');
       err.statusCode = 404;
       return next(err);
     }
+
+    // Build the update object
+    const updateData = { role };
+
+    // Add optional fields if provided
+    if (pricePerNight !== undefined) {
+      updateData.pricePerNight = pricePerNight;
+    }
+    if (dailyFee !== undefined) {
+      updateData.dailyFee = dailyFee;
+    }
+    
+    // Handle admin role - set isAdmin flag
+    if (role === 'admin') {
+      updateData.isAdmin = true;
+    } else if (currentUser.role === 'admin' && role !== 'admin') {
+      // If removing admin role, also remove isAdmin flag
+      updateData.isAdmin = false;
+    }
+
+    // Update the user
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    // Handle role-specific document creation
+    if (role === 'hotel_owner' && pricePerNight !== undefined) {
+      // Check if hotel already exists for this user
+      const existingHotel = await Hotel.findOne({ userId: req.params.id });
+
+      if (!existingHotel) {
+        // Create new hotel for the user
+        const hotel = new Hotel({
+          name: `${updatedUser.username}'s Hotel`,
+          basePrice: pricePerNight,
+          totalRooms: 10, // Default rooms for user-owned hotels
+          userId: req.params.id,
+          isUserOwned: true,
+          features: ['User-owned accommodation']
+        });
+        await hotel.save();
+      } else {
+        // Update existing hotel
+        await Hotel.findOneAndUpdate(
+          { userId: req.params.id },
+          {
+            basePrice: pricePerNight,
+            name: existingHotel.name || `${updatedUser.username}'s Hotel`
+          }
+        );
+      }
+    }
+
+    if (role === 'guide' && dailyFee !== undefined) {
+      // Check if guide profile already exists
+      const existingGuide = await Guide.findOne({ userId: req.params.id });
+
+      if (!existingGuide) {
+        // Create new guide profile
+        const guideProfile = new Guide({
+          userId: req.params.id,
+          guideName: `${updatedUser.username} Guide`,
+          dailyFee: dailyFee,
+          bio: `Professional guide ${updatedUser.username}`,
+          rating: 0,
+          completedTours: 0,
+          isVerified: true
+        });
+        await guideProfile.save();
+      } else {
+        // Update existing guide profile
+        await Guide.findOneAndUpdate(
+          { userId: req.params.id },
+          {
+            dailyFee: dailyFee,
+            guideName: existingGuide.guideName || `${updatedUser.username} Guide`
+          }
+        );
+      }
+    }
+
+    // If user was previously a hotel_owner or guide and is now something else, we could remove their profiles
+    // But let's keep them for now in case they switch back
+
     res.json(updatedUser);
   } catch (error) {
     next(error);

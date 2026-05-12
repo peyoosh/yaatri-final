@@ -4,6 +4,7 @@ import Home from './pages/Home/Home';
 import Blog from './pages/Blog/Blog';
 import DestinationDetail from './pages/Destinations/DestinationDetail';
 import BlogModal from './components/Common/BlogModal';
+import AIChatbox from './components/Common/AIChatbox';
 import Auth from './pages/Auth/Auth';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import UserDashboard from './pages/UserDashboard/UserDashboard';
@@ -60,6 +61,7 @@ const App = () => {
           <Route path="/" element={<Home onNavigate={navigate} onSelectNode={handleNodeSelection} />} />
           <Route path="/destinations" element={<Destinations onSelectNode={handleNodeSelection} />} />
           <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
+          <Route path="/destination/:id" element={<DestinationDetail onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/auth" element={<Auth />} />
@@ -85,6 +87,8 @@ const App = () => {
         onClose={() => setIsBlogModalOpen(false)} 
         post={selectedBlogNode} 
       />
+
+      <AIChatbox />
 
       <footer className="system-footer">
         YAATRI.NP | FYP | LALITPUR, NEPAL

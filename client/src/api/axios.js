@@ -5,18 +5,25 @@ import axios from 'axios';
 // protecting against typos in your .env deployment variables.
 
 // DYNAMIC FALLBACK: If Vite doesn't find an env variable, check the browser's URL.
-const fallbackURL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
-  : 'https://yaatri-backend.onrender.com'; // ⚠️ Replace this with your actual live backend Render URL!
+const resolveBaseURL = () => {
+  const envURL = import.meta.env.VITE_API_URL;
+  if (envURL) {
+    return envURL.replace(/\/+$/, '');
+  }
 
-let rawBaseURL = (import.meta.env.VITE_API_URL || fallbackURL).replace(/\/+$/, '');
-if (!rawBaseURL.endsWith('/api')) {
-  rawBaseURL += '/api';
-}
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000/api';
+  }
 
+  return 'https://yaatri-backend.onrender.com/api';
+};
+
+const rawBaseURL = resolveBaseURL();
 const api = axios.create({
   baseURL: rawBaseURL,
-  withCredentials: true
+  withCredentials: true,
+  timeout: 15000
 });
 
 api.interceptors.request.use(

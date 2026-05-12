@@ -1,11 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../api/axios';
 import { motion } from 'framer-motion';
 import { Heart, Map, Bed, Compass, ChevronLeft, Mountain, Users, Wind, Camera } from 'lucide-react';
 
 const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [activeProtocol, setActiveProtocol] = useState(null);
+  const [remoteNode, setRemoteNode] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
-  if (!node) return null;
+  const nodeToRender = node || remoteNode;
+  const handleBackClick = () => {
+    if (onBack) return onBack();
+    navigate('/destinations');
+  };
+
+  useEffect(() => {
+    if (node || !id) return;
+
+    const fetchDestination = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/destinations/${id}`);
+        setRemoteNode(res.data);
+        setFetchError(null);
+      } catch (error) {
+        console.error('Failed to load destination:', error);
+        setFetchError('Could not load destination information.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDestination();
+  }, [id, node]);
+
+  if (loading) {
+    return <div className="loading-container">Loading destination details...</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="error-page">
+        <p>{fetchError}</p>
+        <button onClick={handleBackClick}>Back to Destinations</button>
+      </div>
+    );
+  }
+
+  if (!nodeToRender) return null;
 
   const userIntel = [
     { id: 1, user: 'trekker_88', img: 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=400', likes: 84 },
@@ -36,7 +82,7 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
       <section className="destinations-split-layout">
         {/* LEFT COLUMN: 25% - USER INTEL FEED */}
         <aside className="dest-sidebar" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 6rem)' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--hill-green)', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '2rem', fontWeight: 'bold', fontSize: '0.7rem' }}>
+          <button onClick={handleBackClick} style={{ background: 'none', border: 'none', color: 'var(--hill-green)', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '2rem', fontWeight: 'bold', fontSize: '0.7rem' }}>
             <ChevronLeft size={14} /> BACK_TO_RANKINGS
           </button>
 
@@ -67,10 +113,10 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
         {/* RIGHT COLUMN: 75% - SECTOR ANALYSIS */}
         <main className="dest-rankings" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 6rem)' }}>
           <div style={{ position: 'relative', padding: '4rem 0' }}>
-            <p className="rank-region">{node.region}</p>
-            <h2 className="vibrant-title" style={{ fontSize: '4rem', margin: '1rem 0' }}>{node.name || node.title}</h2>
+            <p className="rank-region">{nodeToRender.region}</p>
+            <h2 className="vibrant-title" style={{ fontSize: '4rem', margin: '1rem 0' }}>{nodeToRender.name || nodeToRender.title}</h2>
             <p style={{ color: 'var(--terai-harvest)', fontSize: '1.1rem', maxWidth: '700px', lineHeight: '1.6' }}>
-              Detailed analysis of coordinate node {node.rank || (node._id ? node._id.substring(node._id.length - 4) : 'XYZ')}. This sector represents the peak of high-altitude exploration in the Nepal system. 
+              Detailed analysis of coordinate node {nodeToRender.rank || (nodeToRender._id ? nodeToRender._id.substring(nodeToRender._id.length - 4) : 'XYZ')}. This sector represents the peak of high-altitude exploration in the Nepal system. 
               Topographic stability is currently rated at 94%.
             </p>
 
@@ -86,7 +132,7 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
                 <ul style={{ listStyle: 'none', padding: 0, opacity: 0.8 }}>
                   <li style={{ marginBottom: '1rem' }}>
                     <strong style={{ display: 'block', color: 'var(--himalayan-mist)' }}>Base Camp Expedition</strong>
-                    <span style={{ fontSize: '0.85rem' }}>12-day calculated trek route via Namche Node.</span>
+                    <span style={{ fontSize: '0.85rem' }}>12-day calculated trek route via Namche node.</span>
                   </li>
                   <li style={{ marginBottom: '1rem' }}>
                     <strong style={{ display: 'block', color: 'var(--himalayan-mist)' }}>Kala Patthar Summit</strong>
@@ -123,7 +169,7 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem' }}>
                 {protocols.map((proto) => {
                   const Icon = proto.icon;
-                  const desc = node.experienceProtocols?.[proto.id] || proto.defaultDesc;
+                  const desc = nodeToRender.experienceProtocols?.[proto.id] || proto.defaultDesc;
                   return (
                     <div 
                       key={proto.id}
@@ -160,9 +206,9 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
                 
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Guides</h4>
-                  {node.assignedGuides && node.assignedGuides.length > 0 ? (
+                  {nodeToRender.assignedGuides && nodeToRender.assignedGuides.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {node.assignedGuides.map(guide => {
+                      {nodeToRender.assignedGuides.map(guide => {
                         const avgRating = (Math.random() * (5.0 - 4.0) + 4.0).toFixed(1);
                         const isHigh = avgRating >= 4.5;
                         return (
@@ -184,9 +230,9 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
 
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Hotels</h4>
-                  {node.assignedHotels && node.assignedHotels.length > 0 ? (
+                  {nodeToRender.assignedHotels && nodeToRender.assignedHotels.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {node.assignedHotels.map(hotel => {
+                      {nodeToRender.assignedHotels.map(hotel => {
                         const avgRating = (Math.random() * (5.0 - 3.5) + 3.5).toFixed(1);
                         const isHigh = avgRating >= 4.5;
                         return (

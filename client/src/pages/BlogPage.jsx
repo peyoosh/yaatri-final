@@ -36,24 +36,33 @@ const BlogPage = () => {
     e.preventDefault();
     if (!title || !content) return;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
     try {
       setIsPublishing(true);
       const newBlogData = { title, content, images: [] };
 
-      // 1. Send the POST request to create the blog
-      const res = await api.post(`/blogs`, newBlogData);
+      const res = await api.post(`/blogs`, newBlogData, {
+        signal: controller.signal
+      });
 
-      // 2. Trigger an immediate re-fetch of the blog list
       await fetchBlogs();
-
-      // 3. Clear the form inputs
       setTitle('');
       setContent('');
-      
     } catch (err) {
-      console.error("Error publishing blog:", err);
-      alert("Failed to publish the blog. Make sure you are logged in.");
+      console.error('Error publishing blog:', err);
+      if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') {
+        alert('Blog post request timed out. Please retry with a smaller payload.');
+      } else if (err.response?.status === 400) {
+        alert(`Validation error: ${err.response.data?.error || 'Please check your fields.'}`);
+      } else if (err.response?.status === 401) {
+        alert('Unauthorized: Please log in to publish a blog.');
+      } else {
+        alert('Failed to publish the blog. Please try again later.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsPublishing(false);
     }
   };

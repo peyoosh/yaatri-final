@@ -6,8 +6,8 @@ const ProtectedRoute = ({ user, children, isAdminRoute = false }) => {
     return <Navigate to="/auth?mode=login" />;
   }
 
-  if (isAdminRoute && user.role !== 'author' && !user.isAdmin) {
-    console.warn("Access Denied: Author privileges required.");
+  if (isAdminRoute && !user.isAdmin) {
+    console.warn("Access Denied: Admin privileges required.");
     return <Navigate to="/" />;
   }
 

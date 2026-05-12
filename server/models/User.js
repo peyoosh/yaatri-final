@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema({
     bio: String
   },
   preferences: { type: String, default: 'Adventure, Nature' },
+  pricePerNight: { type: Number, default: null },
+  dailyFee: { type: Number, default: null },
   tripHistory: [
     {
       id: { type: String },
