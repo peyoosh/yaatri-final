@@ -27,6 +27,7 @@ const HotelSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      unique: true,
       sparse: true // Allow null values, but unique when present
     },
     isUserOwned: {

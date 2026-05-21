@@ -193,11 +193,12 @@ const createDestination = async (data) => {
 };
 
 const updateDestination = async (id, data) => {
-  return await Destination.findByIdAndUpdate(
-    id,
-    data,
-    { new: true, runValidators: true }
-  );
+  const destination = await Destination.findById(id);
+  if (!destination) return null;
+
+  Object.assign(destination, data);
+  await destination.save();
+  return destination;
 };
 
 const deleteDestination = async (id) => {

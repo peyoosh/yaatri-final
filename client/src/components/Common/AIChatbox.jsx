@@ -56,16 +56,27 @@ const AIChatbox = () => {
     try {
       // Call backend AI endpoint
       const response = await api.post('/ai/chat', { query: userInput });
-      
+      const { reply, redirectTo, suggestedDestinations } = response.data || {};
+
       const botMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        text: response.data.reply,
+        text: reply,
         timestamp: new Date(),
-        suggestedDestinations: response.data.suggestedDestinations || []
+        suggestedDestinations: suggestedDestinations || [],
+        redirectTo: redirectTo || null,
       };
 
       setMessages(prev => [...prev, botMessage]);
+
+      // If the model resolved an intent to a known route, give the user 1.5s to read the
+      // confirmation, then deep-link them there.
+      if (redirectTo) {
+        setTimeout(() => {
+          setIsOpen(false);
+          navigate(redirectTo);
+        }, 1500);
+      }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage = {
@@ -108,10 +119,10 @@ const AIChatbox = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="fixed bottom-24 right-6 w-96 max-h-[600px] bg-gradient-to-br from-[#1A434E] to-[#0D0A02] border border-[#059D72]/30 rounded-2xl shadow-2xl shadow-[#059D72]/20 flex flex-col overflow-hidden z-40"
+            className="fixed bottom-24 right-6 w-96 max-h-[600px] bg-gradient-to-br from-teal-steel to-obsidian border border-hill-green/30 rounded-2xl shadow-2xl shadow-hill-green/20 flex flex-col overflow-hidden z-40"
           >
             {/* HEADER */}
-            <div className="bg-gradient-to-r from-[#059D72] to-[#047D57] p-4 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-hill-green to-[#047D57] p-4 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <MessageCircle size={20} className="text-white" />
                 <h3 className="text-white font-bold">Yaatri AI Guide</h3>
@@ -125,7 +136,7 @@ const AIChatbox = () => {
             </div>
 
             {/* MESSAGES AREA */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0D0A02]/50 scrollbar-thin scrollbar-thumb-[#059D72]/50 scrollbar-track-transparent">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-obsidian/50 scrollbar-thin scrollbar-thumb-[#059D72]/50 scrollbar-track-transparent">
               {messages.map((msg) => (
                 <motion.div
                   key={msg.id}
@@ -137,8 +148,8 @@ const AIChatbox = () => {
                     <div
                       className={`max-w-xs px-4 py-3 rounded-xl ${
                         msg.type === 'user'
-                          ? 'bg-[#059D72] text-white rounded-br-none ml-auto'
-                          : 'bg-[#1A434E]/60 text-[#E8E3D6] rounded-bl-none border border-[#059D72]/20'
+                          ? 'bg-hill-green text-white rounded-br-none ml-auto'
+                          : 'bg-teal-steel/60 text-[#E8E3D6] rounded-bl-none border border-hill-green/20'
                       }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -154,15 +165,15 @@ const AIChatbox = () => {
                             key={dest._id}
                             whileHover={{ scale: 1.02 }}
                             onClick={() => handleDestinationClick(dest._id)}
-                            className="w-full text-left bg-[#059D72]/20 hover:bg-[#059D72]/40 border border-[#059D72]/50 rounded-lg p-3 transition-all cursor-pointer"
+                            className="w-full text-left bg-hill-green/20 hover:bg-hill-green/40 border border-hill-green/50 rounded-lg p-3 transition-all cursor-pointer"
                           >
                             <div className="flex items-start gap-2">
-                              <MapPin size={14} className="text-[#A2D729] flex-shrink-0 mt-1" />
+                              <MapPin size={14} className="text-toxic-lime flex-shrink-0 mt-1" />
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-sm text-white truncate">
                                   {dest.name}
                                 </p>
-                                <p className="text-xs text-[#A6A180] truncate">
+                                <p className="text-xs text-terai-harvest truncate">
                                   {dest.region} • {dest.terrainType}
                                 </p>
                               </div>
@@ -177,8 +188,8 @@ const AIChatbox = () => {
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-[#1A434E]/60 border border-[#059D72]/20 text-[#E8E3D6] px-4 py-3 rounded-xl flex items-center gap-2">
-                    <Loader size={16} className="animate-spin text-[#059D72]" />
+                  <div className="bg-teal-steel/60 border border-hill-green/20 text-[#E8E3D6] px-4 py-3 rounded-xl flex items-center gap-2">
+                    <Loader size={16} className="animate-spin text-hill-green" />
                     <span className="text-sm">Thinking...</span>
                   </div>
                 </div>
@@ -188,7 +199,7 @@ const AIChatbox = () => {
             </div>
 
             {/* INPUT AREA */}
-            <div className="border-t border-[#059D72]/20 p-3 bg-[#1A434E]/40 space-y-2">
+            <div className="border-t border-hill-green/20 p-3 bg-teal-steel/40 space-y-2">
               <form onSubmit={handleSendMessage} className="flex gap-2">
                 <input
                   ref={inputRef}
@@ -197,19 +208,19 @@ const AIChatbox = () => {
                   onChange={(e) => setUserInput(e.target.value)}
                   placeholder="Ask about destinations..."
                   disabled={isLoading}
-                  className="flex-1 bg-[#0D0A02]/60 border border-[#059D72]/30 rounded-lg px-3 py-2 text-sm text-white placeholder-white/40 focus:outline-none focus:border-[#059D72] transition-colors disabled:opacity-50"
+                  className="flex-1 bg-obsidian/60 border border-hill-green/30 rounded-lg px-3 py-2 text-sm text-white placeholder-white/40 focus:outline-none focus:border-hill-green transition-colors disabled:opacity-50"
                 />
                 <button
                   type="submit"
                   disabled={isLoading || !userInput.trim()}
-                  className="bg-[#059D72] hover:bg-[#047D57] disabled:bg-gray-600 text-white rounded-lg p-2 transition-colors"
+                  className="bg-hill-green hover:bg-[#047D57] disabled:bg-gray-600 text-white rounded-lg p-2 transition-colors"
                 >
                   <Send size={16} />
                 </button>
               </form>
               <button
                 onClick={clearChat}
-                className="w-full text-xs text-[#A6A180] hover:text-[#059D72] transition-colors py-1"
+                className="w-full text-xs text-terai-harvest hover:text-hill-green transition-colors py-1"
               >
                 Clear Chat
               </button>
@@ -223,7 +234,7 @@ const AIChatbox = () => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 bg-gradient-to-br from-[#059D72] to-[#047D57] hover:from-[#A2D729] hover:to-[#8BC34A] text-white rounded-full p-4 shadow-lg shadow-[#059D72]/30 hover:shadow-[#A2D729]/30 transition-all z-40 border border-white/10"
+        className="fixed bottom-6 right-6 bg-gradient-to-br from-hill-green to-[#047D57] hover:from-toxic-lime hover:to-[#8BC34A] text-white rounded-full p-4 shadow-lg shadow-hill-green/30 hover:shadow-toxic-lime/30 transition-all z-40 border border-white/10"
         title={isOpen ? 'Close AI Guide' : 'Open AI Guide'}
       >
         {isOpen ? (

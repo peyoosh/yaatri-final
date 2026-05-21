@@ -41,12 +41,16 @@ router.patch('/users/:id/role', validateAdmin, validate(userRoleUpdateSchema), a
     // Build the update object
     const updateData = { role };
 
-    // Add optional fields if provided
-    if (pricePerNight !== undefined) {
-      updateData.pricePerNight = pricePerNight;
-    }
-    if (dailyFee !== undefined) {
-      updateData.dailyFee = dailyFee;
+    // Only persist role-scoped fields when relevant; null-out the opposite to avoid stale values across role switches
+    if (role === 'hotel_owner') {
+      if (pricePerNight !== undefined) updateData.pricePerNight = pricePerNight;
+      updateData.dailyFee = null;
+    } else if (role === 'guide') {
+      if (dailyFee !== undefined) updateData.dailyFee = dailyFee;
+      updateData.pricePerNight = null;
+    } else {
+      updateData.pricePerNight = null;
+      updateData.dailyFee = null;
     }
     
     // Handle admin role - set isAdmin flag

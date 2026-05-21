@@ -376,7 +376,7 @@ const UserDashboard = ({ user }) => {
                   >
                     <div style={{ height: '100px', background: '#333', overflow: 'hidden' }}>
                       {dest.imageUrls && dest.imageUrls[0] ? (
-                        <img src={`http://localhost:5000${dest.imageUrls[0]}`} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={dest.imageUrls[0].startsWith('http') ? dest.imageUrls[0] : `${(api.defaults.baseURL || '').replace(/\/api\/?$/, '')}${dest.imageUrls[0]}`} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>No Image</div>
                       )}

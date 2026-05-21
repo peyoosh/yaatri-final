@@ -32,9 +32,12 @@ const userRoleUpdateSchema = z.object({
   dailyFee: z.number().positive().optional()
 });
 
+const countWords = (text) => (text.trim().match(/\S+/g) || []).length;
+
 const blogSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  content: z.string().min(10, 'Content must be at least 10 characters'),
+  content: z.string()
+    .refine((val) => countWords(val) <= 250, { message: 'Caption cannot exceed 250 words' }),
   locationNode: z.string().max(100).optional(),
   images: z.preprocess((value) => {
     if (!value) return undefined;

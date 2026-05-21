@@ -38,12 +38,15 @@ const DestinationManager = () => {
 
   const fetchDestinations = async () => {
     try {
+      setIsLoadingDestinations(true);
       const response = await api.get(`/destinations`);
       const fetchedData = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setDestinations(fetchedData);
     } catch (error) {
       console.error('Error fetching destinations:', error);
       showFeedback('error', 'FAILED_TO_FETCH_NODES');
+    } finally {
+      setIsLoadingDestinations(false);
     }
   };
 

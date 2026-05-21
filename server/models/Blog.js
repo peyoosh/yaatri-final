@@ -8,7 +8,8 @@ const blogSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true
+    required: false,
+    default: ''
   },
   authorId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -26,6 +27,7 @@ const blogSchema = new mongoose.Schema({
   },
   image: {
     type: String,
+    required: false,
     default: ''
   },
   imagePublicId: {

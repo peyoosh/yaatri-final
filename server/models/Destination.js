@@ -59,28 +59,24 @@ const DestinationSchema = new mongoose.Schema(
   }
 );
 
-DestinationSchema.pre('save', async function(next) {
-  try {
-    const User = mongoose.model('User');
-    const Hotel = mongoose.model('Hotel');
-    
-    if (this.isModified('assignedHotels') && this.assignedHotels && this.assignedHotels.length > 0) {
-      const hotels = await Hotel.find({ _id: { $in: this.assignedHotels } });
-      if (hotels.length !== this.assignedHotels.length) {
-        return next(new Error('One or more assigned hotels are invalid.'));
-      }
+// Mongoose 9 removed the `next` callback signature for async hooks — throw to signal errors instead.
+DestinationSchema.pre('save', async function () {
+  const User = mongoose.model('User');
+  const Hotel = mongoose.model('Hotel');
+
+  if (this.isModified('assignedHotels') && this.assignedHotels && this.assignedHotels.length > 0) {
+    const hotels = await Hotel.find({ _id: { $in: this.assignedHotels } });
+    if (hotels.length !== this.assignedHotels.length) {
+      throw new Error('One or more assigned hotels are invalid.');
     }
-    
-    if (this.isModified('assignedGuides') && this.assignedGuides && this.assignedGuides.length > 0) {
-      const guides = await User.find({ _id: { $in: this.assignedGuides } });
-      const invalidGuides = guides.filter(g => g.role !== 'guide');
-      if (invalidGuides.length > 0) {
-        return next(new Error('One or more assigned guides do not have the guide role.'));
-      }
+  }
+
+  if (this.isModified('assignedGuides') && this.assignedGuides && this.assignedGuides.length > 0) {
+    const guides = await User.find({ _id: { $in: this.assignedGuides } });
+    const invalidGuides = guides.filter(g => g.role !== 'guide');
+    if (invalidGuides.length > 0) {
+      throw new Error('One or more assigned guides do not have the guide role.');
     }
-    next();
-  } catch (error) {
-    next(error);
   }
 });
 

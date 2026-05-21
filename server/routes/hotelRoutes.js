@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Hotel = require('../models/Hotel');
+const { validateAdmin } = require('../middleware/authMiddleware');
+
+const HOTEL_ALLOWED_FIELDS = ['name', 'totalRooms', 'bookedRooms', 'basePrice', 'features', 'phoneNumber', 'userId', 'isUserOwned'];
 
 // @route   GET /api/hotels
 // @desc    Get all hotels and label them based on occupancy
@@ -36,10 +39,14 @@ router.get('/', async (req, res) => {
 
 // @route   POST /api/hotels
 // @desc    Create a new hotel
-// @access  Public (should probably be Admin, but keeping it open for now)
-router.post('/', async (req, res) => {
+// @access  Private/Admin
+router.post('/', validateAdmin, async (req, res) => {
   try {
-    const newHotel = new Hotel(req.body);
+    const safeBody = {};
+    for (const key of HOTEL_ALLOWED_FIELDS) {
+      if (req.body[key] !== undefined) safeBody[key] = req.body[key];
+    }
+    const newHotel = new Hotel(safeBody);
     const savedHotel = await newHotel.save();
     res.status(201).json(savedHotel);
   } catch (err) {

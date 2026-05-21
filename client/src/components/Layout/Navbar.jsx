@@ -95,7 +95,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
         </div>
         
         {loggedInUser?.isAdmin && (
-          <span className="nav-link-block text-[#A6A180] cursor-pointer hover:text-white" onClick={() => navigate('/admin')}>
+          <span className="nav-link-block text-terai-harvest cursor-pointer hover:text-white" onClick={() => navigate('/admin')}>
             ADMIN
           </span>
         )}
@@ -109,7 +109,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
             >
               <User size={18} />
               <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                @{loggedInUser.username.toUpperCase()}
+                @{(loggedInUser?.username || 'user').toUpperCase()}
               </span>
             </div>
             <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -119,20 +119,20 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
         ) : (
           <div style={{ display: 'flex', gap: '1.5rem' }}>
             {(() => {
-              const isAuthPage = location.pathname === '/auth';
-              const isLoginMode = new URLSearchParams(location.search).get('mode') !== 'signup';
+              const isAuthPage = ['/auth', '/login', '/register'].includes(location.pathname);
+              const isLoginMode = location.pathname === '/register' ? false : location.pathname === '/login' ? true : new URLSearchParams(location.search).get('mode') !== 'signup';
               
               if (isAuthPage) {
                 return isLoginMode ? (
-                  <span className="nav-link-block" onClick={() => navigate('/auth?mode=signup')}>Sign up</span>
+                  <span className="nav-link-block" onClick={() => navigate('/register')}>Sign up</span>
                 ) : (
-                  <span className="nav-link-block" onClick={() => navigate('/auth?mode=login')}>Sign in</span>
+                  <span className="nav-link-block" onClick={() => navigate('/login')}>Sign in</span>
                 );
               }
 
               return [
-                <span key="in" className="nav-link-block" onClick={() => navigate('/auth?mode=login')}>Sign in</span>,
-                <span key="up" className="nav-link-block" onClick={() => navigate('/auth?mode=signup')}>Sign up</span>
+                <span key="in" className="nav-link-block" onClick={() => navigate('/login')}>Sign in</span>,
+                <span key="up" className="nav-link-block" onClick={() => navigate('/register')}>Sign up</span>
               ];
             })()}
           </div>
@@ -146,15 +146,15 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: '100vh' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden fixed top-[6rem] left-0 right-0 bg-[#0D0A02]/95 backdrop-blur-xl z-50 flex flex-col items-center justify-start pt-12 overflow-y-auto pb-24 border-t border-white/10"
+            className="md:hidden fixed top-[6rem] left-0 right-0 bg-obsidian/95 backdrop-blur-xl z-50 flex flex-col items-center justify-start pt-12 overflow-y-auto pb-24 border-t border-white/10"
           >
             <div className="flex flex-col gap-6 w-full px-8">
-              <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/destinations' ? 'text-[#059D72]' : 'text-white'}`} onClick={() => navigate('/destinations')}>DESTINATIONS</span>
-              <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/blog' ? 'text-[#059D72]' : 'text-white'}`} onClick={() => navigate('/blog')}>JOURNALS</span>
-              <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/contact' ? 'text-[#059D72]' : 'text-white'}`} onClick={() => navigate('/contact')}>CONTACT</span>
+              <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/destinations' ? 'text-hill-green' : 'text-white'}`} onClick={() => navigate('/destinations')}>DESTINATIONS</span>
+              <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/blog' ? 'text-hill-green' : 'text-white'}`} onClick={() => navigate('/blog')}>JOURNALS</span>
+              <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/contact' ? 'text-hill-green' : 'text-white'}`} onClick={() => navigate('/contact')}>CONTACT</span>
               
               {loggedInUser?.isAdmin && (
-                <span className="text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 text-[#A6A180]" onClick={() => navigate('/admin')}>
+                <span className="text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 text-terai-harvest" onClick={() => navigate('/admin')}>
                   ADMIN DASHBOARD
                 </span>
               )}
@@ -162,12 +162,12 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
               {loggedInUser ? (
                 <div className="flex flex-col items-center gap-6 mt-8">
                   <div 
-                    className="flex items-center gap-2 text-[#059D72]" 
+                    className="flex items-center gap-2 text-hill-green" 
                     onClick={() => navigate('/dashboard')}
                   >
                     <User size={24} />
                     <span className="text-xl font-black tracking-widest">
-                      @{loggedInUser.username.toUpperCase()}
+                      @{(loggedInUser?.username || 'user').toUpperCase()}
                     </span>
                   </div>
                   <button onClick={handleLogout} className="flex items-center gap-2 text-[#ff4d4d] text-lg font-bold">
@@ -176,8 +176,8 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-6 mt-8">
-                  <button className="w-full bg-[#059D72] text-white py-4 rounded-full font-bold tracking-widest text-lg" onClick={() => navigate('/auth?mode=login')}>SIGN IN</button>
-                  <button className="w-full bg-transparent border-2 border-white/20 text-white py-4 rounded-full font-bold tracking-widest text-lg" onClick={() => navigate('/auth?mode=signup')}>CREATE ACCOUNT</button>
+                  <button className="w-full bg-hill-green text-white py-4 rounded-full font-bold tracking-widest text-lg" onClick={() => navigate('/login')}>SIGN IN</button>
+                  <button className="w-full bg-transparent border-2 border-white/20 text-white py-4 rounded-full font-bold tracking-widest text-lg" onClick={() => navigate('/register')}>CREATE ACCOUNT</button>
                 </div>
               )}
             </div>

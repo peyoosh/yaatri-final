@@ -12,10 +12,11 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('yaatri_token');
       if (token) {
         try {
-          const { data } = await api.get('/auth/me');
+          const { data } = await api.get('/me');
           setUser(data);
         } catch (err) {
           localStorage.removeItem('yaatri_token');
+          localStorage.removeItem('yaatri_user');
         }
       }
       setLoading(false);
@@ -24,19 +25,26 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (payload) => {
-    const { data } = await api.post('/auth/login', payload);
-    localStorage.setItem('yaatri_token', data.token);
-    setUser(data.user);
-    return data.user;
+    try {
+      const { data } = await api.post('/login', payload);
+      localStorage.setItem('yaatri_token', data.token);
+      localStorage.setItem('yaatri_user', JSON.stringify(data.user));
+      setUser(data.user);
+      return data.user;
+    } catch (err) {
+      console.error('DEBUG LOGIN ERROR:', err.response?.data || err.message, err);
+      throw err;
+    }
   };
 
   const logout = () => {
     localStorage.removeItem('yaatri_token');
+    localStorage.removeItem('yaatri_user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

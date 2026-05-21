@@ -5,7 +5,14 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { protect } = require('../middleware/authMiddleware');
 
-const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
+// Public Auth API Routes
+// POST   /register  - Create a new user
+// POST   /login     - Authenticate user and return JWT
+// GET    /me        - Return current authenticated user profile
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // POST: Register User
 router.post('/register', async (req, res, next) => {
@@ -15,7 +22,7 @@ router.post('/register', async (req, res, next) => {
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      return res.status(400).json({ error: "User already exists with that email or username." });
+      return res.sendError(400, 'AUTH_USER_EXISTS', 'User already exists with that email or username.');
     }
 
     // Hash password
@@ -43,11 +50,11 @@ router.post('/login', async (req, res, next) => {
     const user = await User.findOne({ 
       $or: [{ email: identifier }, { phoneNumber: identifier }, { username: identifier }] 
     });
-    if (!user) return res.status(401).json({ error: "Invalid credentials. Please check your username and password." });
+    if (!user) return res.sendError(401, 'AUTH_INVALID_CREDENTIALS', 'Invalid credentials. Please check your username and password.');
 
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: "Invalid password." });
+    if (!isMatch) return res.sendError(400, 'AUTH_INVALID_PASSWORD', 'Invalid password.');
 
     // Generate Token & Remove password from response
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
@@ -59,10 +66,10 @@ router.post('/login', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET: /api/auth/me - Get current user profile
+// GET: /me - Get current user profile
 router.get('/me', protect, async (req, res) => {
   if (!req.user) {
-    return res.status(404).json({ error: 'User not found' });
+    return res.sendError(404, 'AUTH_USER_NOT_FOUND', 'User not found');
   }
   const userObj = req.user.toObject();
   userObj.isAdmin = req.user.isAdmin; // Ensure virtual is included

@@ -5,6 +5,8 @@ const Destination = require('../models/Destination');
 const { protect } = require('../middleware/authMiddleware');
 const { blogSchema } = require('../validations/schemas');
 const { deleteFromCloudinary } = require('../utils/cloudinary');
+// Legacy blogs may still hold Cloudinary public IDs — `deleteFromCloudinary` is retained for the DELETE path only.
+// New blogs store their image as a Base64 data URL directly on the document.
 
 // GET: Fetch all published blogs for the public feed
 router.get('/', async (req, res) => {
@@ -20,50 +22,64 @@ router.get('/', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST: Create a new blog with Cloudinary URL
+// POST: Create a new blog. Image is sent inline as a Base64 data URL in the JSON body.
 router.post('/', protect, async (req, res) => {
   try {
-    // Extract and validate payload
-    const { title, content, locationId, image, imagePublicId, taggedHotels, taggedGuides } = req.body;
-    
-    // Validate locationId references actual destination
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const { title, content, locationId, taggedHotels, taggedGuides, image } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+
     if (locationId) {
       const destinationExists = await Destination.findById(locationId);
       if (!destinationExists) {
-        return res.status(400).json({ error: 'Selected destination does not exist' });
+        return res.status(400).json({ message: 'Selected destination does not exist' });
       }
     }
 
-    const rawPayload = {
+    // Light sanity-check on the Base64 payload — accept either a data URL or empty/missing.
+    let safeImage = '';
+    if (typeof image === 'string' && image.trim().length > 0) {
+      if (!/^data:image\/(png|jpe?g|webp|gif);base64,/.test(image)) {
+        return res.status(400).json({ message: 'image must be a base64-encoded data URL (data:image/...;base64,...)' });
+      }
+      safeImage = image;
+    }
+
+    // Zod still validates the text portion of the payload.
+    const parsed = blogSchema.parse({
       title: title || 'Untitled Journey',
-      content: content,
+      content: content || '',
       locationNode: title || '',
-      images: image ? [image] : []
+      images: []
+    });
+
+    const normalizeTagField = (value, fieldName) => {
+      if (value === undefined || value === null || value === '') return [];
+      if (Array.isArray(value)) return value;
+      try {
+        const parsedValue = JSON.parse(value);
+        if (!Array.isArray(parsedValue)) throw new Error(`${fieldName} must be an array`);
+        return parsedValue;
+      } catch (e) {
+        const err = new Error(`${fieldName} payload is malformed: ${e.message}`);
+        err.statusCode = 400;
+        throw err;
+      }
     };
 
-    // Validate with Zod
-    const parsed = blogSchema.parse(rawPayload);
-
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    // Extract public_id from Cloudinary URL if provided
-    let extractedPublicId = '';
-    if (image && image.includes('cloudinary.com')) {
-      try {
-        const urlParts = image.split('/');
-        const uploadIndex = urlParts.findIndex(part => part === 'upload');
-        if (uploadIndex !== -1 && urlParts.length > uploadIndex + 2) {
-          const versionAndId = urlParts[uploadIndex + 2]; // e.g., "v1234567890/yaatri-blogs/image.jpg"
-          const idPart = versionAndId.split('/')[1]; // Remove version
-          if (idPart) {
-            extractedPublicId = `yaatri-blogs/${idPart.split('.')[0]}`; // Remove extension
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to extract public_id from Cloudinary URL:', err);
-      }
+    let parsedTaggedHotels;
+    let parsedTaggedGuides;
+    try {
+      parsedTaggedHotels = normalizeTagField(taggedHotels, 'taggedHotels');
+      parsedTaggedGuides = normalizeTagField(taggedGuides, 'taggedGuides');
+    } catch (tagErr) {
+      return res.status(400).json({ message: tagErr.message });
     }
 
     const newBlog = new Blog({
@@ -72,29 +88,35 @@ router.post('/', protect, async (req, res) => {
       authorId: req.user._id,
       locationNode: parsed.locationNode || '',
       locationId: locationId || null,
-      image: image || '',
-      imagePublicId: imagePublicId || extractedPublicId || '',
-      images: [image] || [],
-      imagesPublicIds: imagePublicId ? [imagePublicId] : extractedPublicId ? [extractedPublicId] : [],
-      taggedHotels: taggedHotels || [],
-      taggedGuides: taggedGuides || [],
+      image: safeImage,
+      taggedHotels: parsedTaggedHotels,
+      taggedGuides: parsedTaggedGuides,
       status: 'pending'
     });
 
     const savedBlog = await newBlog.save();
-    const populatedBlog = await savedBlog
+    const populatedBlog = await Blog.findById(savedBlog._id)
       .populate('authorId', 'username')
       .populate('locationId', 'name region')
       .populate('taggedHotels', 'name')
       .populate('taggedGuides', 'guideName');
 
-    res.status(201).json(populatedBlog);
+    return res.status(201).json(populatedBlog);
   } catch (err) {
-    if (err.errors) {
-      return res.status(400).json({ error: 'Validation failed', details: err.errors });
+    // Zod and Mongoose validation errors → 400 with a *specific* message so the user knows what to fix.
+    if (err && err.name === 'ZodError') {
+      // Zod v4 exposes `issues`; v3 exposes `errors`. Support both.
+      const list = Array.isArray(err.issues) ? err.issues : (Array.isArray(err.errors) ? err.errors : []);
+      const first = list[0];
+      const fieldPath = first?.path?.join('.') || 'payload';
+      const detail = first?.message || 'Blog validation failed';
+      return res.status(400).json({ message: `${fieldPath}: ${detail}`, details: list });
+    }
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ message: err.message });
     }
     console.error('Blog creation error:', err);
-    res.status(500).json({ error: err.message || 'Failed to create blog' });
+    return res.status(400).json({ message: err.message || 'Failed to create blog' });
   }
 });
 

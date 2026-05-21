@@ -1,21 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from '../../api/axios';
-import ProfileBento from '../../components/ProfileBento';
+import api from '../../api/axios';
+import { AuthContext } from '../../context/AuthContext';
+import {
+  Edit3, Save, Camera, MapPin, ShieldCheck, Languages, Banknote, BookOpen,
+  Hotel, Star, ListChecks, Compass, Heart, Award, ArrowLeft
+} from 'lucide-react';
+
+// Convert a File → Base64 data URL for inline storage on the user document.
+const convertToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = (error) => reject(error);
+});
+
+// Map legacy enum values to the spec triple. Falls through to 'user' for unknown.
+const normalizeRole = (r) => {
+  if (r === 'guide') return 'guide';
+  if (r === 'hotel' || r === 'hotel_owner') return 'hotel';
+  if (r === 'admin') return 'admin';
+  return 'user';
+};
+
+const roleBadgeMap = {
+  user: { label: 'Yaatri Explorer', color: '#A2D729' },
+  guide: { label: 'Verified Local Guide', color: '#059D72' },
+  hotel: { label: 'Hotel Partner', color: '#F4A261' },
+  admin: { label: 'System Administrator', color: '#E63946' },
+};
 
 const Profile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser, setUser } = useContext(AuthContext);
+  const fileInputRef = useRef(null);
+
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({});
+
+  const isOwnProfile = !!authUser && (String(authUser._id) === String(id));
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get(`/users/${id}`);
+        const res = await api.get(`/users/${id}`);
         setProfileUser(res.data);
+        setDraft({
+          bio: res.data.bio || '',
+          avatar: res.data.avatar || '',
+          role: normalizeRole(res.data.role),
+          ...res.data.profileData,
+        });
       } catch (err) {
-        console.error("Failed to fetch user profile", err);
+        console.error('Failed to fetch user profile', err);
       } finally {
         setLoading(false);
       }
@@ -23,29 +65,692 @@ const Profile = () => {
     fetchUser();
   }, [id]);
 
-  if (loading) return <div className="p-8 text-white">Loading profile...</div>;
+  const role = useMemo(() => normalizeRole(profileUser?.role), [profileUser]);
+  const badge = roleBadgeMap[role] || roleBadgeMap.user;
+
+  const handleAvatarPick = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveError('Avatar must be under 5MB. Try a smaller image.');
+      return;
+    }
+    try {
+      const base64 = await convertToBase64(file);
+      setDraft((prev) => ({ ...prev, avatar: base64 }));
+      setSaveError(null);
+    } catch (err) {
+      setSaveError('Could not read the selected file.');
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const payload = {
+        avatar: draft.avatar,
+        bio: draft.bio,
+        role: draft.role,
+        // role-specific:
+        hotelName: draft.hotelName,
+        amenities: draft.amenities,
+        baseRoomRate: typeof draft.baseRoomRate === 'string' ? Number(draft.baseRoomRate) : draft.baseRoomRate,
+        languages: draft.languages,
+        ratePerDay: typeof draft.ratePerDay === 'string' ? Number(draft.ratePerDay) : draft.ratePerDay,
+        licenseNumber: draft.licenseNumber,
+      };
+      const { data } = await api.put('/users/profile', payload);
+      setProfileUser(data);
+      if (typeof setUser === 'function') setUser(data);
+      setEditing(false);
+    } catch (err) {
+      setSaveError(err.response?.data?.message || err.message || 'Failed to save profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="p-8 text-white">Loading profile…</div>;
   if (!profileUser) return <div className="p-8 text-white">User not found.</div>;
 
   return (
-    <div className="min-h-screen bg-obsidian text-white">
-      <div className="p-8 pb-0">
-        <button onClick={() => navigate(-1)} className="mb-4 text-toxic-lime hover:underline">
-          &larr; Back
+    <div style={{ minHeight: '100vh', background: 'var(--obsidian, #0D0A02)', color: '#fff' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 6%' }}>
+
+        {/* BACK */}
+        <button
+          onClick={() => navigate(-1)}
+          style={{ background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 600 }}
+        >
+          <ArrowLeft size={14} /> Back
         </button>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-toxic-lime uppercase tracking-wider">{profileUser.username}'s Profile</h1>
-          <p className="text-sm opacity-80 mt-2">{profileUser.bio || 'New Explorer'}</p>
-          <span className="inline-block mt-2 px-3 py-1 bg-teal-steel/50 border border-toxic-lime/30 rounded-full text-xs font-bold uppercase text-toxic-lime">
-            Role: {profileUser.role}
-          </span>
+
+        {/* STATIC BRAND HEADER */}
+        <header
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '180px 1fr auto',
+            gap: '2rem',
+            alignItems: 'center',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 12,
+            padding: '2rem',
+            marginBottom: '2rem',
+          }}
+        >
+          {/* Arched avatar mask */}
+          <div style={{ position: 'relative' }}>
+            <div
+              style={{
+                width: 160,
+                height: 200,
+                borderTopLeftRadius: 80,
+                borderTopRightRadius: 80,
+                borderBottomLeftRadius: 14,
+                borderBottomRightRadius: 14,
+                overflow: 'hidden',
+                background: 'linear-gradient(135deg, rgba(5,157,114,0.25), rgba(162,215,41,0.1))',
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {(editing ? draft.avatar : profileUser.avatar) ? (
+                <img
+                  src={editing ? draft.avatar : profileUser.avatar}
+                  alt={profileUser.username}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ fontSize: '3rem', fontWeight: 900, color: '#059D72', letterSpacing: 1 }}>
+                  {(profileUser.username || '?').slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </div>
+            {isOwnProfile && editing && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarPick}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    position: 'absolute', bottom: 8, right: 8,
+                    background: '#A2D729', color: '#0D0A02',
+                    width: 36, height: 36, borderRadius: '50%',
+                    border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  title="Upload new avatar"
+                >
+                  <Camera size={16} />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Identity column */}
+          <div>
+            <p style={{ fontSize: '0.7rem', letterSpacing: 3, fontWeight: 700, color: '#A6A180', textTransform: 'uppercase', marginBottom: 6 }}>
+              @{profileUser.username}
+            </p>
+            <h1 style={{ fontSize: '2.25rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: 12 }}>
+              {profileUser.username}
+            </h1>
+            <span
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 12px',
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${badge.color}`,
+                color: badge.color,
+                fontSize: '0.7rem', fontWeight: 700, letterSpacing: 2,
+                textTransform: 'uppercase',
+              }}
+            >
+              <ShieldCheck size={12} /> {badge.label}
+            </span>
+
+            {/* Bio */}
+            {editing ? (
+              <textarea
+                value={draft.bio || ''}
+                onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
+                placeholder="Tell other Yaatris about yourself…"
+                rows={2}
+                style={{
+                  display: 'block', marginTop: '1rem',
+                  width: '100%', maxWidth: 560,
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#fff',
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: 6,
+                  fontSize: '0.9rem',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  resize: 'vertical',
+                }}
+              />
+            ) : (
+              <p style={{ marginTop: 12, opacity: 0.75, fontSize: '0.95rem', maxWidth: 560, lineHeight: 1.55 }}>
+                {profileUser.bio || 'No bio yet.'}
+              </p>
+            )}
+          </div>
+
+          {/* Edit / Save toggle */}
+          {isOwnProfile && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {editing ? (
+                <>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    style={{
+                      background: '#A2D729', color: '#0D0A02',
+                      border: 'none', padding: '0.65rem 1.1rem',
+                      borderRadius: 6, cursor: saving ? 'wait' : 'pointer',
+                      fontWeight: 700, fontSize: '0.85rem',
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      opacity: saving ? 0.6 : 1,
+                    }}
+                  >
+                    <Save size={14} /> {saving ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => { setEditing(false); setSaveError(null); }}
+                    style={{
+                      background: 'none', color: '#A6A180', border: '1px solid rgba(255,255,255,0.1)',
+                      padding: '0.6rem 1rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem',
+                    }}
+                  >Cancel</button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setEditing(true)}
+                  style={{
+                    background: 'none', color: '#A2D729',
+                    border: '1px solid #A2D729', padding: '0.65rem 1.1rem',
+                    borderRadius: 6, cursor: 'pointer',
+                    fontWeight: 700, fontSize: '0.85rem',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  <Edit3 size={14} /> Edit Profile
+                </button>
+              )}
+              {saveError && (
+                <p style={{ color: '#E63946', fontSize: '0.75rem', maxWidth: 200 }}>{saveError}</p>
+              )}
+            </div>
+          )}
+        </header>
+
+        {/* DUAL-PANEL LAYOUT */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }} className="profile-grid">
+          {/* LEFT PANEL — role-adaptive */}
+          <main style={{ minHeight: 400 }}>
+            {role === 'user' && (
+              <UserPanel
+                user={profileUser}
+                editing={isOwnProfile && editing}
+                draft={draft}
+                setDraft={setDraft}
+              />
+            )}
+            {role === 'guide' && (
+              <GuidePanel
+                user={profileUser}
+                editing={isOwnProfile && editing}
+                draft={draft}
+                setDraft={setDraft}
+              />
+            )}
+            {role === 'hotel' && (
+              <HotelPanel
+                user={profileUser}
+                editing={isOwnProfile && editing}
+                draft={draft}
+                setDraft={setDraft}
+              />
+            )}
+            {role === 'admin' && (
+              <AdminPanel user={profileUser} />
+            )}
+          </main>
+
+          {/* RIGHT SIDEBAR — role-adaptive */}
+          <aside>
+            {role === 'user' && <UserSidebar user={profileUser} />}
+            {role === 'guide' && <GuideSidebar user={profileUser} />}
+            {role === 'hotel' && <HotelSidebar user={profileUser} />}
+            {role === 'admin' && <AdminSidebar />}
+          </aside>
         </div>
-      </div>
-      {/* 100% width parent for Bento Grid without padding */}
-      <div className="w-full">
-        <ProfileBento role={profileUser.role} data={{}} />
       </div>
     </div>
   );
 };
+
+/* ----------  SHARED UI HELPERS  ---------- */
+
+const Card = ({ title, icon: Icon, children, accent = '#059D72' }) => (
+  <section style={{
+    background: 'rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: 10,
+    padding: '1.5rem',
+    marginBottom: '1.25rem',
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+      {Icon && <Icon size={16} style={{ color: accent }} />}
+      <h3 style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', color: accent }}>
+        {title}
+      </h3>
+    </div>
+    {children}
+  </section>
+);
+
+const TextInput = ({ label, value, onChange, type = 'text', placeholder }) => (
+  <label style={{ display: 'block', marginBottom: '0.85rem' }}>
+    <span style={{ fontSize: '0.7rem', opacity: 0.6, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+      {label}
+    </span>
+    <input
+      type={type}
+      value={value ?? ''}
+      placeholder={placeholder}
+      onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
+      style={{
+        width: '100%',
+        background: 'rgba(0,0,0,0.25)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        color: '#fff',
+        padding: '0.6rem 0.85rem',
+        borderRadius: 6,
+        fontSize: '0.9rem',
+        outline: 'none',
+      }}
+    />
+  </label>
+);
+
+const ChipList = ({ items, onRemove, onAdd, addLabel = 'Add', editing }) => {
+  const [next, setNext] = useState('');
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: editing ? '0.75rem' : 0 }}>
+        {(items || []).length === 0 && <span style={{ opacity: 0.4, fontSize: '0.8rem' }}>None yet.</span>}
+        {(items || []).map((tag, i) => (
+          <span key={`${tag}-${i}`} style={{
+            background: 'rgba(5,157,114,0.15)',
+            color: '#A2D729',
+            padding: '3px 10px',
+            borderRadius: 999,
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            {tag}
+            {editing && (
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                style={{ background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
+              >×</button>
+            )}
+          </span>
+        ))}
+      </div>
+      {editing && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            placeholder={addLabel}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && next.trim()) { e.preventDefault(); onAdd(next.trim()); setNext(''); }
+            }}
+            style={{
+              flex: 1,
+              background: 'rgba(0,0,0,0.25)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#fff',
+              padding: '0.5rem 0.75rem',
+              borderRadius: 6,
+              fontSize: '0.85rem',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => { if (next.trim()) { onAdd(next.trim()); setNext(''); } }}
+            style={{
+              background: '#A2D729', color: '#0D0A02',
+              border: 'none', padding: '0.5rem 0.9rem',
+              borderRadius: 6, cursor: 'pointer',
+              fontWeight: 700, fontSize: '0.8rem',
+            }}
+          >+</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ----------  USER (Traveler) ---------- */
+
+const UserPanel = ({ user }) => {
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/blogs').then(({ data }) => {
+      const mine = (data || []).filter(b => b.authorId?._id === user._id || b.authorId === user._id);
+      setBlogs(mine);
+    }).catch(() => setBlogs([])).finally(() => setLoading(false));
+  }, [user._id]);
+
+  return (
+    <>
+      <Card title="Published Journals" icon={BookOpen}>
+        {loading ? (
+          <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>Loading…</p>
+        ) : blogs.length === 0 ? (
+          <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No journals published yet.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+            {blogs.map(b => (
+              <div key={b._id} style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                {b.image && <img src={b.image} alt={b.title} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />}
+                <div style={{ padding: '0.6rem 0.75rem' }}>
+                  <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 4 }}>{b.title}</p>
+                  <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>
+                    {b.locationId?.name || 'Unspecified'} · ♥ {b.likeCount || 0}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card title="Favorite Destinations" icon={Heart} accent="#E63946">
+        {(user.profileData?.favoriteDestinations || []).length === 0 ? (
+          <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No favorites saved. Star destinations to build your shortlist.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {user.profileData.favoriteDestinations.map((d, i) => (
+              <li key={i} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '0.9rem' }}>
+                {d.name || d}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </>
+  );
+};
+
+const UserSidebar = ({ user }) => {
+  const upcoming = (user.tripHistory || []).slice(0, 4);
+  return (
+    <Card title="Active Itinerary" icon={Compass}>
+      {upcoming.length === 0 ? (
+        <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No itineraries booked.</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {upcoming.map((t, i) => (
+            <li key={i} style={{ padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 700 }}>{t.dest || 'Destination TBD'}</p>
+              <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{t.date || '—'} · {t.status || 'planned'}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+};
+
+/* ----------  GUIDE  ---------- */
+
+const GuidePanel = ({ user, editing, draft, setDraft }) => {
+  const languages = (editing ? draft.languages : user.profileData?.languages) || [];
+  const rate = editing ? draft.ratePerDay : user.profileData?.ratePerDay;
+  const license = editing ? draft.licenseNumber : user.profileData?.licenseNumber;
+
+  return (
+    <>
+      <Card title="Professional Telemetry" icon={Award}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          {editing ? (
+            <>
+              <TextInput
+                label="License No."
+                value={draft.licenseNumber}
+                onChange={(v) => setDraft({ ...draft, licenseNumber: v })}
+                placeholder="NTB-12345"
+              />
+              <TextInput
+                label="Rate / day (NPR)"
+                type="number"
+                value={draft.ratePerDay}
+                onChange={(v) => setDraft({ ...draft, ratePerDay: v })}
+                placeholder="5000"
+              />
+            </>
+          ) : (
+            <>
+              <Stat label="License No." value={license || '—'} />
+              <Stat label="Rate / day" value={rate ? `NPR ${Number(rate).toLocaleString()}` : '—'} icon={Banknote} />
+            </>
+          )}
+          <Stat label="Verification" value={user.profileData?.isVerified ? 'Verified ✓' : 'Pending'} accent={user.profileData?.isVerified ? '#A2D729' : '#F4A261'} />
+          <Stat label="Member since" value={new Date(user.joinDate || Date.now()).getFullYear()} />
+        </div>
+      </Card>
+
+      <Card title="Languages" icon={Languages}>
+        <ChipList
+          items={languages}
+          editing={editing}
+          addLabel="Add a language (e.g. Nepali)"
+          onAdd={(v) => setDraft({ ...draft, languages: [...(draft.languages || []), v] })}
+          onRemove={(i) => setDraft({ ...draft, languages: draft.languages.filter((_, idx) => idx !== i) })}
+        />
+      </Card>
+    </>
+  );
+};
+
+const GuideSidebar = ({ user }) => {
+  const toursLed = (user.tripHistory || []).length;
+  const reviews = (user.tripHistory || []).filter(t => t.rating != null);
+
+  return (
+    <>
+      <Card title="Customer Reviews" icon={Star} accent="#F4A261">
+        {reviews.length === 0 ? (
+          <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No reviews yet.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {reviews.slice(0, 5).map((r, i) => (
+              <li key={i} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.78rem' }}>★ {r.rating} — {r.dest || ''}</p>
+                {r.comment && <p style={{ fontSize: '0.7rem', opacity: 0.55, fontStyle: 'italic' }}>"{r.comment}"</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      <Card title="Total Tours Led" icon={MapPin}>
+        <p style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{toursLed}</p>
+        <p style={{ fontSize: '0.75rem', opacity: 0.55 }}>completed engagements</p>
+      </Card>
+    </>
+  );
+};
+
+/* ----------  HOTEL  ---------- */
+
+const HotelPanel = ({ user, editing, draft, setDraft }) => {
+  const presetAmenities = ['WiFi', 'AC', 'Breakfast included', 'Parking', 'Hot Water', 'Laundry'];
+  const current = (editing ? draft.amenities : user.profileData?.amenities) || [];
+
+  const toggleAmenity = (a) => {
+    if (!editing) return;
+    const exists = (draft.amenities || []).includes(a);
+    setDraft({
+      ...draft,
+      amenities: exists
+        ? draft.amenities.filter(x => x !== a)
+        : [...(draft.amenities || []), a],
+    });
+  };
+
+  return (
+    <>
+      <Card title="Hotel Details" icon={Hotel}>
+        {editing ? (
+          <>
+            <TextInput
+              label="Hotel Name"
+              value={draft.hotelName}
+              onChange={(v) => setDraft({ ...draft, hotelName: v })}
+              placeholder="Mountain View Lodge"
+            />
+            <TextInput
+              label="Base Room Rate (NPR / night)"
+              type="number"
+              value={draft.baseRoomRate}
+              onChange={(v) => setDraft({ ...draft, baseRoomRate: v })}
+              placeholder="2500"
+            />
+          </>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+            <Stat label="Hotel Name" value={user.profileData?.hotelName || '—'} />
+            <Stat
+              label="Base Room Rate"
+              value={user.profileData?.baseRoomRate ? `NPR ${Number(user.profileData.baseRoomRate).toLocaleString()}` : '—'}
+              icon={Banknote}
+            />
+          </div>
+        )}
+      </Card>
+
+      <Card title="Amenities Matrix" icon={ListChecks}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+          {presetAmenities.map((a) => {
+            const active = current.includes(a);
+            return (
+              <button
+                key={a}
+                type="button"
+                onClick={() => toggleAmenity(a)}
+                disabled={!editing}
+                style={{
+                  background: active ? 'rgba(162,215,41,0.15)' : 'rgba(0,0,0,0.25)',
+                  border: `1px solid ${active ? '#A2D729' : 'rgba(255,255,255,0.08)'}`,
+                  color: active ? '#A2D729' : '#A6A180',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: 6,
+                  cursor: editing ? 'pointer' : 'default',
+                  textAlign: 'left',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <span style={{
+                  width: 14, height: 14,
+                  borderRadius: 3,
+                  border: `1px solid ${active ? '#A2D729' : 'rgba(255,255,255,0.2)'}`,
+                  background: active ? '#A2D729' : 'transparent',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#0D0A02', fontSize: 10, fontWeight: 900,
+                }}>{active ? '✓' : ''}</span>
+                {a}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+    </>
+  );
+};
+
+const HotelSidebar = ({ user }) => {
+  const reservations = (user.tripHistory || []).slice(0, 5);
+  return (
+    <>
+      <Card title="Incoming Reservations" icon={Compass}>
+        {reservations.length === 0 ? (
+          <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No reservations yet.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {reservations.map((r, i) => (
+              <li key={i} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>{r.dest || 'Guest'}</p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{r.date || '—'}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      <Card title="Billing Settings" icon={Banknote}>
+        <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: 10 }}>
+          Configure VAT and invoicing for your guests.
+        </p>
+        <button style={{
+          background: 'none', border: '1px solid #A2D729', color: '#A2D729',
+          padding: '0.55rem 1rem', borderRadius: 6, cursor: 'pointer',
+          fontSize: '0.8rem', fontWeight: 700,
+        }}>
+          Configure VAT →
+        </button>
+      </Card>
+    </>
+  );
+};
+
+/* ----------  ADMIN (light)  ---------- */
+
+const AdminPanel = ({ user }) => (
+  <Card title="Administrator" icon={ShieldCheck} accent="#E63946">
+    <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+      {user.username} has system administrator privileges. Use the /admin route for management.
+    </p>
+  </Card>
+);
+const AdminSidebar = () => (
+  <Card title="System" icon={ShieldCheck} accent="#E63946">
+    <p style={{ fontSize: '0.8rem', opacity: 0.65 }}>All operational tooling lives in the Admin Dashboard.</p>
+  </Card>
+);
+
+/* ----------  STAT TILE  ---------- */
+
+const Stat = ({ label, value, icon: Icon, accent = '#A2D729' }) => (
+  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: '0.85rem 1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+    <p style={{ fontSize: '0.65rem', opacity: 0.55, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>{label}</p>
+    <p style={{ fontSize: '1.15rem', fontWeight: 800, color: accent, display: 'flex', alignItems: 'center', gap: 6 }}>
+      {Icon && <Icon size={14} />} {value}
+    </p>
+  </div>
+);
 
 export default Profile;

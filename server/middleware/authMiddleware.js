@@ -1,60 +1,54 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const protect = async (req, res, next) => {
-  let token;
-
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      // Get token from header
-      token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
-      const decoded = jwt.verify(token, JWT_SECRET);
-
-      // Get user from the token, excluding the password
-      req.user = await User.findById(decoded.id).select('-password');
-
-      next();
-    } catch (error) {
-      console.error(error);
-      return res.status(401).json({ error: 'Not authorized, token failed' });
-    }
+  if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer')) {
+    return res.sendError(401, 'AUTH_NO_TOKEN', 'Not authorized, no token');
   }
 
-  if (!token) {
-    return res.status(401).json({ error: 'Not authorized, no token' });
+  try {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = await User.findById(decoded.id).select('-password');
+
+    if (!req.user) {
+      return res.sendError(401, 'AUTH_USER_GONE', 'User no longer exists');
+    }
+
+    return next();
+  } catch (error) {
+    console.error(error);
+    return res.sendError(401, 'AUTH_TOKEN_FAILED', 'Not authorized, token failed');
   }
 };
 
 const validateAdmin = async (req, res, next) => {
-  let token;
+  if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer')) {
+    return res.sendError(401, 'AUTH_NO_TOKEN', 'Not authorized, no token');
+  }
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      // Get token from header
-      token = req.headers.authorization.split(' ')[1];
+  try {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = await User.findById(decoded.id).select('-password');
 
-      // Verify token
-      const decoded = jwt.verify(token, JWT_SECRET);
-
-      // Get user from the token, excluding the password
-      req.user = await User.findById(decoded.id).select('-password');
-
-      // Check if user is admin
-      if (!req.user.isAdmin) {
-        return res.status(403).json({ error: 'Not authorized, admin privileges required' });
-      }
-
-      next();
-    } catch (error) {
-      console.error(error);
-      return res.status(401).json({ error: 'Not authorized, token failed' });
+    if (!req.user) {
+      return res.sendError(401, 'AUTH_USER_GONE', 'User no longer exists');
     }
-  } else {
-    return res.status(401).json({ error: 'Not authorized, no token' });
+
+    if (!req.user.isAdmin) {
+      return res.sendError(403, 'AUTH_ADMIN_REQUIRED', 'Not authorized, admin privileges required');
+    }
+
+    return next();
+  } catch (error) {
+    console.error(error);
+    return res.sendError(401, 'AUTH_TOKEN_FAILED', 'Not authorized, token failed');
   }
 };
 

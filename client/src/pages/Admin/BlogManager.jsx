@@ -64,7 +64,7 @@ export default function BlogManager({ blogList, updateBlogStatus, deleteBlog, lo
                     <td>{blog.authorId?.username || 'Unknown Author'}</td>
                     <td>
                       <span className={`status-badge ${getStatusClass(blog.status)}`}>
-                        {blog.status.toUpperCase()}
+                        {(blog.status || 'unknown').toUpperCase()}
                       </span>
                     </td>
                     <td className="actions-cell">

@@ -79,10 +79,10 @@ const AdminLayout = ({ user }) => {
           </div>
           <div className="admin-profile">
             <div className="profile-info">
-              <span className="profile-name">{user?.name || 'Admin User'}</span>
+              <span className="profile-name">{user?.username || 'Admin User'}</span>
               <span className="profile-role">SYSTEM ADMINISTRATOR</span>
             </div>
-            <div className="profile-avatar">{user?.name ? user.name[0].toUpperCase() : 'A'}</div>
+            <div className="profile-avatar">{user?.username ? user.username[0].toUpperCase() : 'A'}</div>
           </div>
         </header>
 

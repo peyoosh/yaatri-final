@@ -28,7 +28,7 @@ const ProfileBento = ({ role, data }) => {
     );
   }
 
-  if (role === 'owner') {
+  if (role === 'hotel_owner') {
     return (
       <div className="grid grid-cols-4 grid-rows-2 gap-6 min-h-[400px] w-full">
         <div className={`col-span-4 md:col-span-2 row-span-2 ${baseCardStyle}`}>

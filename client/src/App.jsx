@@ -5,6 +5,7 @@ import Blog from './pages/Blog/Blog';
 import DestinationDetail from './pages/Destinations/DestinationDetail';
 import BlogModal from './components/Common/BlogModal';
 import AIChatbox from './components/Common/AIChatbox';
+import Footer from './components/Layout/Footer';
 import Auth from './pages/Auth/Auth';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import UserDashboard from './pages/UserDashboard/UserDashboard';
@@ -64,6 +65,8 @@ const App = () => {
           <Route path="/destination/:id" element={<DestinationDetail onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/register" element={<Auth />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/dashboard" element={
@@ -90,9 +93,7 @@ const App = () => {
 
       <AIChatbox />
 
-      <footer className="system-footer">
-        YAATRI.NP | FYP | LALITPUR, NEPAL
-      </footer>
+      <Footer />
         </>
       )}
     </div>

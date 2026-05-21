@@ -26,7 +26,7 @@ const Destinations = ({ onSelectNode }) => {
   const recommended = ["Langtang Valley", "Upper Mustang", "Rara Lake", "Shey Phoksundo"];
 
   const handleRecommendedClick = (name) => {
-    const dest = sectors.find(s => s.name.toLowerCase() === name.toLowerCase());
+    const dest = sectors.find(s => s?.name && s.name.toLowerCase() === name.toLowerCase());
     if (dest) {
       onSelectNode(dest);
     } else {
@@ -34,9 +34,9 @@ const Destinations = ({ onSelectNode }) => {
     }
   };
 
-  const filteredSectors = sectors.filter(dest => 
-    dest.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (dest.region && dest.region.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredSectors = sectors.filter(dest =>
+    (dest?.name && dest.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (dest?.region && dest.region.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -112,7 +112,7 @@ const Destinations = ({ onSelectNode }) => {
                   <p className="rank-region flex items-center gap-2">
                     {dest.region}
                     {isPersonalized && (
-                      <span className="text-[0.55rem] font-bold bg-[#A2D729]/10 text-[#A2D729] px-2 py-0.5 rounded uppercase tracking-widest border border-[#A2D729]/30">
+                      <span className="text-[0.55rem] font-bold bg-toxic-lime/10 text-toxic-lime px-2 py-0.5 rounded uppercase tracking-widest border border-toxic-lime/30">
                         Top Match
                       </span>
                     )}

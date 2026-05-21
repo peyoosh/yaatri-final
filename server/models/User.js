@@ -5,18 +5,32 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phoneNumber: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { 
-    type: String, 
-    enum: ['explorer', 'hotel_owner', 'guide', 'admin'],
-    default: 'explorer' 
+  role: {
+    type: String,
+    // Old values (explorer/hotel_owner) kept for backwards-compat with existing rows.
+    // New registrations should use the spec triple: 'user' | 'guide' | 'hotel'.
+    enum: ['explorer', 'user', 'hotel_owner', 'hotel', 'guide', 'admin'],
+    default: 'user'
   },
   isAdmin: { type: Boolean, default: false },
   status: { type: String, default: 'Active' },
   bio: { type: String, default: 'New Explorer' },
+  avatar: { type: String, default: '' }, // Base64 data URL of the compressed avatar
   profileData: {
-    experience: String,
-    amenities: [String],
-    bio: String
+    // Shared
+    experience: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    // Hotel
+    hotelName: { type: String, default: '' },
+    amenities: [{ type: String }],
+    baseRoomRate: { type: Number, default: 0 },
+    // Guide
+    languages: [{ type: String }],
+    ratePerDay: { type: Number, default: 0 },
+    licenseNumber: { type: String, default: '' },
+    isVerified: { type: Boolean, default: false },
+    // Traveler
+    favoriteDestinations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Destination' }]
   },
   preferences: { type: String, default: 'Adventure, Nature' },
   pricePerNight: { type: Number, default: null },

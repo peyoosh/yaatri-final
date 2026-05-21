@@ -42,6 +42,27 @@ Yaatri Hub is a full-stack MERN travel and destination guide application. It fea
    npm run dev      # For development (Nodemon)
    ```
 
+### Public Auth API
+* `POST /register` — register a new user
+* `POST /login` — authenticate with email/phone/username and password
+* `GET /me` — get the currently authenticated user profile using JWT
+
+### Frontend (Client)
+1. Navigate to the client directory:
+   ```bash
+   cd client
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file with your `MONGO_URI`, `JWT_SECRET`, and `GEMINI_API_KEY`.
+4. Start the server:
+   ```bash
+   npm start        # For production
+   npm run dev      # For development (Nodemon)
+   ```
+
 ### Frontend (Client)
 1. Navigate to the client directory:
    ```bash

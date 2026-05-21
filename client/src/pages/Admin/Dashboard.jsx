@@ -30,20 +30,18 @@ export default function AdminDashboard() {
     { id: 2, name: 'Rita Tamang', region: 'Mustang', severity: 'Low', log: 'Supply drop delay at node 04.' }
   ]);
 
-  // SECURE CONFIG
-  const loggedInUser = JSON.parse(localStorage.getItem('yaatri_user'));
-
-  // Immediate Admin Check: If no user or user is not an admin, redirect immediately.
-  if (!loggedInUser?.isAdmin) {
-    // Using Navigate component is the idiomatic way to redirect in React Router v6 during render.
-    return <Navigate to="/auth?mode=login" replace />;
-  }
+  // SECURE CONFIG (cached parse; gate rendered AFTER all hooks have run)
+  const loggedInUser = (() => {
+    try { return JSON.parse(localStorage.getItem('yaatri_user')); } catch { return null; }
+  })();
+  const isAdminUser = !!loggedInUser?.isAdmin;
 
   useEffect(() => {
+    if (!isAdminUser) return; // Skip the admin data fetch if not an admin; render will redirect below.
+
     const token = localStorage.getItem('yaatri_token');
-    
     if (!token) {
-      navigate('/auth?mode=login');
+      navigate('/login');
       return;
     }
 
@@ -68,14 +66,19 @@ export default function AdminDashboard() {
       } catch (err) {
         console.error("ADMIN_AUTH_FAILED", err);
         if (err.response?.status === 401 || err.response?.status === 403) {
-          navigate('/auth?mode=login');
+          navigate('/login');
         }
       } finally {
         setLoading(false);
       }
     };
     loadAdminData();
-  }, []); // Empty array ensures this only runs ONCE on mount
+  }, [isAdminUser, navigate]);
+
+  // Render-time gate — runs AFTER all hooks have been declared so the hook count stays stable.
+  if (!isAdminUser) {
+    return <Navigate to="/login" replace />;
+  }
 
   const blockUser = async (id) => {
     const userToBlock = userList.find(u => u.id === id || u._id === id);

@@ -1,16 +1,24 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const Destination = require('./models/Destination');
 const User = require('./models/User');
 
 dotenv.config();
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('seed.js refuses to run when NODE_ENV=production. This script wipes the User and Destination collections.');
+  process.exit(1);
+}
+
+const generatedAdminPassword = crypto.randomBytes(12).toString('base64url');
+
 const sampleUsers = [
   {
     username: 'peyoosh_admin',
     email: 'peyoosh@yaatri.np',
-    password: '1234567890',
+    password: generatedAdminPassword,
     phoneNumber: '9841111111',
     role: 'admin',
     isAdmin: true,
@@ -97,6 +105,8 @@ const seedDB = async () => {
     }
     await User.insertMany(sampleUsers);
     console.log("👤 Users Seeded...");
+    console.log(`🔑 Seeded admin login → username: peyoosh_admin   password: ${generatedAdminPassword}`);
+    console.log('   (Capture this password now — it is generated fresh each seed run.)');
 
     // Seed Destinations
     await Destination.deleteMany({}); // Clears existing data

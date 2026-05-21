@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ user, children, isAdminRoute = false }) => {
   if (!user) {
-    return <Navigate to="/auth?mode=login" />;
+    return <Navigate to="/login" />;
   }
 
   if (isAdminRoute && !user.isAdmin) {

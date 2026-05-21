@@ -7,7 +7,10 @@ const { validate } = require('../middleware/validate');
 const { destinationSchema } = require('../validations/schemas');
 const destinationService = require('../services/destinationService');
 
-const JWT_SECRET = process.env.JWT_SECRET || "YAATRI_CORE_ENCRYPTION_KEY";
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // @route   GET /api/destinations
 // @desc    Get all destinations (personalized if logged in, otherwise sorted by popularity)

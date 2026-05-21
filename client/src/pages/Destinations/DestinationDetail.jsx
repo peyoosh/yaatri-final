@@ -11,6 +11,8 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
   const [remoteNode, setRemoteNode] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [regionBlogs, setRegionBlogs] = useState([]);
+  const [blogsLoading, setBlogsLoading] = useState(false);
 
   const nodeToRender = node || remoteNode;
   const handleBackClick = () => {
@@ -38,6 +40,32 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
     fetchDestination();
   }, [id, node]);
 
+  // Pull all published blogs once, filter to those tagged with this destination's region.
+  useEffect(() => {
+    if (!nodeToRender?.region) return;
+
+    const fetchRegionBlogs = async () => {
+      try {
+        setBlogsLoading(true);
+        const res = await api.get('/blogs');
+        const list = Array.isArray(res.data) ? res.data : [];
+        const region = (nodeToRender.region || '').toLowerCase().trim();
+        const matched = list.filter((post) => {
+          const blogRegion = (post?.locationId?.region || '').toLowerCase().trim();
+          return blogRegion && blogRegion === region;
+        });
+        setRegionBlogs(matched);
+      } catch (err) {
+        console.error('Failed to load region blogs:', err);
+        setRegionBlogs([]);
+      } finally {
+        setBlogsLoading(false);
+      }
+    };
+
+    fetchRegionBlogs();
+  }, [nodeToRender?.region]);
+
   if (loading) {
     return <div className="loading-container">Loading destination details...</div>;
   }
@@ -53,10 +81,8 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
 
   if (!nodeToRender) return null;
 
-  const userIntel = [
-    { id: 1, user: 'trekker_88', img: 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=400', likes: 84 },
-    { id: 2, user: 'kathmandu_eyes', img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400', likes: 120 }
-  ];
+  // Fallback image when a blog has no uploaded picture
+  const fallbackBlogImage = 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=400';
 
   const protocols = [
     { id: 'adventure', title: 'Adventure on foot', icon: Mountain, defaultDesc: 'Expert-led trekking modules with localized survival data specific to this node.' },
@@ -86,28 +112,51 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
             <ChevronLeft size={14} /> BACK_TO_RANKINGS
           </button>
 
-          <p className="sidebar-kicker">USER_INTEL_NODES</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {userIntel.map(post => (
-              <div 
-                key={post.id} 
-                onClick={() => onSeeBlog(post)}
-                className="intel-node-mini"
-                style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', padding: '10px', cursor: 'pointer', transition: 'all 0.3s ease' }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--hill-green)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
-              >
-                <img src={post.img} alt="User" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', filter: 'grayscale(30%)' }} />
-                <div style={{ padding: '10px 5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '1px' }}>@{post.user.toUpperCase()}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--hill-green)' }}>
-                    <Heart size={12} fill="var(--hill-green)" />
-                    <span style={{ fontSize: '0.65rem' }}>{post.likes}</span>
+          <p className="sidebar-kicker">JOURNALS_FROM_{(nodeToRender.region || 'REGION').toUpperCase()}</p>
+
+          {blogsLoading ? (
+            <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '1rem' }}>Loading journals…</p>
+          ) : regionBlogs.length === 0 ? (
+            <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '1rem' }}>
+              No journals posted from this region yet. Be the first to share.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {regionBlogs.map((post) => {
+                const cover = post.image || (Array.isArray(post.images) && post.images[0]) || fallbackBlogImage;
+                return (
+                  <div
+                    key={post._id}
+                    onClick={() => onSeeBlog && onSeeBlog(post)}
+                    className="intel-node-mini"
+                    style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', padding: '10px', cursor: 'pointer', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hill-green)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)')}
+                  >
+                    <img
+                      src={cover}
+                      alt={post.title || 'Journal'}
+                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }}
+                    />
+                    <div style={{ padding: '10px 5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '1px' }}>
+                        @{(post.authorId?.username || 'anon').toUpperCase()}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--hill-green)' }}>
+                        <Heart size={12} fill="var(--hill-green)" />
+                        <span style={{ fontSize: '0.65rem' }}>{post.likeCount || 0}</span>
+                      </div>
+                    </div>
+                    {post.locationId?.name && (
+                      <p style={{ padding: '0 5px 6px', fontSize: '0.6rem', opacity: 0.5, fontFamily: 'monospace' }}>
+                        @ {post.locationId.name}
+                      </p>
+                    )}
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </aside>
 
         {/* RIGHT COLUMN: 75% - SECTOR ANALYSIS */}

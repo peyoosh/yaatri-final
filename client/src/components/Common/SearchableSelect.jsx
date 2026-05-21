@@ -121,8 +121,8 @@ const SearchableSelect = ({
     <div className={`relative ${className}`} ref={containerRef}>
       {/* Selected values display */}
       <div
-        className={`min-h-[38px] w-full bg-[#1A434E] border border-[#A2D729]/30 rounded-md px-3 py-2 cursor-pointer flex items-center justify-between ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[#A2D729]/50'
+        className={`min-h-[38px] w-full bg-teal-steel border border-toxic-lime/30 rounded-md px-3 py-2 cursor-pointer flex items-center justify-between ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-toxic-lime/50'
         }`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
@@ -132,7 +132,7 @@ const SearchableSelect = ({
               getSelectedLabels().map((label, index) => (
                 <span
                   key={value[index]}
-                  className="inline-flex items-center gap-1 bg-[#A2D729]/20 text-[#A2D729] px-2 py-1 rounded text-xs"
+                  className="inline-flex items-center gap-1 bg-toxic-lime/20 text-toxic-lime px-2 py-1 rounded text-xs"
                 >
                   {label}
                   <X
@@ -160,9 +160,9 @@ const SearchableSelect = ({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-[#1A434E] border border-[#A2D729]/30 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-teal-steel border border-toxic-lime/30 rounded-md shadow-lg max-h-60 overflow-auto">
           {/* Search input */}
-          <div className="p-2 border-b border-[#A2D729]/20">
+          <div className="p-2 border-b border-toxic-lime/20">
             <input
               ref={inputRef}
               type="text"
@@ -172,7 +172,7 @@ const SearchableSelect = ({
                 setSearchTerm(e.target.value);
                 setHighlightedIndex(-1);
               }}
-              className="w-full bg-[#0D0A02] border border-[#A2D729]/30 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#A2D729]"
+              className="w-full bg-obsidian border border-toxic-lime/30 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-toxic-lime"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -181,7 +181,7 @@ const SearchableSelect = ({
           <div className="py-1">
             {loading ? (
               <div className="px-3 py-4 text-center text-white/60 text-sm">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#A2D729] mx-auto mb-2"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-toxic-lime mx-auto mb-2"></div>
                 Loading...
               </div>
             ) : filteredOptions.length === 0 ? (
@@ -196,7 +196,7 @@ const SearchableSelect = ({
                   <div
                     key={optionValue}
                     className={`px-3 py-2 cursor-pointer flex items-center justify-between ${
-                      isHighlighted ? 'bg-[#A2D729]/20' : 'hover:bg-[#A2D729]/10'
+                      isHighlighted ? 'bg-toxic-lime/20' : 'hover:bg-toxic-lime/10'
                     }`}
                     onClick={() => handleOptionClick(option)}
                   >
@@ -211,7 +211,7 @@ const SearchableSelect = ({
                       )}
                     </div>
                     {isSelected && (
-                      <Check size={16} className="text-[#A2D729]" />
+                      <Check size={16} className="text-toxic-lime" />
                     )}
                   </div>
                 );

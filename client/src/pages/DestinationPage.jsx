@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
-// Make sure you have this component created, or update the path to match yours
-import DestinationCard from '../components/DestinationCard'; 
 
 const DestinationPage = () => {
   const [destinations, setDestinations] = useState([]);
@@ -62,7 +60,11 @@ const DestinationPage = () => {
       ) : (
         <div className="destination-grid">
           {destinations.map(dest => (
-            <DestinationCard key={dest._id} data={dest} />
+            <div key={dest._id} className="destination-card">
+              <h3>{dest.name}</h3>
+              <p className="destination-region">{dest.region}</p>
+              <p className="destination-description">{dest.description}</p>
+            </div>
           ))}
         </div>
       )}

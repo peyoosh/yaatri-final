@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -6,6 +6,13 @@ const RoleAssignmentModal = ({ isOpen, onClose, user, onSave, loading }) => {
   const [selectedRole, setSelectedRole] = useState(user?.role || 'explorer');
   const [pricePerNight, setPricePerNight] = useState(user?.pricePerNight || '');
   const [dailyFee, setDailyFee] = useState(user?.dailyFee || '');
+
+  // Reseed local state whenever a different user (or the same user with refreshed fields) is opened.
+  useEffect(() => {
+    setSelectedRole(user?.role || 'explorer');
+    setPricePerNight(user?.pricePerNight ?? '');
+    setDailyFee(user?.dailyFee ?? '');
+  }, [user?._id, user?.role, user?.pricePerNight, user?.dailyFee]);
 
   const handleSave = async () => {
     const payload = {

@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
-import api from '../../api/axios';
+import api from '../api/axios';
 import { AlertCircle, MapPin, DollarSign, Star, Edit2, Save } from 'lucide-react';
 
 const HotelProfileManager = () => {
-  const { loggedInUser } = useContext(AuthContext);
+  const { user: loggedInUser } = useContext(AuthContext);
   const [hotelProfile, setHotelProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -79,7 +79,7 @@ const HotelProfileManager = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#A2D729] to-[#059D72]">
+          <h1 className="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-toxic-lime to-hill-green">
             Hotel Management Dashboard
           </h1>
           <p className="text-white/60">Manage your hotel details and pricing</p>
@@ -99,19 +99,19 @@ const HotelProfileManager = () => {
         )}
 
         {/* Profile Card */}
-        <div className="bg-[#1A434E] border border-white/10 rounded-2xl p-8 mb-8">
+        <div className="bg-teal-steel border border-white/10 rounded-2xl p-8 mb-8">
           <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-3xl font-bold mb-2">{formData.hotelName || 'Your Hotel'}</h2>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <DollarSign size={18} className="text-[#A2D729]" />
+                  <DollarSign size={18} className="text-toxic-lime" />
                   <span className="text-lg">
                     Base Price: <strong>${formData.basePrice}</strong> per night
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Star size={18} className="text-[#A2D729]" />
+                  <Star size={18} className="text-toxic-lime" />
                   <span className="text-lg">
                     Rating: <strong>{formData.rating.toFixed(1)}</strong>/5
                   </span>
@@ -120,7 +120,7 @@ const HotelProfileManager = () => {
             </div>
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="bg-[#059D72] hover:bg-[#A2D729] hover:text-[#0D0A02] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              className="bg-hill-green hover:bg-toxic-lime hover:text-obsidian text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
             >
               {isEditing ? <Save size={18} /> : <Edit2 size={18} />}
               {isEditing ? 'Save' : 'Edit'}
@@ -136,7 +136,7 @@ const HotelProfileManager = () => {
                   name="hotelName"
                   value={formData.hotelName}
                   onChange={handleChange}
-                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#A2D729]"
+                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-toxic-lime"
                 />
               </div>
 
@@ -148,7 +148,7 @@ const HotelProfileManager = () => {
                     name="basePrice"
                     value={formData.basePrice}
                     onChange={handleChange}
-                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#A2D729]"
+                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-toxic-lime"
                     min="0"
                     step="10"
                   />
@@ -161,7 +161,7 @@ const HotelProfileManager = () => {
                     name="rating"
                     value={formData.rating}
                     onChange={handleChange}
-                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#A2D729]"
+                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-toxic-lime"
                     min="0"
                     max="5"
                     step="0.1"
@@ -176,14 +176,14 @@ const HotelProfileManager = () => {
                   value={formData.description}
                   onChange={handleChange}
                   rows="4"
-                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#A2D729] resize-none"
+                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-toxic-lime resize-none"
                 />
               </div>
 
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleSave}
-                  className="flex-1 bg-[#A2D729] hover:bg-[#059D72] text-[#0D0A02] hover:text-white font-bold py-3 rounded-lg transition-colors"
+                  className="flex-1 bg-toxic-lime hover:bg-hill-green text-obsidian hover:text-white font-bold py-3 rounded-lg transition-colors"
                 >
                   Save Changes
                 </button>
@@ -203,7 +203,7 @@ const HotelProfileManager = () => {
         </div>
 
         {/* Info Box */}
-        <div className="bg-[#1A434E]/50 border border-blue-500/30 rounded-lg p-4 flex gap-3">
+        <div className="bg-teal-steel/50 border border-blue-500/30 rounded-lg p-4 flex gap-3">
           <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-white/80">
             <p className="font-semibold mb-1">Pricing Information</p>
