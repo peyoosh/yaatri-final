@@ -15,7 +15,9 @@ const userSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   status: { type: String, default: 'Active' },
   bio: { type: String, default: 'New Explorer' },
-  avatar: { type: String, default: '' }, // Base64 data URL of the compressed avatar
+  // Base64 data URL of the compressed avatar — heavy field, excluded from default selects.
+  // Read paths that need it must opt in via `.select('+avatar')`.
+  avatar: { type: String, default: '', select: false },
   profileData: {
     // Shared
     experience: { type: String, default: '' },

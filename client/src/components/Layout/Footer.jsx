@@ -42,17 +42,17 @@ const Footer = () => {
 
   const colA = [
     { label: 'Destinations', to: '/destinations' },
+    { label: 'Explore (AI)', to: '/explore' },
     { label: 'Blog', to: '/blog' },
     { label: 'About us', to: '/contact' },
     { label: 'Contact us', to: '/contact' },
-    { label: 'FAQ', to: '/contact' },
   ];
 
   const colB = [
     { label: 'Booking guide', to: '/destinations' },
     { label: 'Travel tips', to: '/blog' },
+    { label: 'Support', to: '/support' },
     { label: 'Visa info', to: '/contact' },
-    { label: 'Insurance', to: '/contact' },
     { label: 'Partnerships', to: '/contact' },
   ];
 

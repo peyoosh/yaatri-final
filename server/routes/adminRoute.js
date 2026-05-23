@@ -8,17 +8,95 @@ const Destination = require('../models/Destination');
 const Blog = require('../models/Blog');
 const Hotel = require('../models/Hotel');
 const Guide = require('../models/Guide');
+const Booking = require('../models/Booking');
 
+// GET /api/admin/stats — every number here is computed against live collections so
+// the overview tiles update the moment a booking is placed / cancelled.
 router.get('/stats', validateAdmin, async (req, res, next) => {
   try {
-    const [users, destinations, blogs] = await Promise.all([
+    const [users, destinations, blogs, activeGuides, hotels, bookings] = await Promise.all([
       User.countDocuments(),
       Destination.countDocuments(),
-      Blog.countDocuments()
+      Blog.countDocuments(),
+      User.countDocuments({ role: 'guide' }),
+      Hotel.countDocuments(),
+      Booking.find({})
+        .select('pricing status createdAt destination user')
+        .populate('destination', 'name region')
+        .populate('user', 'username')
+        .sort({ createdAt: -1 })
+        .lean(),
     ]);
 
+    // Revenue: sum of pricing.totalCost across all bookings whose status isn't 'cancelled'.
+    let revenue = 0;
+    let cancelledRevenue = 0;
+    let pendingCount = 0;
+    let confirmedCount = 0;
+    let completedCount = 0;
+    let cancelledCount = 0;
+    for (const b of bookings) {
+      const total = Number(b?.pricing?.totalCost || 0);
+      if (b.status === 'cancelled') {
+        cancelledRevenue += total;
+        cancelledCount++;
+      } else {
+        revenue += total;
+        if (b.status === 'pending') pendingCount++;
+        else if (b.status === 'confirmed') confirmedCount++;
+        else if (b.status === 'completed') completedCount++;
+      }
+    }
+
+    // Traffic estimate — derived from real engagement signals until we wire
+    // proper analytics. Replace with a tracker (PostHog/Plausible) later.
+    const traffic = (destinations * 80) + (users * 12) + (blogs * 40) + (bookings.length * 25);
+
+    // Top-destinations by booking count (drives the "Most Opted Nepal Routes" chart).
+    const destCounts = new Map();
+    for (const b of bookings) {
+      const key = b?.destination?._id ? String(b.destination._id) : null;
+      if (!key) continue;
+      const entry = destCounts.get(key) || { _id: key, name: b.destination.name, region: b.destination.region, bookings: 0, revenue: 0 };
+      entry.bookings += 1;
+      if (b.status !== 'cancelled') entry.revenue += Number(b?.pricing?.totalCost || 0);
+      destCounts.set(key, entry);
+    }
+    const topDestinations = Array.from(destCounts.values())
+      .sort((a, b) => b.bookings - a.bookings)
+      .slice(0, 5);
+
+    // Recent activity (live, derived from Bookings — replaces the previous static mock log).
+    const recentActivity = bookings.slice(0, 8).map((b) => ({
+      id: String(b._id),
+      user: b?.user?.username || 'guest',
+      action: b.status === 'cancelled'
+        ? `Cancelled booking for ${b.destination?.name || 'a destination'}`
+        : `Booked ${b.destination?.name || 'a destination'} (NPR ${Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')})`,
+      timestamp: b.createdAt,
+      status: b.status,
+    }));
+
     res.json({
-      users, destinations, blogs, activeGuides: 5
+      users,
+      destinations,
+      blogs,
+      hotels,
+      activeGuides,
+      revenue,                       // NPR — net of cancellations
+      cancelledRevenue,              // NPR — diagnostic, shown separately
+      traffic,
+      bookings: {
+        total: bookings.length,
+        pending: pendingCount,
+        confirmed: confirmedCount,
+        completed: completedCount,
+        cancelled: cancelledCount,
+      },
+      topDestinations,
+      recentActivity,
+      currency: 'NPR',
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     next(error);

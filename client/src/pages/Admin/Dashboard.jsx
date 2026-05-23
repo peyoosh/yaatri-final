@@ -14,6 +14,7 @@ import BlogManager from './BlogManager';
 import GuideManager from './GuideManager';
 import HotelManager from './HotelManager';
 import DashboardOverview from './DashboardOverview';
+import MessagesManager from './MessagesManager';
 
 import './Dashboard.css';
 import api from '../../api/axios';
@@ -198,6 +199,11 @@ export default function AdminDashboard() {
           <Route path="userguidemanagement" element={
             <ErrorBoundary>
               <GuideManager safetyConcerns={safetyConcerns} />
+            </ErrorBoundary>
+          } />
+          <Route path="messages" element={
+            <ErrorBoundary>
+              <MessagesManager />
             </ErrorBoundary>
           } />
         </Route>

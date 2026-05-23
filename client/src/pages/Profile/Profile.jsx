@@ -577,28 +577,77 @@ const GuidePanel = ({ user, editing, draft, setDraft }) => {
 };
 
 const GuideSidebar = ({ user }) => {
-  const toursLed = (user.tripHistory || []).length;
-  const reviews = (user.tripHistory || []).filter(t => t.rating != null);
+  // Live engagement data — polls /api/users/:id/role-stats every 60s so newly placed
+  // bookings on the guide's assigned destinations show up without a page refresh.
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?._id) return;
+    let cancelled = false;
+    const pull = async () => {
+      try {
+        const { data } = await api.get(`/users/${user._id}/role-stats`);
+        if (!cancelled) setStats(data);
+      } catch (_) { /* keep previous snapshot */ }
+      finally { if (!cancelled) setLoading(false); }
+    };
+    pull();
+    const id = setInterval(pull, 60_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [user?._id]);
+
+  const upcoming = stats?.upcomingEngagements || [];
+  const past = stats?.pastEngagements || [];
+  const totalEngagements = stats?.totalEngagements ?? 0;
+  const totalEarnings = stats?.totalEarnings ?? 0;
+  const assignedDestinations = stats?.assignedDestinations || [];
 
   return (
     <>
-      <Card title="Customer Reviews" icon={Star} accent="#F4A261">
-        {reviews.length === 0 ? (
-          <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No reviews yet.</p>
+      <Card title="Earnings (estimated)" icon={Banknote} accent="#A2D729">
+        <p style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#A2D729' }}>
+          NPR {Number(totalEarnings).toLocaleString('en-IN')}
+        </p>
+        <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
+          {totalEngagements} engagement{totalEngagements === 1 ? '' : 's'} across {assignedDestinations.length} destination{assignedDestinations.length === 1 ? '' : 's'} · NPR 1,500/traveller/day
+        </p>
+      </Card>
+
+      <Card title="Upcoming engagements" icon={Compass}>
+        {loading ? (
+          <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>Loading…</p>
+        ) : upcoming.length === 0 ? (
+          <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No upcoming engagements. New bookings on your assigned destinations will appear here.</p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {reviews.slice(0, 5).map((r, i) => (
-              <li key={i} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <p style={{ fontSize: '0.78rem' }}>★ {r.rating} — {r.dest || ''}</p>
-                {r.comment && <p style={{ fontSize: '0.7rem', opacity: 0.55, fontStyle: 'italic' }}>"{r.comment}"</p>}
+            {upcoming.slice(0, 5).map((b) => (
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                  {b.destination?.name || 'Destination'} · {b.travelers}p × {b.durationDays}d
+                </p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>
+                  @{b.user?.username || 'traveler'} · {b.startDate ? new Date(b.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'date TBD'} · {b.status}
+                </p>
               </li>
             ))}
           </ul>
         )}
       </Card>
-      <Card title="Total Tours Led" icon={MapPin}>
-        <p style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{toursLed}</p>
-        <p style={{ fontSize: '0.75rem', opacity: 0.55 }}>completed engagements</p>
+
+      <Card title="Recent engagements" icon={Star} accent="#F4A261">
+        {past.length === 0 ? (
+          <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No completed engagements yet.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {past.slice(0, 4).map((b) => (
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.78rem' }}>{b.destination?.name || 'Destination'} · @{b.user?.username || 'traveler'}</p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{b.status} · NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </>
   );
@@ -694,34 +743,91 @@ const HotelPanel = ({ user, editing, draft, setDraft }) => {
 };
 
 const HotelSidebar = ({ user }) => {
-  const reservations = (user.tripHistory || []).slice(0, 5);
+  // Live booking stream — polls /api/users/:id/role-stats every 60s so the hotel
+  // owner sees new reservations on their assigned destinations in near-real-time.
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [lastSync, setLastSync] = useState(null);
+
+  useEffect(() => {
+    if (!user?._id) return;
+    let cancelled = false;
+    const pull = async () => {
+      try {
+        const { data } = await api.get(`/users/${user._id}/role-stats`);
+        if (!cancelled) {
+          setStats(data);
+          setLastSync(new Date());
+        }
+      } catch (_) { /* keep previous snapshot */ }
+      finally { if (!cancelled) setLoading(false); }
+    };
+    pull();
+    const id = setInterval(pull, 60_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [user?._id]);
+
+  const upcoming = stats?.upcomingReservations || [];
+  const past = stats?.pastReservations || [];
+  const totalRevenue = stats?.totalRevenue ?? 0;
+  const totalBookings = stats?.totalBookings ?? 0;
+  const assignedDestinations = stats?.assignedDestinations || [];
+
   return (
     <>
-      <Card title="Incoming Reservations" icon={Compass}>
-        {reservations.length === 0 ? (
-          <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No reservations yet.</p>
+      <Card title="Revenue (live)" icon={Banknote} accent="#A2D729">
+        <p style={{ fontSize: '2.1rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#A2D729' }}>
+          NPR {Number(totalRevenue).toLocaleString('en-IN')}
+        </p>
+        <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
+          {totalBookings} booking{totalBookings === 1 ? '' : 's'} across {assignedDestinations.length} destination{assignedDestinations.length === 1 ? '' : 's'} · net of cancellations
+        </p>
+        {lastSync && (
+          <p style={{ fontSize: '0.6rem', opacity: 0.4, marginTop: 6, fontFamily: 'monospace' }}>
+            ● synced {lastSync.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        )}
+      </Card>
+
+      <Card title="Upcoming reservations" icon={Compass}>
+        {loading ? (
+          <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>Loading…</p>
+        ) : upcoming.length === 0 ? (
+          <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>
+            No upcoming reservations. New bookings on destinations assigned to your hotel will appear here automatically.
+          </p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {reservations.map((r, i) => (
-              <li key={i} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>{r.dest || 'Guest'}</p>
-                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{r.date || '—'}</p>
+            {upcoming.slice(0, 5).map((b) => (
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>{b.destination?.name || 'Destination'}</p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>
+                  @{b.user?.username || 'guest'} · {b.travelers}p × {b.durationDays}d · {b.startDate ? new Date(b.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'date TBD'}
+                </p>
+                <p style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 700, marginTop: 2 }}>
+                  NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')} · {b.status}
+                </p>
               </li>
             ))}
           </ul>
         )}
       </Card>
-      <Card title="Billing Settings" icon={Banknote}>
-        <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: 10 }}>
-          Configure VAT and invoicing for your guests.
-        </p>
-        <button style={{
-          background: 'none', border: '1px solid #A2D729', color: '#A2D729',
-          padding: '0.55rem 1rem', borderRadius: 6, cursor: 'pointer',
-          fontSize: '0.8rem', fontWeight: 700,
-        }}>
-          Configure VAT →
-        </button>
+
+      <Card title="Recent stays" icon={Star} accent="#F4A261">
+        {past.length === 0 ? (
+          <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No completed or cancelled stays yet.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {past.slice(0, 4).map((b) => (
+              <li key={b._id} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.78rem' }}>{b.destination?.name || 'Destination'} · @{b.user?.username || 'guest'}</p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>
+                  {b.status} · NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </>
   );

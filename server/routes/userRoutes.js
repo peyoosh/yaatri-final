@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const Hotel = require('../models/Hotel');
+const Destination = require('../models/Destination');
+const Booking = require('../models/Booking');
 const destinationService = require('../services/destinationService');
 const { validateAdmin, protect } = require('../middleware/authMiddleware');
 
@@ -20,6 +23,7 @@ router.put('/profile', protect, async (req, res) => {
       licenseNumber,
       isVerified,
       favoriteDestinations,
+      toggleFavoriteId, // dedicated push/pull on a single destination id — preferred over sending the full array
       title,    // alias — accepted but stored on bio/experience as fallback context
       details,  // alias for free-form details → merged into bio if bio not present
     } = req.body || {};
@@ -28,7 +32,8 @@ router.put('/profile', protect, async (req, res) => {
       return res.status(400).json({ message: 'avatar must be a base64-encoded data URL (data:image/...;base64,...)' });
     }
 
-    const user = await User.findById(req.user._id);
+    // Need +avatar so the new value (or the existing one) round-trips through save() correctly.
+    const user = await User.findById(req.user._id).select('+avatar');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Top-level fields
@@ -49,6 +54,22 @@ router.put('/profile', protect, async (req, res) => {
     if (typeof licenseNumber === 'string') user.profileData.licenseNumber = licenseNumber;
     if (typeof isVerified === 'boolean' && user.isAdmin) user.profileData.isVerified = isVerified;
     if (Array.isArray(favoriteDestinations)) user.profileData.favoriteDestinations = favoriteDestinations;
+
+    // Server-side push/pull on a single favourite. Keeps the array as the canonical source of truth
+    // and avoids race conditions when the client computes the new array from a stale snapshot.
+    if (typeof toggleFavoriteId === 'string' && toggleFavoriteId.length > 0) {
+      const current = (user.profileData.favoriteDestinations || []).map(String);
+      const idx = current.indexOf(String(toggleFavoriteId));
+      if (idx >= 0) {
+        current.splice(idx, 1); // pull
+      } else {
+        current.push(String(toggleFavoriteId)); // push
+      }
+      user.profileData.favoriteDestinations = current;
+      // Mongoose nested-array mutation tracking — make the change visible to save().
+      user.markModified('profileData.favoriteDestinations');
+    }
+
     if (typeof title === 'string') user.profileData.experience = title;
 
     await user.save();
@@ -105,13 +126,15 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const isOwner = String(req.user._id) === String(req.params.id);
     if (isOwner || req.user.isAdmin) {
-      const user = await User.findById(req.params.id).select('-password');
+      // Owner or admin gets the full profile including the (heavy) avatar.
+      const user = await User.findById(req.params.id).select('-password +avatar');
       if (!user) return res.status(404).json({ error: 'User not found' });
       return res.json(user);
     }
 
-    // Public-safe projection for other authenticated users
-    const user = await User.findById(req.params.id).select('username bio joinDate role');
+    // Public-safe projection for other authenticated users — still includes the
+    // avatar so profile cards across the app can render their portrait.
+    const user = await User.findById(req.params.id).select('username bio joinDate role +avatar');
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
   } catch (err) {
@@ -156,6 +179,135 @@ router.delete('/:id', validateAdmin, async (req, res) => {
     res.status(200).json({ message: 'User node purged successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/users/:id/role-stats
+// Aggregates live booking data for a hotel-owner OR guide so their profile page can
+// surface real revenue + upcoming reservations. Owner or admin only.
+//
+// Hotel-owner shape:
+//   { role: 'hotel', hotelId, hotelName, assignedDestinations: [...],
+//     totalBookings, totalRevenue, upcomingReservations: [...], pastReservations: [...] }
+//
+// Guide shape:
+//   { role: 'guide', assignedDestinations: [...], totalEngagements, totalEarnings,
+//     upcomingEngagements: [...], pastEngagements: [...] }
+router.get('/:id/role-stats', protect, async (req, res) => {
+  try {
+    const isOwner = String(req.user._id) === String(req.params.id);
+    if (!isOwner && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'Only the user or an admin can view role stats.' });
+    }
+
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const role = user.role;
+
+    // ---------- HOTEL-OWNER PATH ----------
+    if (role === 'hotel' || role === 'hotel_owner') {
+      const hotel = await Hotel.findOne({ userId: user._id }).lean();
+      const assignedDestinations = hotel
+        ? await Destination.find({ assignedHotels: hotel._id })
+            .select('_id name region terrainType')
+            .lean()
+        : [];
+
+      const destIds = assignedDestinations.map((d) => d._id);
+      const bookings = destIds.length
+        ? await Booking.find({ destination: { $in: destIds } })
+            .populate('destination', 'name region')
+            .populate('user', 'username email')
+            .sort({ startDate: 1, createdAt: -1 })
+            .lean()
+        : [];
+
+      let totalRevenue = 0;
+      const upcoming = [];
+      const past = [];
+      const now = Date.now();
+
+      for (const b of bookings) {
+        const total = Number(b?.pricing?.totalCost || 0);
+        if (b.status !== 'cancelled') totalRevenue += total;
+
+        const isFuture = b.startDate && new Date(b.startDate).getTime() >= now;
+        if (['pending', 'confirmed'].includes(b.status) && isFuture) upcoming.push(b);
+        else past.push(b);
+      }
+
+      return res.json({
+        role: 'hotel',
+        hotelId: hotel?._id || null,
+        hotelName: hotel?.name || user.profileData?.hotelName || `${user.username}'s Hotel`,
+        basePrice: hotel?.basePrice || 0,
+        assignedDestinations,
+        totalBookings: bookings.length,
+        totalRevenue,
+        upcomingReservations: upcoming.slice(0, 10),
+        pastReservations: past.slice(0, 10),
+        currency: 'NPR',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // ---------- GUIDE PATH ----------
+    if (role === 'guide') {
+      const assignedDestinations = await Destination.find({ assignedGuides: user._id })
+        .select('_id name region terrainType')
+        .lean();
+
+      const destIds = assignedDestinations.map((d) => d._id);
+      // Treat guide engagements as bookings on assigned destinations that explicitly include the guide add-on.
+      const bookings = destIds.length
+        ? await Booking.find({ destination: { $in: destIds }, 'pricing.addOns': 'guide' })
+            .populate('destination', 'name region')
+            .populate('user', 'username')
+            .sort({ startDate: 1, createdAt: -1 })
+            .lean()
+        : [];
+
+      // Earnings ≈ NPR 1,500 per traveller per day per booking (matches the add-on rate used at booking time).
+      const GUIDE_RATE = 1500;
+      let totalEarnings = 0;
+      const upcoming = [];
+      const past = [];
+      const now = Date.now();
+
+      for (const b of bookings) {
+        if (b.status !== 'cancelled') {
+          totalEarnings += GUIDE_RATE * Number(b.travelers || 1) * Number(b.durationDays || 1);
+        }
+        const isFuture = b.startDate && new Date(b.startDate).getTime() >= now;
+        if (['pending', 'confirmed'].includes(b.status) && isFuture) upcoming.push(b);
+        else past.push(b);
+      }
+
+      return res.json({
+        role: 'guide',
+        assignedDestinations,
+        totalEngagements: bookings.length,
+        totalEarnings,
+        upcomingEngagements: upcoming.slice(0, 10),
+        pastEngagements: past.slice(0, 10),
+        currency: 'NPR',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Travelers / admins fall back to a lightweight shape so the same endpoint can be polled by any profile.
+    return res.json({
+      role,
+      totalBookings: 0,
+      totalRevenue: 0,
+      upcomingReservations: [],
+      currency: 'NPR',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('ROLE_STATS_ERROR', err);
+    res.status(500).json({ message: err.message || 'Failed to fetch role stats' });
   }
 });
 

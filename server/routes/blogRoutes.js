@@ -11,7 +11,10 @@ const { deleteFromCloudinary } = require('../utils/cloudinary');
 // GET: Fetch all published blogs for the public feed
 router.get('/', async (req, res) => {
   try {
+    // Blog.image/images are schema-level select:false (heavy Base64 fields). The public
+    // feed renders cover thumbnails, so opt them back in explicitly here.
     const publishedBlogs = await Blog.find({ status: 'published' })
+      .select('+image +images')
       .populate('authorId', 'username')
       .populate('locationId', 'name region')
       .populate('taggedHotels', 'name')
@@ -96,6 +99,7 @@ router.post('/', protect, async (req, res) => {
 
     const savedBlog = await newBlog.save();
     const populatedBlog = await Blog.findById(savedBlog._id)
+      .select('+image +images')
       .populate('authorId', 'username')
       .populate('locationId', 'name region')
       .populate('taggedHotels', 'name')
@@ -167,7 +171,6 @@ router.delete('/:id', protect, async (req, res) => {
     if (blog.imagePublicId) {
       try {
         await deleteFromCloudinary(blog.imagePublicId);
-        console.log(`Deleted image ${blog.imagePublicId} from Cloudinary`);
       } catch (cloudinaryError) {
         console.warn('Failed to delete image from Cloudinary:', cloudinaryError);
         // Don't fail the blog deletion if image deletion fails
@@ -179,7 +182,6 @@ router.delete('/:id', protect, async (req, res) => {
       for (const publicId of blog.imagesPublicIds) {
         try {
           await deleteFromCloudinary(publicId);
-          console.log(`Deleted additional image ${publicId} from Cloudinary`);
         } catch (cloudinaryError) {
           console.warn(`Failed to delete additional image ${publicId} from Cloudinary:`, cloudinaryError);
         }

@@ -1,407 +1,510 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Calendar, Star, TrendingUp, Cloud, Wind, Thermometer, User as UserIcon, LogOut, Home, X, Save, Edit3, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { AuthContext } from '../../context/AuthContext';
+import {
+  Menu, Map, Heart, Settings, LogOut, Camera, Save, Loader, MapPin, Calendar, Tag,
+} from 'lucide-react';
+import GoogleMapView from '../../components/Common/GoogleMapView';
 import './UserDashboard.css';
 
-const UserDashboard = ({ user }) => {
+const TABS = [
+  { id: 'trips',     label: 'Overview & My Trips',       Icon: Map },
+  { id: 'favorites', label: 'My Favorites',              Icon: Heart },
+  { id: 'settings',  label: 'Account & Profile Settings', Icon: Settings },
+];
+
+const convertToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = reject;
+});
+
+const UserDashboard = ({ user: userProp }) => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [recommendedDestinations, setRecommendedDestinations] = useState([]);
-  const [showPopup, setShowPopup] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
-  
-  const [ratingData, setRatingData] = useState({});
+  const { user: authUser, setUser, logout } = useContext(AuthContext);
+  const user = userProp || authUser;
 
-  // Settings state
-  const [profileData, setProfileData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    phoneNumber: user?.phoneNumber || '',
-    bio: user?.bio || '',
-    preferences: 'Adventure, Nature'
-  });
+  const [activeTab, setActiveTab] = useState('trips');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const stats = [
-    { label: 'Expeditions', value: '12', icon: MapPin },
-    { label: 'Favorites', value: '48', icon: Star },
-    { label: 'Bookings', value: '3', icon: Calendar },
-    { label: 'Yaatri Points', value: '2,450', icon: TrendingUp },
-  ];
+  if (!user) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+        <p>Please sign in to view your dashboard.</p>
+      </div>
+    );
+  }
 
-  // We are separating current bookings and trip history as per requirement
-  const currentBookings = [
-    { id: 'b1', date: '2026-05-10', dest: 'Pokhara', status: 'Booked', hotel: 'Fishtail Lodge' }
-  ];
-  
-  const tripHistory = user?.tripHistory && user.tripHistory.length > 0 ? user.tripHistory : [
-    { id: 'h1', date: '2025-10-12', dest: 'Chitwan', status: 'Completed', hotel: 'Green Park Resort' }
-  ];
+  return (
+    <div className="user-dashboard-layout" style={{ minHeight: '100vh', background: 'var(--obsidian, #0D0A02)', color: 'white' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: sidebarOpen ? '260px 1fr' : '64px 1fr', transition: 'grid-template-columns 0.25s ease', minHeight: '100vh' }}>
+        {/* SIDEBAR with 3-line/hamburger toggle */}
+        <aside style={{ background: 'rgba(255,255,255,0.02)', borderRight: '1px solid rgba(255,255,255,0.06)', padding: '1.5rem 0.75rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            style={{ background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', padding: '0.5rem 0.6rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            <Menu size={18} />
+            {sidebarOpen && <span style={{ fontWeight: 900, letterSpacing: 4 }}>YAATRI</span>}
+          </button>
+
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '0.5rem 0' }} />
+
+          {TABS.map(({ id, label, Icon }) => {
+            const active = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                style={{
+                  background: active ? 'rgba(162,215,41,0.12)' : 'transparent',
+                  border: `1px solid ${active ? '#A2D729' : 'transparent'}`,
+                  color: active ? '#A2D729' : '#A6A180',
+                  padding: '0.7rem 0.8rem',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                }}
+                title={!sidebarOpen ? label : undefined}
+              >
+                <Icon size={16} />
+                {sidebarOpen && <span>{label}</span>}
+              </button>
+            );
+          })}
+
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <button
+              onClick={() => { logout && logout(); navigate('/login'); }}
+              style={{
+                background: 'none',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#A6A180',
+                padding: '0.6rem 0.8rem',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <LogOut size={14} />
+              {sidebarOpen && 'Sign out'}
+            </button>
+          </div>
+        </aside>
+
+        {/* MAIN PANEL */}
+        <main style={{ padding: '2rem 4%', overflowY: 'auto' }}>
+          <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <p style={{ fontSize: '0.65rem', letterSpacing: 3, color: '#A2D729', fontWeight: 700, textTransform: 'uppercase' }}>Dashboard</p>
+              <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Namaste, {user.username}</h1>
+            </div>
+            <span style={{ fontSize: '0.75rem', opacity: 0.4, fontFamily: 'monospace' }}>
+              [TAB: {activeTab.toUpperCase()}]
+            </span>
+          </header>
+
+          {activeTab === 'trips' && <TripsTab user={user} navigate={navigate} />}
+          {activeTab === 'favorites' && <FavoritesTab user={user} navigate={navigate} />}
+          {activeTab === 'settings' && <SettingsTab user={user} setUser={setUser} />}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+/* ----- TAB 1: TRIPS ----- */
+const TripsTab = ({ user, navigate }) => {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const handleCancel = async (booking) => {
+    const dest = booking.destination?.name || 'this trip';
+    if (!window.confirm(`Cancel your booking for ${dest}? This sends a cancellation receipt to your email and cannot be undone.`)) return;
+    setCancellingId(booking._id);
+    try {
+      const { data } = await api.patch(`/bookings/${booking._id}/cancel`);
+      // Update local list with the cancelled record so the UI reshuffles immediately.
+      setBookings((prev) => prev.map((b) => (b._id === booking._id ? { ...b, ...data, destination: b.destination } : b)));
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to cancel booking.';
+      alert(msg);
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   useEffect(() => {
-    if (!user?.tripHistory || user.tripHistory.length === 0) {
-      setShowPopup(true);
-      const fetchRecommendations = async () => {
-        try {
-          const res = await api.get('/destinations');
-          setRecommendedDestinations(res.data.slice(0, 3));
-        } catch (err) {
-          console.error("Failed to fetch recommendations:", err);
+    let cancelled = false;
+    api.get('/bookings/me')
+      .then(({ data }) => { if (!cancelled) setBookings(Array.isArray(data) ? data : []); })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('Failed to load bookings', err);
+          setBookings([]);
         }
-      };
-      fetchRecommendations();
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) return <p style={{ opacity: 0.5 }}>Loading itineraries…</p>;
+
+  const upcoming = bookings.filter(b => ['pending', 'confirmed'].includes(b.status));
+  const past = bookings.filter(b => ['completed', 'cancelled'].includes(b.status));
+
+  // Deduplicate destinations across bookings so the map doesn't stack identical pins.
+  // Use a plain object — the lucide-react `Map` icon imported above shadows the JS built-in `Map`.
+  const tripDestinations = (() => {
+    const byId = {};
+    bookings.forEach((b) => {
+      const d = b.destination;
+      if (d && d._id && !byId[String(d._id)]) byId[String(d._id)] = d;
+    });
+    return Object.values(byId);
+  })();
+
+  return (
+    <div style={{ display: 'grid', gap: '1.5rem' }}>
+      {tripDestinations.length > 0 && (
+        <section>
+          <h2 style={sectionTitle}>Journey map</h2>
+          <p style={{ fontSize: '0.75rem', opacity: 0.55, marginBottom: 10 }}>
+            {tripDestinations.length} unique destination{tripDestinations.length === 1 ? '' : 's'} across your {bookings.length} booking{bookings.length === 1 ? '' : 's'} · click a pin to revisit it
+          </p>
+          <GoogleMapView
+            destinations={tripDestinations}
+            height={320}
+            onMarkerClick={(d) => d?._id && navigate(`/destination/${d._id}`)}
+          />
+        </section>
+      )}
+
+      <section>
+        <h2 style={sectionTitle}>Upcoming itineraries</h2>
+        {upcoming.length === 0 ? (
+          <EmptyState
+            title="No upcoming trips yet"
+            body="Visit the Explore page to map your next journey."
+            cta="Open Explore"
+            onClick={() => navigate('/explore')}
+          />
+        ) : (
+          <div style={cardGrid}>
+            {upcoming.map(b => <BookingCard key={b._id} b={b} onCancel={handleCancel} cancelling={cancellingId === b._id} />)}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 style={sectionTitle}>Trip history</h2>
+        {past.length === 0 ? (
+          <EmptyState
+            title="No trip history yet"
+            body="Completed and cancelled trips will appear here."
+          />
+        ) : (
+          <div style={cardGrid}>
+            {past.map(b => <BookingCard key={b._id} b={b} />)}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};
+
+const BookingCard = ({ b, onCancel, cancelling }) => {
+  const dest = b.destination || {};
+  // Status colour: lime for completed, hill-green for active, muted red for cancelled.
+  const statusColors = {
+    completed: { bg: 'rgba(162,215,41,0.15)', fg: '#A2D729' },
+    cancelled: { bg: 'rgba(255,77,77,0.12)', fg: '#ff6b6b' },
+    default:   { bg: 'rgba(5,157,114,0.15)', fg: '#059D72' },
+  };
+  const c = statusColors[b.status] || statusColors.default;
+  const canCancel = ['pending', 'confirmed'].includes(b.status) && typeof onCancel === 'function';
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '1.25rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{dest.name || 'Destination'}</h3>
+        <span style={{
+          fontSize: '0.65rem', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700,
+          padding: '2px 8px', borderRadius: 999,
+          background: c.bg, color: c.fg,
+        }}>{b.status}</span>
+      </div>
+      {dest.region && (
+        <p style={{ fontSize: '0.8rem', opacity: 0.6, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <MapPin size={12} /> {dest.region}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: '1rem', marginTop: 10, fontSize: '0.8rem', opacity: 0.7 }}>
+        <span><Calendar size={12} style={{ display: 'inline', marginRight: 4 }} /> {b.durationDays}d × {b.travelers}p</span>
+        <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#A2D729' }}>
+          NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}
+        </span>
+      </div>
+      {canCancel && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => onCancel(b)}
+            disabled={cancelling}
+            style={{
+              background: 'none',
+              border: '1px solid rgba(255,77,77,0.5)',
+              color: cancelling ? '#A6A180' : '#ff6b6b',
+              padding: '0.45rem 0.95rem',
+              borderRadius: 6,
+              cursor: cancelling ? 'wait' : 'pointer',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              letterSpacing: 1.5,
+              textTransform: 'uppercase',
+            }}
+          >
+            {cancelling ? 'Cancelling…' : 'Cancel booking'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ----- TAB 2: FAVORITES ----- */
+const FavoritesTab = ({ user, navigate }) => {
+  const [favs, setFavs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const ids = user?.profileData?.favoriteDestinations || [];
+    if (!Array.isArray(ids) || ids.length === 0) {
+      setFavs([]);
+      setLoading(false);
+      return;
     }
-  }, [user?.tripHistory]);
+    api.get('/destinations')
+      .then(({ data }) => {
+        const idSet = new Set(ids.map(String));
+        setFavs((data || []).filter(d => idSet.has(String(d._id))));
+      })
+      .catch(() => setFavs([]))
+      .finally(() => setLoading(false));
+  }, [user?.profileData?.favoriteDestinations]);
 
-  const recommendations = [
-    { title: 'Upper Mustang', energy: 'High', img: 'https://images.unsplash.com/photo-1623492701902-47dc207df5dc?w=400' },
-    { title: 'Rara Lake', energy: 'Zen', img: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400' },
-    { title: 'Ghalegaun', energy: 'Cultural', img: 'https://images.unsplash.com/photo-1582234131908-769502909282?w=400' },
-  ];
+  if (loading) return <p style={{ opacity: 0.5 }}>Loading favourites…</p>;
 
-  const handleRatingSubmit = async (bookingId, e) => {
-    e.preventDefault();
-    const data = ratingData[bookingId];
-    if(!data) return;
+  if (!Array.isArray(favs) || favs.length === 0) {
+    return (
+      <EmptyState
+        title="Your favorite trails are empty."
+        body="Explore destinations to build your list!"
+        cta="Browse destinations"
+        onClick={() => navigate('/destinations')}
+      />
+    );
+  }
+
+  return (
+    <div style={cardGrid}>
+      {favs.map(d => (
+        <button
+          key={d._id}
+          onClick={() => navigate(`/destination/${d._id}`)}
+          style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 10,
+            padding: 0,
+            overflow: 'hidden',
+            cursor: 'pointer',
+            color: 'white',
+            textAlign: 'left',
+          }}
+        >
+          {d.imageURL && <img src={d.imageURL} alt={d.name} style={{ width: '100%', aspectRatio: '16/10', objectFit: 'cover' }} />}
+          <div style={{ padding: '0.85rem 1rem' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: 4 }}>{d.name}</h3>
+            <p style={{ fontSize: '0.75rem', opacity: 0.55 }}>{d.region} · {d.terrainType}</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/* ----- TAB 3: SETTINGS ----- */
+const SettingsTab = ({ user, setUser }) => {
+  const fileRef = useRef(null);
+  const [draft, setDraft] = useState({
+    username: user.username || '',
+    email: user.email || '',
+    phoneNumber: user.phoneNumber || '',
+    bio: user.bio || '',
+    avatar: user.avatar || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
+  const [error, setError] = useState(null);
+
+  const pickAvatar = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { setError('Avatar must be under 5MB'); return; }
+    setError(null);
     try {
-      await api.post(`/users/bookings/${bookingId}/rate`, data);
-      alert('Review submitted successfully to MongoDB!');
+      const base64 = await convertToBase64(f);
+      setDraft(d => ({ ...d, avatar: base64 }));
+    } catch (err) { setError('Could not read file'); }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const { data } = await api.put('/users/profile', {
+        avatar: draft.avatar,
+        bio: draft.bio,
+      });
+      if (typeof setUser === 'function') setUser({ ...user, ...data });
+      setSavedAt(new Date());
     } catch (err) {
-      console.log('Mocking save to MongoDB for now');
-      alert('Review submitted! (Stored in MongoDB)');
-    }
-  };
-
-  const handleRatingChange = (bookingId, field, value) => {
-    setRatingData(prev => ({
-      ...prev,
-      [bookingId]: {
-        ...prev[bookingId],
-        [field]: value
-      }
-    }));
-  };
-
-  const handleProfileUpdate = async (e) => {
-    e.preventDefault();
-    try {
-      // Assuming a settings update route
-      await api.put(`/users/${user?._id}`, profileData);
-      alert('Profile updated successfully!');
-    } catch (error) {
-      console.log("Mocking profile update");
-      alert('Profile updated successfully!');
+      setError(err.response?.data?.message || err.message || 'Could not save profile.');
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div className="user-dashboard-layout">
-      {/* SIDEBAR */}
-      <aside className="user-sidebar">
-        <div className="sidebar-brand" onClick={() => navigate('/')}>YAATRI</div>
-        <nav className="sidebar-menu">
-          <button className={`menu-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}><TrendingUp size={18} /> Overview</button>
-          {/* Merged My Trips and Bookings */}
-          <button className={`menu-item ${activeTab === 'trips' ? 'active' : ''}`} onClick={() => setActiveTab('trips')}><MapPin size={18} /> My Trips & Bookings</button>
-          <button className={`menu-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}><UserIcon size={18} /> Profile Settings</button>
-        </nav>
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={() => navigate('/')}><Home size={18} /> Back to Site</button>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) 1fr', gap: '2rem' }}>
+      {/* Avatar */}
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '1.25rem', textAlign: 'center' }}>
+        <div style={{
+          width: 140, height: 140, borderRadius: '50%', margin: '0 auto 1rem',
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, rgba(5,157,114,0.25), rgba(162,215,41,0.15))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          {draft.avatar
+            ? <img src={draft.avatar} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#059D72' }}>{(user.username || '?').slice(0, 2).toUpperCase()}</span>}
         </div>
-      </aside>
+        <input ref={fileRef} type="file" accept="image/*" onChange={pickAvatar} style={{ display: 'none' }} />
+        <button
+          onClick={() => fileRef.current?.click()}
+          style={{
+            background: 'none', border: '1px solid #A2D729', color: '#A2D729',
+            padding: '0.55rem 1rem', borderRadius: 6, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: '0.8rem', fontWeight: 700,
+          }}
+        >
+          <Camera size={14} /> Upload avatar
+        </button>
+        <p style={{ fontSize: '0.7rem', opacity: 0.45, marginTop: 10, lineHeight: 1.4 }}>
+          Image is compressed and stored inline on your account (Base64).
+        </p>
+      </div>
 
-      {/* MAIN CONTENT */}
-      <main className="user-main">
-        <header className="user-header">
-          <div className="search-container">
-            <Search size={18} />
-            <input 
-              type="text" 
-              placeholder="Search destinations..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="user-profile-brief">
-            <span>{user?.username || 'User'}</span>
-            <div className="avatar">{user?.username?.charAt(0).toUpperCase() || 'U'}</div>
-          </div>
-        </header>
+      {/* Form */}
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '1.5rem' }}>
+        <h2 style={sectionTitle}>Account details</h2>
 
-        <div className="dashboard-content">
-          {activeTab === 'overview' && (
-            <>
-              <h1 className="welcome-text">Namaste, {user?.username || 'Traveler'}</h1>
-              
-              {/* STAT CARDS */}
-              <div className="stats-grid">
-                {stats.map((s, i) => (
-                  <div key={i} className="stat-card">
-                    <s.icon size={20} className="stat-icon" />
-                    <div className="stat-info">
-                      <span className="stat-value">{s.value}</span>
-                      <span className="stat-label">{s.label}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        <SettingsRow label="Username" hint="Read-only — contact support to change">
+          <input value={draft.username} disabled style={{ ...inputStyle, opacity: 0.55, cursor: 'not-allowed' }} />
+        </SettingsRow>
 
-              <div className="middle-section">
-                <div className="weather-widget" style={{ gridColumn: 'span 2' }}>
-                  <div className="weather-header">
-                    <h3>Kathmandu Hub</h3>
-                    <Cloud size={24} />
-                  </div>
-                  <div className="temp-main">
-                    <span className="temp-value">22°C</span>
-                    <span className="temp-desc">Partly Cloudy</span>
-                  </div>
-                  <div className="weather-details">
-                    <div className="detail"><Wind size={14} /> 12km/h</div>
-                    <div className="detail"><Thermometer size={14} /> 64% Hum</div>
-                  </div>
-                  <p className="weather-footer">Optimal conditions for trekking nodes.</p>
-                </div>
-              </div>
+        <SettingsRow label="Email" hint="Read-only — contact support to change">
+          <input value={draft.email} disabled style={{ ...inputStyle, opacity: 0.55, cursor: 'not-allowed' }} />
+        </SettingsRow>
 
-              {/* RECOMMENDATIONS */}
-              <div className="recommendations-section">
-                <h3>Recommended for Your Energy</h3>
-                <div className="recom-grid">
-                  {recommendations.map((r, i) => (
-                    <div key={i} className="recom-card">
-                      <img src={r.img} alt={r.title} />
-                      <div className="recom-overlay">
-                        <h4>{r.title}</h4>
-                        <span className="energy-pill">{r.energy} Energy</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+        <SettingsRow label="Bio">
+          <textarea
+            value={draft.bio}
+            onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
+            rows={3}
+            placeholder="Tell other Yaatris about yourself"
+            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+          />
+        </SettingsRow>
 
-          {activeTab === 'trips' && (
-            <div className="trips-bookings-section">
-              <h1 className="welcome-text">My Trips & Bookings</h1>
-              
-              <div className="activity-container" style={{ marginBottom: '2rem' }}>
-                <h3>Current Bookings</h3>
-                {currentBookings.length === 0 ? (
-                  <p style={{ color: '#aaa', padding: '1rem 0' }}>You have no current bookings.</p>
-                ) : (
-                  <table className="activity-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Destination</th>
-                        <th>Hotel</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentBookings.map((b, i) => (
-                        <tr key={i}>
-                          <td>{b.date}</td>
-                          <td>{b.dest}</td>
-                          <td>{b.hotel}</td>
-                          <td><span className={`status-pill ${b.status.toLowerCase()}`}>{b.status}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              <div className="activity-container">
-                <h3>Previous Bookings (History)</h3>
-                {(!user?.tripHistory || user.tripHistory.length === 0) && tripHistory.length === 0 ? (
-                  <div className="no-trips-message" style={{ padding: '2rem', textAlign: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', marginTop: '1rem' }}>
-                    <p style={{ fontSize: '1.1rem', color: '#ccc', marginBottom: '1rem' }}>Travel with us for Travel History</p>
-                    <button 
-                      onClick={() => navigate('/destinations')}
-                      style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-                    >
-                      Explore Destinations
-                    </button>
-                  </div>
-                ) : (
-                  <div className="history-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
-                    {tripHistory.map((h, i) => (
-                      <div key={i} className="history-card" style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                          <div>
-                            <h4 style={{ margin: 0, fontSize: '1.2rem' }}>{h.dest}</h4>
-                            <span style={{ fontSize: '0.85rem', color: '#aaa' }}>{h.date} • {h.hotel || 'No hotel specified'}</span>
-                          </div>
-                          <div><span className="status-pill completed">Completed</span></div>
-                        </div>
-                        
-                        <form onSubmit={(e) => handleRatingSubmit(h.id || i, e)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px' }}>
-                          <h5 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Star size={16} /> Rate Your Experience</h5>
-                          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div style={{ flex: '1 1 100px' }}>
-                              <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '4px' }}>Rating (1-5)</label>
-                              <input 
-                                type="number" min="1" max="5" 
-                                value={ratingData[h.id || i]?.rating || ''}
-                                onChange={(e) => handleRatingChange(h.id || i, 'rating', e.target.value)}
-                                style={{ width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
-                                required
-                              />
-                            </div>
-                            <div style={{ flex: '3 1 200px' }}>
-                              <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '4px' }}>Comment</label>
-                              <input 
-                                type="text" placeholder="How was the hotel and place?" 
-                                value={ratingData[h.id || i]?.comment || ''}
-                                onChange={(e) => handleRatingChange(h.id || i, 'comment', e.target.value)}
-                                style={{ width: '100%', padding: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
-                                required
-                              />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                              <button type="submit" style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <MessageSquare size={16} /> Submit
-                              </button>
-                            </div>
-                          </div>
-                        </form>
-
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="settings-section">
-              <h1 className="welcome-text">Profile Settings</h1>
-              <div className="activity-container">
-                <form onSubmit={handleProfileUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '600px' }}>
-                  
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem' }}>Username</label>
-                    <input 
-                      type="text" 
-                      value={profileData.username} 
-                      onChange={(e) => setProfileData({...profileData, username: e.target.value})}
-                      style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem' }}>Email Address</label>
-                    <input 
-                      type="email" 
-                      value={profileData.email} 
-                      onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                      style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem' }}>Phone Number</label>
-                    <input 
-                      type="text" 
-                      value={profileData.phoneNumber} 
-                      onChange={(e) => setProfileData({...profileData, phoneNumber: e.target.value})}
-                      style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem' }}>Travel Preferences</label>
-                    <input 
-                      type="text" 
-                      value={profileData.preferences} 
-                      onChange={(e) => setProfileData({...profileData, preferences: e.target.value})}
-                      style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                    />
-                  </div>
-                  
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem' }}>Bio</label>
-                    <textarea 
-                      value={profileData.bio} 
-                      onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
-                      style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', minHeight: '100px', resize: 'vertical' }}
-                    />
-                  </div>
-
-                  <button type="submit" style={{ padding: '12px', background: '#059d72', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '1rem' }}>
-                    <Save size={18} /> Save Settings
-                  </button>
-
-                </form>
-              </div>
-            </div>
-          )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="btn-primary-white"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: saving ? 0.6 : 1 }}
+          >
+            {saving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+          {savedAt && <span style={{ fontSize: '0.75rem', color: '#A2D729' }}>Saved at {savedAt.toLocaleTimeString()}</span>}
+          {error && <span style={{ fontSize: '0.75rem', color: '#E63946' }}>{error}</span>}
         </div>
-
-        {/* POPUP MODAL FOR RECOMMENDATIONS */}
-        {showPopup && recommendedDestinations.length > 0 && (
-          <div className="recommendation-popup-overlay" style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', 
-            justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(5px)'
-          }}>
-            <div className="recommendation-popup-content" style={{
-              background: '#1a1a1a', padding: '2rem', borderRadius: '16px', 
-              width: '90%', maxWidth: '600px', position: 'relative', border: '1px solid #333'
-            }}>
-              <button 
-                onClick={() => setShowPopup(false)} 
-                style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}
-              >
-                <X size={24} />
-              </button>
-              <h2 style={{ marginBottom: '0.5rem', color: '#fff' }}>Start Your Journey</h2>
-              <p style={{ color: '#aaa', margin: '1.5rem 0', lineHeight: '1.5' }}>Travel with us for Travel History! Here are some recommended destinations based on your profile.</p>
-              
-              <div className="popup-recom-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-                {recommendedDestinations.map((dest, i) => (
-                  <div 
-                    key={i} 
-                    className="popup-recom-card" 
-                    onClick={() => navigate('/destinations')}
-                    style={{ 
-                      background: '#2a2a2a', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    <div style={{ height: '100px', background: '#333', overflow: 'hidden' }}>
-                      {dest.imageUrls && dest.imageUrls[0] ? (
-                        <img src={dest.imageUrls[0].startsWith('http') ? dest.imageUrls[0] : `${(api.defaults.baseURL || '').replace(/\/api\/?$/, '')}${dest.imageUrls[0]}`} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>No Image</div>
-                      )}
-                    </div>
-                    <div style={{ padding: '0.8rem' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#fff' }}>{dest.name}</h4>
-                      <span style={{ fontSize: '0.75rem', color: '#3b82f6' }}>{dest.category || 'Adventure'}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <button 
-                onClick={() => navigate('/destinations')}
-                style={{ width: '100%', padding: '1rem', marginTop: '1.5rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                View All Destinations
-              </button>
-            </div>
-          </div>
-        )}
-
-      </main>
+      </div>
     </div>
   );
+};
+
+const SettingsRow = ({ label, hint, children }) => (
+  <div style={{ marginBottom: '1rem' }}>
+    <label style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, opacity: 0.6, marginBottom: 4, display: 'block' }}>{label}</label>
+    {children}
+    {hint && <p style={{ fontSize: '0.7rem', opacity: 0.4, marginTop: 4 }}>{hint}</p>}
+  </div>
+);
+
+const EmptyState = ({ title, body, cta, onClick }) => (
+  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 10, padding: '2rem', textAlign: 'center' }}>
+    <p style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 4 }}>{title}</p>
+    <p style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: cta ? 16 : 0 }}>{body}</p>
+    {cta && onClick && (
+      <button onClick={onClick} style={{ background: '#A2D729', color: '#0D0A02', border: 'none', padding: '0.6rem 1.2rem', borderRadius: 6, cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+        {cta}
+      </button>
+    )}
+  </div>
+);
+
+const sectionTitle = {
+  fontSize: '0.75rem',
+  letterSpacing: 3,
+  textTransform: 'uppercase',
+  fontWeight: 700,
+  color: '#A2D729',
+  marginBottom: '1rem',
+};
+
+const cardGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+  gap: '1rem',
+};
+
+const inputStyle = {
+  width: '100%',
+  background: 'rgba(0,0,0,0.25)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  color: 'white',
+  padding: '0.6rem 0.85rem',
+  borderRadius: 6,
+  fontSize: '0.9rem',
+  outline: 'none',
 };
 
 export default UserDashboard;

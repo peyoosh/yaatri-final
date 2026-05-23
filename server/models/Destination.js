@@ -14,9 +14,14 @@ const DestinationSchema = new mongoose.Schema(
       type: String, 
       required: [true, 'Description is required'] 
     },
-    imageURL: { 
-      type: String, 
-      required: [true, 'Image URL is required'] 
+    // BSON-ceiling audit (Phase 2 schema review): imageURL stores short CDN URLs
+    // (Unsplash, R2, etc.), not Base64 strings — so it is intentionally NOT marked
+    // `select: false`. If you ever switch destinations to store inline Base64
+    // imagery, add `select: false` here and opt back in via .select('+imageURL')
+    // on the destination list / detail routes that render the asset directly.
+    imageURL: {
+      type: String,
+      required: [true, 'Image URL is required']
     },
     terrainType: {
       type: String,

@@ -101,15 +101,54 @@ app.use((req, res, next) => {
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- MONGODB CONNECTION ---
+// --- MONGODB CONNECTION (resilient: retry with exponential backoff, reconnect listeners) ---
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
-mongoose.connect(MONGO_URI, {
-  dbName: 'yaatri'
-})
-  .then(() => {
+
+const MAX_RETRY = 5;
+const BASE_DELAY_MS = 1500;
+
+const connectMongo = async (attempt = 1) => {
+  try {
+    await mongoose.connect(MONGO_URI, {
+      dbName: 'yaatri',
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      family: 4, // IPv4 — avoids the IPv6 hang some Windows hosts hit
+    });
     console.log(`YAATRI_DATABASE: CONNECTED TO [${mongoose.connection.name.toUpperCase()}]`);
-  })
-  .catch(err => console.error("DATABASE_CONNECTION_ERROR:", err));
+  } catch (err) {
+    console.error(`DATABASE_CONNECTION_ERROR (attempt ${attempt}/${MAX_RETRY}):`, err.message);
+    if (attempt < MAX_RETRY) {
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1); // 1.5s, 3s, 6s, 12s, 24s
+      console.warn(`  retrying in ${delay}ms…`);
+      setTimeout(() => connectMongo(attempt + 1), delay);
+    } else {
+      console.error('DATABASE_CONNECTION_GAVE_UP: server will keep running but DB-backed routes will 500.');
+    }
+  }
+};
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('YAATRI_DATABASE: lost connection — mongoose will auto-attempt reconnection.');
+});
+mongoose.connection.on('reconnected', () => {
+  console.log('YAATRI_DATABASE: reconnected.');
+});
+mongoose.connection.on('error', (err) => {
+  console.error('YAATRI_DATABASE error:', err.message);
+});
+
+// Graceful shutdown — close Mongo cleanly so Atlas doesn't hold the socket open.
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  process.on(sig, async () => {
+    console.log(`[shutdown] received ${sig}, closing Mongo…`);
+    try { await mongoose.connection.close(); } catch (_) {}
+    process.exit(0);
+  });
+}
+
+connectMongo();
 
 // --- HEALTH CHECK ---
 // Used by the frontend interceptor to detect when the backend is back online after a transient outage.
@@ -162,6 +201,15 @@ app.use('/api/blogs', require('./routes/blogRoutes'));
 
 // AI Authentic Guide
 app.use('/api/ai', require('./routes/aiRoute'));
+
+// Bookings (per-user travel reservations)
+app.use('/api/bookings', require('./routes/bookingRoutes'));
+
+// Support queries (user → admin contact desk)
+app.use('/api/queries', require('./routes/queryRoutes'));
+
+// Runtime config (e.g., Google Maps API key fetched on-demand by the client)
+app.use('/api/config', require('./routes/configRoutes'));
 
 // Global Error Handler
 const errorHandler = require('./middleware/errorHandler');

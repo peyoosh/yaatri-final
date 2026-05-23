@@ -25,18 +25,20 @@ const blogSchema = new mongoose.Schema({
     ref: 'Destination',
     default: null
   },
+  // Base64 data URL (or URL) for the cover image. Heavy when uploaded as Base64 —
+  // excluded from default selects. List/detail endpoints opt in via `.select('+image')`.
   image: {
     type: String,
     required: false,
-    default: ''
+    default: '',
+    select: false,
   },
   imagePublicId: {
     type: String,
     default: ''
   },
-  images: [{
-    type: String
-  }],
+  // Same rationale as `image` — array of Base64 strings is the heaviest field on the doc.
+  images: { type: [String], default: [], select: false },
   imagesPublicIds: [{
     type: String
   }],

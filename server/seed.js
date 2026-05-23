@@ -106,7 +106,6 @@ const seedDB = async () => {
     await User.insertMany(sampleUsers);
     console.log("👤 Users Seeded...");
     console.log(`🔑 Seeded admin login → username: peyoosh_admin   password: ${generatedAdminPassword}`);
-    console.log('   (Capture this password now — it is generated fresh each seed run.)');
 
     // Seed Destinations
     await Destination.deleteMany({}); // Clears existing data

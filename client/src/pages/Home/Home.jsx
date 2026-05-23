@@ -27,22 +27,18 @@ const Home = ({ onNavigate, onSelectNode }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('Fetching real-time metrics and destinations...');
         
         // Fetch real metrics from backend stats endpoint
         const statsRes = await api.get(`/stats/metrics`);
         const stats = statsRes.data || {};
-        console.log('Stats fetched:', stats);
         
         // Fetch destinations for the carousel
         const destsRes = await api.get(`/destinations`);
         const destinations = destsRes.data || [];
-        console.log('Destinations fetched:', destinations.length);
         
         // Fetch settings for marquee title
         const settingsRes = await api.get(`/settings`);
         const settings = settingsRes.data || {};
-        console.log('Settings fetched:', settings);
         
         // Update metrics with real data from backend
         setMetrics({
@@ -148,8 +144,8 @@ const Home = ({ onNavigate, onSelectNode }) => {
             From hidden valleys to high passes, Yaatri stitches together the destinations, guides, and journals that turn a trip into a story you keep telling.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-primary-white" onClick={() => onNavigate('/destinations')}>Explore</button>
-            <button className="btn-secondary-outline" onClick={() => onNavigate('/contact')}>Learn</button>
+            <button className="btn-primary-white" onClick={() => onNavigate('/destinations')}>Explore Destinations</button>
+            <button className="btn-secondary-outline" onClick={() => onNavigate('/contact')}>Contact Us</button>
           </div>
         </motion.div>
       </section>

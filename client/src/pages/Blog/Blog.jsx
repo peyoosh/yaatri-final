@@ -103,10 +103,8 @@ const Blog = ({ onSeeBlog }) => {
 
     try {
       setIsCompressing(true);
-      console.log(`Original size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
       
       const compressedFile = await compressImage(file);
-      console.log(`Compressed size: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
       
       setImageFile(compressedFile);
       
@@ -167,7 +165,6 @@ const Blog = ({ onSeeBlog }) => {
       let base64String = '';
       if (imageFile) {
         base64String = await convertToBase64(imageFile);
-        console.log(`Image encoded to Base64 (${(base64String.length / 1024 / 1024).toFixed(2)}MB of payload)`);
       }
 
       const payload = {
@@ -183,7 +180,6 @@ const Blog = ({ onSeeBlog }) => {
         signal: controller.signal,
       });
 
-      console.log('Blog created successfully:', response.data);
       await fetchPosts();
       closeModal();
       alert('Your journey has been shared! It will be published after admin review.');
@@ -202,7 +198,6 @@ const Blog = ({ onSeeBlog }) => {
         alert(`Validation error: ${errorMsg}`);
       } else if (err.response?.status === 500) {
         if (retryCount < maxRetries) {
-          console.log(`Server error, retrying (${retryCount + 1}/${maxRetries})...`);
           setTimeout(() => handlePost(retryCount + 1), 1000);
           return;
         } else {

@@ -20,6 +20,8 @@ const DestinationManager = () => {
     description: '',
     imageURL: '',
     terrainType: 'Hill', // Default matching the Enum
+    latitude: '',
+    longitude: '',
     experienceProtocols: {
       adventure: '',
       tradition: '',
@@ -98,6 +100,8 @@ const DestinationManager = () => {
       description: dest.description || '',
       imageURL: dest.imageURL || '',
       terrainType: dest.terrainType || 'Hill',
+      latitude: dest.latitude ?? '',
+      longitude: dest.longitude ?? '',
       experienceProtocols: {
         adventure: dest.experienceProtocols?.adventure || '',
         tradition: dest.experienceProtocols?.tradition || '',
@@ -113,32 +117,49 @@ const DestinationManager = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Cast lat/lng to numbers before sending; empty strings become undefined so
+    // Mongoose treats them as "not set" rather than NaN.
+    const payload = {
+      ...formData,
+      latitude: formData.latitude === '' || formData.latitude === null ? undefined : Number(formData.latitude),
+      longitude: formData.longitude === '' || formData.longitude === null ? undefined : Number(formData.longitude),
+    };
+    if (payload.latitude !== undefined && !Number.isFinite(payload.latitude)) {
+      showFeedback('error', 'LATITUDE_MUST_BE_NUMERIC');
+      return;
+    }
+    if (payload.longitude !== undefined && !Number.isFinite(payload.longitude)) {
+      showFeedback('error', 'LONGITUDE_MUST_BE_NUMERIC');
+      return;
+    }
     try {
       if (editingId) {
-        const response = await api.put(`/destinations/${editingId}`, formData, {
+        const response = await api.put(`/destinations/${editingId}`, payload, {
           headers: getAuthHeaders()
         });
         if (response.status === 200) {
           showFeedback('success', 'NODE_UPDATED_SUCCESSFULLY');
           setEditingId(null);
           setShowForm(false);
-          setFormData({ 
+          setFormData({
             name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
+            latitude: '', longitude: '',
             experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' },
             assignedGuides: [], assignedHotels: []
           });
           fetchDestinations();
         }
       } else {
-        const response = await api.post(`/destinations`, formData, {
+        const response = await api.post(`/destinations`, payload, {
           headers: getAuthHeaders()
         });
         
         if (response.status === 201) {
           showFeedback('success', 'NODE_STORED_SUCCESSFULLY');
           setShowForm(false);
-          setFormData({ 
+          setFormData({
             name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
+            latitude: '', longitude: '',
             experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' },
             assignedGuides: [], assignedHotels: []
           });
@@ -241,6 +262,61 @@ const DestinationManager = () => {
                     <option value="Terai" style={{ background: 'var(--obsidian)' }}>Terai</option>
                   </select>
                 </div>
+
+                {/* COORDINATES — used for the live map pin on the destination detail page. */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', borderTop: '1px dashed var(--border-light-3)', paddingTop: '1rem' }}>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--hill-green)', marginBottom: '0.25rem' }}>Map Coordinates</h4>
+                  <p style={{ fontSize: '0.7rem', opacity: 0.55, marginBottom: '1rem' }}>
+                    Drop a pin in Google Maps (right-click → coordinates copy to clipboard), then paste lat / lng below.
+                    Leave empty to fall back to the region default.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
+                        Latitude <span style={{ opacity: 0.5 }}>(−90 to 90)</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="-90"
+                        max="90"
+                        name="latitude"
+                        value={formData.latitude}
+                        onChange={handleChange}
+                        placeholder="e.g. 27.9881"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
+                        Longitude <span style={{ opacity: 0.5 }}>(−180 to 180)</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="-180"
+                        max="180"
+                        name="longitude"
+                        value={formData.longitude}
+                        onChange={handleChange}
+                        placeholder="e.g. 86.9250"
+                      />
+                    </div>
+                  </div>
+                  {formData.latitude !== '' && formData.longitude !== '' && Number.isFinite(Number(formData.latitude)) && Number.isFinite(Number(formData.longitude)) && (
+                    <p style={{ fontSize: '0.7rem', marginTop: 8, color: 'var(--hill-green)' }}>
+                      → Preview pin:&nbsp;
+                      <a
+                        href={`https://www.google.com/maps/?q=${Number(formData.latitude)},${Number(formData.longitude)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: 'var(--hill-green)', textDecoration: 'underline' }}
+                      >
+                        open in Google Maps ↗
+                      </a>
+                    </p>
+                  )}
+                </div>
+
                 <div style={{ gridColumn: '1 / -1', marginTop: '1rem', borderTop: '1px dashed var(--border-light-3)', paddingTop: '1rem' }}>
                   <h4 style={{ fontSize: '0.9rem', color: 'var(--hill-green)', marginBottom: '1rem' }}>Provider Assignments</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -331,6 +407,7 @@ const DestinationManager = () => {
                 <th>NAME</th>
                 <th>REGION</th>
                 <th>TERRAIN</th>
+                <th>COORDS</th>
                 <th>VISITS</th>
                 <th>SCORE</th>
                 <th>ACTIONS</th>
@@ -344,6 +421,7 @@ const DestinationManager = () => {
                     <td className="highlight-text"><div className="h-4 bg-gray-600 rounded animate-pulse w-24"></div></td>
                     <td><div className="h-4 bg-gray-600 rounded animate-pulse w-16"></div></td>
                     <td><div className="h-6 bg-gray-600 rounded animate-pulse w-12"></div></td>
+                    <td><div className="h-4 bg-gray-600 rounded animate-pulse w-20"></div></td>
                     <td><div className="h-4 bg-gray-600 rounded animate-pulse w-8"></div></td>
                     <td><div className="h-4 bg-gray-600 rounded animate-pulse w-10"></div></td>
                     <td className="actions-cell">
@@ -358,6 +436,15 @@ const DestinationManager = () => {
                     <td className="highlight-text">{dest.name}</td>
                     <td>{dest.region}</td>
                     <td><span className="severity-tag low">{dest.terrainType}</span></td>
+                    <td>
+                      {Number.isFinite(dest.latitude) && Number.isFinite(dest.longitude) ? (
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--hill-green)' }}>
+                          {dest.latitude.toFixed(4)}, {dest.longitude.toFixed(4)}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.7rem', opacity: 0.4, fontStyle: 'italic' }}>not set</span>
+                      )}
+                    </td>
                     <td><span style={{ fontWeight: 'bold', color: '#A2D729' }}>{dest.totalVisits || 0}</span></td>
                     <td>{dest.popularityScore || 0}</td>
                     <td className="actions-cell">
@@ -368,7 +455,7 @@ const DestinationManager = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No nodes currently populated.</td>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No nodes currently populated.</td>
                 </tr>
               )}
             </tbody>

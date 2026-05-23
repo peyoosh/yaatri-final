@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { ChevronDown, User, LogOut, Menu, X } from 'lucide-react';
+import { User, LogOut, Menu, X, Sparkles } from 'lucide-react';
 import yaatriLogo from './yaatri_logo.png'; 
 
 const Navbar = ({ loggedInUser, handleLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isExploreOpen, setIsExploreOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -68,30 +67,14 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
       <div className="hidden md:flex nav-actions">
         <div className="nav-links-container">
           <span className={`nav-link-block ${location.pathname === '/destinations' ? 'active' : ''}`} onClick={() => navigate('/destinations')}>Destinations</span>
+          <span
+            className={`nav-link-block flex items-center gap-1 ${location.pathname === '/explore' ? 'active' : ''}`}
+            onClick={() => navigate('/explore')}
+          >
+            <Sparkles size={13} /> Explore
+          </span>
           <span className={`nav-link-block ${location.pathname === '/blog' ? 'active' : ''}`} onClick={() => navigate('/blog')}>Blog</span>
           <span className={`nav-link-block ${location.pathname === '/contact' ? 'active' : ''}`} onClick={() => navigate('/contact')}>Contact</span>
-          <div 
-            className="relative"
-            onMouseEnter={() => setIsExploreOpen(true)}
-            onMouseLeave={() => setIsExploreOpen(false)}
-          >
-            <span className="nav-link-block flex items-center gap-2">
-              Explore <ChevronDown size={14} className={`transition-transform duration-300 ${isExploreOpen ? 'rotate-180' : ''}`} />
-            </span>
-            <AnimatePresence>
-              {isExploreOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="nav-dropdown"
-                >
-                  <div className="nav-link-block" style={{ fontSize: '0.7rem' }}>Safari Expeditions</div>
-                  <div className="nav-link-block" style={{ fontSize: '0.7rem' }}>Mountain Treks</div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
         
         {loggedInUser?.isAdmin && (
@@ -150,6 +133,9 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
           >
             <div className="flex flex-col gap-6 w-full px-8">
               <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/destinations' ? 'text-hill-green' : 'text-white'}`} onClick={() => navigate('/destinations')}>DESTINATIONS</span>
+              <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 flex items-center justify-center gap-2 ${location.pathname === '/explore' ? 'text-toxic-lime' : 'text-white'}`} onClick={() => navigate('/explore')}>
+                <Sparkles size={18} /> EXPLORE
+              </span>
               <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/blog' ? 'text-hill-green' : 'text-white'}`} onClick={() => navigate('/blog')}>JOURNALS</span>
               <span className={`text-xl font-black tracking-widest text-center border-b border-white/10 pb-4 ${location.pathname === '/contact' ? 'text-hill-green' : 'text-white'}`} onClick={() => navigate('/contact')}>CONTACT</span>
               

@@ -13,6 +13,9 @@ import Destinations from './pages/Destinations/Destinations';
 import Contact from './pages/Contact/Contact';
 import AdminDashboard from './pages/Admin/Dashboard';
 import Profile from './pages/Profile/Profile';
+import BookingPage from './pages/Destinations/BookingPage';
+import Explore from './pages/Explore/Explore';
+import Support from './pages/Support/Support';
 import { AuthContext } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './index.css';
@@ -50,6 +53,8 @@ const App = () => {
 
   // Detect if we are in a management/dashboard view to hide site-wide nav/footer
   const isManagementView = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
+  // /explore IS the AI chat — hide the floating widget there to avoid two AI surfaces on one page.
+  const isAIPage = location.pathname === '/explore';
 
   return (
     <div className={`${isManagementView ? "management-shell" : "app-shell"} font-global`}>
@@ -63,8 +68,15 @@ const App = () => {
           <Route path="/destinations" element={<Destinations onSelectNode={handleNodeSelection} />} />
           <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
           <Route path="/destination/:id" element={<DestinationDetail onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
+          <Route path="/destinations/book/:id" element={
+            <ProtectedRoute user={loggedInUser}>
+              <BookingPage />
+            </ProtectedRoute>
+          } />
           <Route path="/blog" element={<Blog onSeeBlog={openBlogModal} />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/register" element={<Auth />} />
           <Route path="/auth" element={<Auth />} />
@@ -85,13 +97,13 @@ const App = () => {
 
       {!isManagementView && (
         <>
-      <BlogModal 
-        isOpen={isBlogModalOpen} 
-        onClose={() => setIsBlogModalOpen(false)} 
-        post={selectedBlogNode} 
+      <BlogModal
+        isOpen={isBlogModalOpen}
+        onClose={() => setIsBlogModalOpen(false)}
+        post={selectedBlogNode}
       />
 
-      <AIChatbox />
+      {!isAIPage && <AIChatbox />}
 
       <Footer />
         </>

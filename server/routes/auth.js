@@ -46,10 +46,11 @@ router.post('/login', async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
 
-    // Flexible login: Find by email, phone, OR username
-    const user = await User.findOne({ 
-      $or: [{ email: identifier }, { phoneNumber: identifier }, { username: identifier }] 
-    });
+    // Flexible login: Find by email, phone, OR username. Pull +avatar so the client
+    // AuthContext receives the full user profile on the first hit.
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { phoneNumber: identifier }, { username: identifier }]
+    }).select('+avatar');
     if (!user) return res.sendError(401, 'AUTH_INVALID_CREDENTIALS', 'Invalid credentials. Please check your username and password.');
 
     // Verify password
@@ -66,13 +67,18 @@ router.post('/login', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET: /me - Get current user profile
+// GET: /me - Get current user profile (re-fetches with +avatar since the
+// schema marks avatar select:false to keep generic auth checks lean).
 router.get('/me', protect, async (req, res) => {
   if (!req.user) {
     return res.sendError(404, 'AUTH_USER_NOT_FOUND', 'User not found');
   }
-  const userObj = req.user.toObject();
-  userObj.isAdmin = req.user.isAdmin; // Ensure virtual is included
+  const full = await User.findById(req.user._id).select('-password +avatar');
+  if (!full) {
+    return res.sendError(404, 'AUTH_USER_NOT_FOUND', 'User not found');
+  }
+  const userObj = full.toObject();
+  userObj.isAdmin = full.isAdmin;
   res.json(userObj);
 });
 

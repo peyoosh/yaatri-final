@@ -1,3 +1,12 @@
-◇ injected env (4) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (4) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 YAATRI_HUB online at 0.0.0.0:5000
 YAATRI_DATABASE: CONNECTED TO [YAATRI]
+[SUPPORT_QUEUE_NEW] ticket=6a0ffe1eb81e187f81388bd6 type="Suggestion" from=tester@example.com
+[SUPPORT_QUEUE_NEW] ticket=6a1003e0b81e187f81388bd7 type="Report Issue" from=asha@example.com
+[SUPPORT_QUEUE_NEW] ticket=6a1003e0b81e187f81388bd8 type="Suggestion" from=bishal@example.com
+[SUPPORT_QUEUE_NEW] ticket=6a1003e1b81e187f81388bd9 type="General Feedback" from=chitra@example.com
+(node:22096) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:22096) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:22096) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:22096) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.

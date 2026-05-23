@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { MessageCircle, X, Send, Loader, MapPin } from 'lucide-react';
+import { MessageCircle, X, Send, Loader, MapPin, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AIChatbox = () => {
@@ -13,7 +13,7 @@ const AIChatbox = () => {
     {
       id: 1,
       type: 'bot',
-      text: 'Welcome to Yaatri AI Guide! 🏔️ Tell me about your ideal travel experience. What kind of destination are you looking for? (e.g., high altitude, cultural, adventure, peaceful)',
+      text: "Namaste! I'm your Yaatri guide. Ask me about treks (EBC, ABC, Mustang), the best seasons, what to pack, costs, or which destination fits your travel style. What's on your mind?",
       timestamp: new Date(),
       suggestedDestinations: []
     }
@@ -54,8 +54,15 @@ const AIChatbox = () => {
     setIsLoading(true);
 
     try {
-      // Call backend AI endpoint
-      const response = await api.post('/ai/chat', { query: userInput });
+      // Build a compact history payload for Gemini's startChat. We map the local
+      // chat model {type: 'user'|'bot'} → Gemini's {role: 'user'|'model'} and keep
+      // only the last ~12 messages so prompt size stays bounded.
+      const history = messages.slice(-12).map((m) => ({
+        role: m.type === 'user' ? 'user' : 'model',
+        parts: [{ text: String(m.text || '').slice(0, 2000) }],
+      }));
+
+      const response = await api.post('/ai/chat', { query: userInput, history });
       const { reply, redirectTo, suggestedDestinations } = response.data || {};
 
       const botMessage = {
@@ -127,12 +134,27 @@ const AIChatbox = () => {
                 <MessageCircle size={20} className="text-white" />
                 <h3 className="text-white font-bold">Yaatri AI Guide</h3>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    // Hand off the current conversation + draft input to the full-page Explore view.
+                    navigate('/explore', { state: { messages, userInput } });
+                  }}
+                  className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                  title="Open in full screen"
+                  aria-label="Open in full screen"
+                >
+                  <Maximize2 size={18} />
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* MESSAGES AREA */}

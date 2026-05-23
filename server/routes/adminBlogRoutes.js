@@ -7,7 +7,9 @@ const { deleteFromCloudinary } = require('../utils/cloudinary');
 // GET: Fetch all blogs (published, reported, flagged) for Management Panel
 router.get('/', validateAdmin, async (req, res) => {
   try {
+    // Admin blog manager renders thumbnails in the table — opt back in to the heavy fields.
     const allBlogs = await Blog.find()
+      .select('+image +images')
       .populate('authorId', 'username email')
       .sort({ timestamp: -1 })
       .lean();
@@ -58,7 +60,6 @@ router.delete('/:id', validateAdmin, async (req, res) => {
     if (blog.imagePublicId) {
       try {
         await deleteFromCloudinary(blog.imagePublicId);
-        console.log(`Deleted image ${blog.imagePublicId} from Cloudinary`);
       } catch (cloudinaryError) {
         console.warn('Failed to delete image from Cloudinary:', cloudinaryError);
         // Don't fail the blog deletion if image deletion fails
@@ -70,7 +71,6 @@ router.delete('/:id', validateAdmin, async (req, res) => {
       for (const publicId of blog.imagesPublicIds) {
         try {
           await deleteFromCloudinary(publicId);
-          console.log(`Deleted additional image ${publicId} from Cloudinary`);
         } catch (cloudinaryError) {
           console.warn(`Failed to delete additional image ${publicId} from Cloudinary:`, cloudinaryError);
         }
