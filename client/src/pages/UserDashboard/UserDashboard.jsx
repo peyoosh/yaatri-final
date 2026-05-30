@@ -3,16 +3,37 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
 import {
-  Menu, Map, Heart, Settings, LogOut, Camera, Save, Loader, MapPin, Calendar, Tag,
+  Menu, Map, Heart, Settings, LogOut, Camera, Save, Loader, MapPin, Calendar, Tag, Home,
+  Compass, Hotel as HotelIcon, MessageSquare, Send, X as XIcon,
+  AlertTriangle, Lightbulb, UserX,
 } from 'lucide-react';
 import GoogleMapView from '../../components/Common/GoogleMapView';
+import GuideDashboard from './GuideDashboard';
+import HotelDashboard from './HotelDashboard';
+import { compressImage } from '../../utils/imageCompression';
 import './UserDashboard.css';
 
-const TABS = [
+// Per-role tab sets — the dashboard branches on user.role at render time so guides
+// and hotel-owners get a workspace tailored to their job instead of the traveller view.
+const TRAVELER_TABS = [
   { id: 'trips',     label: 'Overview & My Trips',       Icon: Map },
   { id: 'favorites', label: 'My Favorites',              Icon: Heart },
   { id: 'settings',  label: 'Account & Profile Settings', Icon: Settings },
 ];
+const GUIDE_TABS = [
+  { id: 'engagements', label: 'My Engagements', Icon: Compass },
+  { id: 'settings',    label: 'Account & Profile', Icon: Settings },
+];
+const HOTEL_TABS = [
+  { id: 'reservations', label: 'Reservations', Icon: HotelIcon },
+  { id: 'settings',     label: 'Account & Profile', Icon: Settings },
+];
+
+const resolveRoleConfig = (role) => {
+  if (role === 'guide') return { tabs: GUIDE_TABS, defaultTab: 'engagements', kicker: 'Guide ops', greet: 'Welcome back, dai' };
+  if (role === 'hotel' || role === 'hotel_owner') return { tabs: HOTEL_TABS, defaultTab: 'reservations', kicker: 'Hotel ops', greet: 'Welcome back' };
+  return { tabs: TRAVELER_TABS, defaultTab: 'trips', kicker: 'Dashboard', greet: 'Namaste' };
+};
 
 const convertToBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -26,8 +47,18 @@ const UserDashboard = ({ user: userProp }) => {
   const { user: authUser, setUser, logout } = useContext(AuthContext);
   const user = userProp || authUser;
 
-  const [activeTab, setActiveTab] = useState('trips');
+  // Resolve role config FIRST so we know which tab set to render and which is default.
+  const roleConfig = resolveRoleConfig(user?.role);
+  const [activeTab, setActiveTab] = useState(roleConfig.defaultTab);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
+  // If role changes (e.g. admin promotes someone) while the dashboard is mounted,
+  // snap the active tab back to a valid one in the new role's set.
+  useEffect(() => {
+    const valid = roleConfig.tabs.some((t) => t.id === activeTab);
+    if (!valid) setActiveTab(roleConfig.defaultTab);
+  }, [user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) {
     return (
@@ -53,7 +84,7 @@ const UserDashboard = ({ user: userProp }) => {
 
           <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '0.5rem 0' }} />
 
-          {TABS.map(({ id, label, Icon }) => {
+          {roleConfig.tabs.map(({ id, label, Icon }) => {
             const active = activeTab === id;
             return (
               <button
@@ -107,18 +138,73 @@ const UserDashboard = ({ user: userProp }) => {
 
         {/* MAIN PANEL */}
         <main style={{ padding: '2rem 4%', overflowY: 'auto' }}>
-          <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
             <div>
-              <p style={{ fontSize: '0.65rem', letterSpacing: 3, color: '#A2D729', fontWeight: 700, textTransform: 'uppercase' }}>Dashboard</p>
-              <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Namaste, {user.username}</h1>
+              <p style={{ fontSize: '0.65rem', letterSpacing: 3, color: '#A2D729', fontWeight: 700, textTransform: 'uppercase' }}>{roleConfig.kicker}</p>
+              <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{roleConfig.greet}, {user.username}</h1>
             </div>
-            <span style={{ fontSize: '0.75rem', opacity: 0.4, fontFamily: 'monospace' }}>
-              [TAB: {activeTab.toUpperCase()}]
-            </span>
+            {/* The dashboard hides the global Navbar, so we surface Home + Feedback inline. */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setFeedbackOpen(true)}
+                style={{
+                  background: 'rgba(244,162,97,0.08)',
+                  border: '1px solid rgba(244,162,97,0.4)',
+                  color: '#F4A261',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  padding: '0.5rem 0.95rem',
+                  borderRadius: 999,
+                }}
+                title="Send a quick bug report, suggestion, or account note"
+              >
+                <MessageSquare size={13} /> FEEDBACK
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                style={{
+                  background: 'rgba(162,215,41,0.08)',
+                  border: '1px solid rgba(162,215,41,0.4)',
+                  color: '#A2D729',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  padding: '0.5rem 0.95rem',
+                  borderRadius: 999,
+                }}
+              >
+                <Home size={13} /> BACK TO HOMEPAGE
+              </button>
+              <span style={{ fontSize: '0.75rem', opacity: 0.4, fontFamily: 'monospace' }}>
+                [TAB: {activeTab.toUpperCase()}]
+              </span>
+            </div>
           </header>
 
+          {feedbackOpen && (
+            <FeedbackModal
+              user={user}
+              onClose={() => setFeedbackOpen(false)}
+            />
+          )}
+
+          {/* Traveler tabs */}
           {activeTab === 'trips' && <TripsTab user={user} navigate={navigate} />}
           {activeTab === 'favorites' && <FavoritesTab user={user} navigate={navigate} />}
+          {/* Guide tabs */}
+          {activeTab === 'engagements' && <GuideDashboard user={user} />}
+          {/* Hotel tabs */}
+          {activeTab === 'reservations' && <HotelDashboard user={user} />}
+          {/* Shared */}
           {activeTab === 'settings' && <SettingsTab user={user} setUser={setUser} />}
         </main>
       </div>
@@ -205,7 +291,7 @@ const TripsTab = ({ user, navigate }) => {
           />
         ) : (
           <div style={cardGrid}>
-            {upcoming.map(b => <BookingCard key={b._id} b={b} onCancel={handleCancel} cancelling={cancellingId === b._id} />)}
+            {upcoming.map(b => <BookingCard key={b._id} b={b} onCancel={handleCancel} cancelling={cancellingId === b._id} onReview={(updated) => setBookings(prev => prev.map(x => x._id === updated._id ? updated : x))} />)}
           </div>
         )}
       </section>
@@ -219,7 +305,7 @@ const TripsTab = ({ user, navigate }) => {
           />
         ) : (
           <div style={cardGrid}>
-            {past.map(b => <BookingCard key={b._id} b={b} />)}
+            {past.map(b => <BookingCard key={b._id} b={b} onReview={(updated) => setBookings(prev => prev.map(x => x._id === updated._id ? updated : x))} />)}
           </div>
         )}
       </section>
@@ -227,60 +313,225 @@ const TripsTab = ({ user, navigate }) => {
   );
 };
 
-const BookingCard = ({ b, onCancel, cancelling }) => {
+const BookingCard = ({ b, onCancel, cancelling, onReview }) => {
   const dest = b.destination || {};
+  const [reviewOpen, setReviewOpen] = useState(false);
+
   // Status colour: lime for completed, hill-green for active, muted red for cancelled.
   const statusColors = {
-    completed: { bg: 'rgba(162,215,41,0.15)', fg: '#A2D729' },
-    cancelled: { bg: 'rgba(255,77,77,0.12)', fg: '#ff6b6b' },
-    default:   { bg: 'rgba(5,157,114,0.15)', fg: '#059D72' },
+    completed:       { bg: 'rgba(162,215,41,0.15)', fg: '#A2D729' },
+    approved:        { bg: 'rgba(162,215,41,0.15)', fg: '#A2D729' },
+    confirmed:       { bg: 'rgba(162,215,41,0.15)', fg: '#A2D729' },
+    cancelled:       { bg: 'rgba(255,77,77,0.12)', fg: '#ff6b6b' },
+    pending_payment: { bg: 'rgba(255,180,80,0.15)', fg: '#FFB450' },
+    escrow_held:     { bg: 'rgba(244,162,97,0.15)', fg: '#F4A261' },
+    default:         { bg: 'rgba(5,157,114,0.15)', fg: '#059D72' },
   };
   const c = statusColors[b.status] || statusColors.default;
-  const canCancel = ['pending', 'confirmed'].includes(b.status) && typeof onCancel === 'function';
+  const canCancel = ['pending', 'pending_payment', 'escrow_held', 'confirmed', 'approved'].includes(b.status) && typeof onCancel === 'function';
+  // Review window: trip has started (approved) or finished (completed) AND hasn't been reviewed yet.
+  const canReview = ['approved', 'completed', 'confirmed'].includes(b.status) && !b.review?.rating;
+  const hasReview = !!b.review?.rating;
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '1.25rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{dest.name || 'Destination'}</h3>
-        <span style={{
-          fontSize: '0.65rem', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700,
-          padding: '2px 8px', borderRadius: 999,
-          background: c.bg, color: c.fg,
-        }}>{b.status}</span>
-      </div>
-      {dest.region && (
-        <p style={{ fontSize: '0.8rem', opacity: 0.6, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <MapPin size={12} /> {dest.region}
-        </p>
-      )}
-      <div style={{ display: 'flex', gap: '1rem', marginTop: 10, fontSize: '0.8rem', opacity: 0.7 }}>
-        <span><Calendar size={12} style={{ display: 'inline', marginRight: 4 }} /> {b.durationDays}d × {b.travelers}p</span>
-        <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#A2D729' }}>
-          NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}
-        </span>
-      </div>
-      {canCancel && (
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => onCancel(b)}
-            disabled={cancelling}
-            style={{
-              background: 'none',
-              border: '1px solid rgba(255,77,77,0.5)',
-              color: cancelling ? '#A6A180' : '#ff6b6b',
-              padding: '0.45rem 0.95rem',
-              borderRadius: 6,
-              cursor: cancelling ? 'wait' : 'pointer',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              letterSpacing: 1.5,
-              textTransform: 'uppercase',
-            }}
-          >
-            {cancelling ? 'Cancelling…' : 'Cancel booking'}
-          </button>
+    <>
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>{dest.name || 'Destination'}</h3>
+          <span style={{
+            fontSize: '0.65rem', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 700,
+            padding: '2px 8px', borderRadius: 999,
+            background: c.bg, color: c.fg,
+          }}>{b.status}</span>
         </div>
+        {dest.region && (
+          <p style={{ fontSize: '0.8rem', opacity: 0.6, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <MapPin size={12} /> {dest.region}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: '1rem', marginTop: 10, fontSize: '0.8rem', opacity: 0.7 }}>
+          <span><Calendar size={12} style={{ display: 'inline', marginRight: 4 }} /> {b.durationDays}d × {b.travelers}p</span>
+          <span style={{ marginLeft: 'auto', fontWeight: 800, color: '#A2D729' }}>
+            NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}
+          </span>
+        </div>
+
+        {/* Review display — if the traveler has rated this trip, show it here */}
+        {hasReview && (
+          <div style={{ marginTop: 12, padding: '0.7rem 0.9rem', background: 'rgba(162,215,41,0.05)', border: '1px solid rgba(162,215,41,0.2)', borderRadius: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span key={n} style={{ color: n <= b.review.rating ? '#A2D729' : 'rgba(255,255,255,0.18)', fontSize: '0.85rem' }}>★</span>
+              ))}
+              <span style={{ fontSize: '0.7rem', opacity: 0.55, marginLeft: 6 }}>your review</span>
+            </div>
+            {b.review.comment && (
+              <p style={{ fontSize: '0.78rem', opacity: 0.85, fontStyle: 'italic', lineHeight: 1.4 }}>"{b.review.comment}"</p>
+            )}
+          </div>
+        )}
+
+        {(canCancel || canReview) && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+            {canReview && (
+              <button
+                onClick={() => setReviewOpen(true)}
+                style={{
+                  background: 'rgba(162,215,41,0.1)',
+                  border: '1px solid #A2D729',
+                  color: '#A2D729',
+                  padding: '0.45rem 0.95rem',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: 1.5,
+                  textTransform: 'uppercase',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                ★ Leave a review
+              </button>
+            )}
+            {canCancel && (
+              <button
+                onClick={() => onCancel(b)}
+                disabled={cancelling}
+                style={{
+                  background: 'none',
+                  border: '1px solid rgba(255,77,77,0.5)',
+                  color: cancelling ? '#A6A180' : '#ff6b6b',
+                  padding: '0.45rem 0.95rem',
+                  borderRadius: 6,
+                  cursor: cancelling ? 'wait' : 'pointer',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  letterSpacing: 1.5,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {cancelling ? 'Cancelling…' : 'Cancel booking'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {reviewOpen && (
+        <ReviewModal
+          booking={b}
+          onClose={() => setReviewOpen(false)}
+          onSubmitted={(updated) => {
+            setReviewOpen(false);
+            if (typeof onReview === 'function') onReview(updated);
+          }}
+        />
       )}
+    </>
+  );
+};
+
+/* ----------  TRIP REVIEW MODAL  ---------- */
+
+const ReviewModal = ({ booking, onClose, onSubmitted }) => {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const submit = async (e) => {
+    e?.preventDefault?.();
+    if (rating < 1 || rating > 5) { setErr('Pick a star rating from 1 to 5.'); return; }
+    setBusy(true);
+    setErr(null);
+    try {
+      const { data } = await api.post(`/bookings/${booking._id}/review`, { rating, comment });
+      onSubmitted?.(data);
+    } catch (e) {
+      setErr(e?.response?.data?.message || 'Could not submit review.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: 'var(--obsidian, #0D0A02)', border: '1px solid var(--hill-green, #059D72)', borderRadius: 12, padding: '1.75rem', maxWidth: 460, width: '100%', color: 'var(--himalayan-mist, #F4F2F3)' }}
+      >
+        <p style={{ fontSize: '0.65rem', letterSpacing: 3, color: '#A2D729', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>
+          Trip review
+        </p>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
+          How was {booking.destination?.name || 'your trip'}?
+        </h2>
+        <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '1.25rem' }}>
+          Your honest take helps fellow travelers, and lets the guide/hotel know how they did.
+        </p>
+
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {/* Star picker */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {[1, 2, 3, 4, 5].map((n) => {
+              const active = (hover || rating) >= n;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRating(n)}
+                  onMouseEnter={() => setHover(n)}
+                  onMouseLeave={() => setHover(0)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: active ? '#A2D729' : 'rgba(255,255,255,0.2)',
+                    fontSize: '2rem', padding: 0, lineHeight: 1, transition: 'color 0.1s',
+                  }}
+                  aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                >★</button>
+              );
+            })}
+            <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: 8 }}>
+              {rating ? `${rating} / 5` : 'click to rate'}
+            </span>
+          </div>
+
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Optional: what stood out? What could've been better? (max 1000 chars)"
+            rows={4}
+            maxLength={1000}
+            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+          />
+
+          {err && <p style={{ fontSize: '0.78rem', color: '#ff6b6b' }}>{err}</p>}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#A6A180', padding: '0.55rem 1rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={busy || rating < 1}
+              className="btn-primary-white"
+              style={{ opacity: busy || rating < 1 ? 0.5 : 1, cursor: busy ? 'wait' : 'pointer' }}
+            >
+              {busy ? 'Submitting…' : 'Submit review'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -367,7 +618,10 @@ const SettingsTab = ({ user, setUser }) => {
     if (f.size > 5 * 1024 * 1024) { setError('Avatar must be under 5MB'); return; }
     setError(null);
     try {
-      const base64 = await convertToBase64(f);
+      // Compress to 480p + <1MB BEFORE Base64 encoding — keeps the User doc tiny
+      // and avoids hitting the 16MB BSON ceiling under continuous avatar churn.
+      const compressed = await compressImage(f);
+      const base64 = await convertToBase64(compressed);
       setDraft(d => ({ ...d, avatar: base64 }));
     } catch (err) { setError('Could not read file'); }
   };
@@ -505,6 +759,160 @@ const inputStyle = {
   borderRadius: 6,
   fontSize: '0.9rem',
   outline: 'none',
+};
+
+/* ----------  FEEDBACK MODAL  ---------- */
+// Inline 3-type feedback form. Posts to /api/queries (the same support pipeline
+// as the public Contact page) so feedback lands in the admin Messages queue.
+
+const FEEDBACK_TYPES = [
+  { id: 'bug_report',    label: 'Bug report',       Icon: AlertTriangle, accent: '#ff6b6b' },
+  { id: 'suggestion',    label: 'Suggestion',       Icon: Lightbulb,     accent: '#A2D729' },
+  { id: 'account_issue', label: 'Account issue',    Icon: UserX,         accent: '#F4A261' },
+];
+
+const FeedbackModal = ({ user, onClose }) => {
+  const [type, setType] = useState('suggestion');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  const handleSend = async (e) => {
+    e?.preventDefault?.();
+    if (submitting || message.trim().length < 5) return;
+    setSubmitting(true);
+    setStatus(null);
+    try {
+      const subject = `[Dashboard ${type}] from @${user?.username || 'user'}`;
+      const { data } = await api.post('/queries', {
+        email: user?.email || 'dashboard-user@yaatri.local',
+        subject,
+        type,
+        message,
+      });
+      setStatus({ kind: 'ok', text: `Thanks — ticket ${String(data?.ticketId || '').slice(-8).toUpperCase()} filed. Our team will follow up.` });
+      setMessage('');
+      setTimeout(() => onClose?.(), 1800);
+    } catch (err) {
+      setStatus({ kind: 'err', text: err?.response?.data?.message || 'Could not send. Try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--obsidian, #0D0A02)',
+          border: '1px solid var(--hill-green, #059D72)',
+          borderRadius: 12,
+          padding: '1.75rem',
+          maxWidth: 480,
+          width: '100%',
+          color: 'var(--himalayan-mist, #F4F2F3)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+          <div>
+            <p style={{ fontSize: '0.65rem', letterSpacing: 3, color: '#F4A261', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>
+              Quick feedback
+            </p>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.02em' }}>What's on your mind?</h2>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#A6A180', cursor: 'pointer', padding: 4 }}
+            aria-label="Close"
+          >
+            <XIcon size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {/* Type chips */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {FEEDBACK_TYPES.map(({ id, label, Icon, accent }) => {
+              const active = type === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setType(id)}
+                  style={{
+                    background: active ? `${accent}1f` : 'rgba(0,0,0,0.25)',
+                    border: `1px solid ${active ? accent : 'rgba(255,255,255,0.08)'}`,
+                    color: active ? accent : 'rgba(255,255,255,0.7)',
+                    padding: '0.55rem 0.5rem',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Icon size={12} /> {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Tell us what's working, what's broken, or what would help (min 5 chars)"
+            rows={5}
+            maxLength={2000}
+            required
+            minLength={5}
+            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+          />
+
+          {status && (
+            <p style={{ fontSize: '0.8rem', color: status.kind === 'ok' ? '#A2D729' : '#ff6b6b' }}>
+              {status.text}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: '#A6A180',
+                padding: '0.55rem 1rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || message.trim().length < 5}
+              className="btn-primary-white"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: submitting || message.trim().length < 5 ? 0.5 : 1 }}
+            >
+              {submitting ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
+              {submitting ? 'Sending…' : 'Send feedback'}
+            </button>
+          </div>
+        </form>
+
+        <p style={{ fontSize: '0.7rem', opacity: 0.45, marginTop: '1rem' }}>
+          Sending as <strong>@{user?.username}</strong> · routes to /admin/messages
+        </p>
+      </div>
+    </div>
+  );
 };
 
 export default UserDashboard;

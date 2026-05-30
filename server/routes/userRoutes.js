@@ -259,30 +259,54 @@ router.get('/:id/role-stats', protect, async (req, res) => {
         .lean();
 
       const destIds = assignedDestinations.map((d) => d._id);
-      // Treat guide engagements as bookings on assigned destinations that explicitly include the guide add-on.
-      const bookings = destIds.length
-        ? await Booking.find({ destination: { $in: destIds }, 'pricing.addOns': 'guide' })
+
+      // Bookings explicitly attributed to this guide (preferred — accurate per-guide attribution).
+      const directBookings = await Booking.find({ assignedGuide: user._id })
+        .populate('destination', 'name region')
+        .populate('user', 'username')
+        .sort({ startDate: 1, createdAt: -1 })
+        .lean();
+
+      // Legacy bookings that came in before per-guide attribution existed: bookings on
+      // this guide's assigned destinations with the 'guide' add-on but no assignedGuide.
+      // Counted at a discounted share so they don't double-pay if the destination has
+      // multiple guides linked.
+      const legacyBookings = destIds.length
+        ? await Booking.find({
+            destination: { $in: destIds },
+            'pricing.addOns': 'guide',
+            $or: [{ assignedGuide: null }, { assignedGuide: { $exists: false } }],
+          })
             .populate('destination', 'name region')
             .populate('user', 'username')
             .sort({ startDate: 1, createdAt: -1 })
             .lean()
         : [];
 
-      // Earnings ≈ NPR 1,500 per traveller per day per booking (matches the add-on rate used at booking time).
-      const GUIDE_RATE = 1500;
+      // Earnings: prefer the rate the guide actually published (profileData.ratePerDay), else 1500.
+      const publishedRate = Number(user.profileData?.ratePerDay) || 1500;
       let totalEarnings = 0;
       const upcoming = [];
       const past = [];
       const now = Date.now();
 
-      for (const b of bookings) {
+      const accountBooking = (b, share) => {
         if (b.status !== 'cancelled') {
-          totalEarnings += GUIDE_RATE * Number(b.travelers || 1) * Number(b.durationDays || 1);
+          totalEarnings += Math.round(publishedRate * Number(b.travelers || 1) * Number(b.durationDays || 1) * share);
         }
         const isFuture = b.startDate && new Date(b.startDate).getTime() >= now;
         if (['pending', 'confirmed'].includes(b.status) && isFuture) upcoming.push(b);
         else past.push(b);
-      }
+      };
+
+      directBookings.forEach((b) => accountBooking(b, 1));
+      // Legacy share: divided by the number of guides on the destination (best-effort fairness).
+      legacyBookings.forEach((b) => {
+        const guideCountOnDest = (assignedDestinations.find((d) => String(d._id) === String(b.destination?._id))?.assignedGuides?.length) || 1;
+        accountBooking(b, 1 / Math.max(1, guideCountOnDest));
+      });
+
+      const bookings = [...directBookings, ...legacyBookings];
 
       return res.json({
         role: 'guide',
@@ -308,6 +332,68 @@ router.get('/:id/role-stats', protect, async (req, res) => {
   } catch (err) {
     console.error('ROLE_STATS_ERROR', err);
     res.status(500).json({ message: err.message || 'Failed to fetch role stats' });
+  }
+});
+
+// GET /api/users/:id/reviews — Public list of trip reviews involving this user as a
+// vendor (guide or hotel-owner). Joins through the Booking collection. Used by the
+// guide and hotel profile sidebars to surface "what travelers say".
+router.get('/:id/reviews', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('role');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const baseSelect = 'review user destination travelers durationDays createdAt';
+    const reviewFilter = { 'review.rating': { $exists: true, $ne: null } };
+
+    let bookings = [];
+    if (user.role === 'guide') {
+      bookings = await Booking.find({ ...reviewFilter, assignedGuide: req.params.id })
+        .select(baseSelect)
+        .populate('user', 'username')
+        .populate('destination', 'name region')
+        .sort({ 'review.submittedAt': -1 })
+        .limit(20)
+        .lean();
+    } else if (['hotel', 'hotel_owner'].includes(user.role)) {
+      const hotel = await Hotel.findOne({ userId: req.params.id }).select('_id').lean();
+      if (hotel) {
+        const dests = await Destination.find({ assignedHotels: hotel._id }).select('_id').lean();
+        const destIds = dests.map((d) => d._id);
+        if (destIds.length > 0) {
+          bookings = await Booking.find({ ...reviewFilter, destination: { $in: destIds } })
+            .select(baseSelect)
+            .populate('user', 'username')
+            .populate('destination', 'name region')
+            .sort({ 'review.submittedAt': -1 })
+            .limit(20)
+            .lean();
+        }
+      }
+    }
+
+    const avgRating = bookings.length
+      ? Math.round((bookings.reduce((s, b) => s + Number(b.review?.rating || 0), 0) / bookings.length) * 10) / 10
+      : null;
+
+    res.json({
+      role: user.role,
+      count: bookings.length,
+      averageRating: avgRating,
+      reviews: bookings.map((b) => ({
+        _id: b._id,
+        rating: b.review.rating,
+        comment: b.review.comment,
+        submittedAt: b.review.submittedAt,
+        author: b.user?.username || 'Traveler',
+        destination: b.destination?.name || '',
+        region: b.destination?.region || '',
+        tripSize: `${b.travelers}p × ${b.durationDays}d`,
+      })),
+    });
+  } catch (err) {
+    console.error('USER_REVIEWS_ERROR', err);
+    res.status(500).json({ message: err.message || 'Failed to load reviews' });
   }
 });
 

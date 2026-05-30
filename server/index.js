@@ -203,24 +203,50 @@ app.use('/api/blogs', require('./routes/blogRoutes'));
 app.use('/api/ai', require('./routes/aiRoute'));
 
 // Bookings (per-user travel reservations)
-app.use('/api/bookings', require('./routes/bookingRoutes'));
+const bookingRouter = require('./routes/bookingRoutes');
+app.use('/api/bookings', bookingRouter);
+
+// Auto-complete bookings whose end-date has passed.
+// Runs once on boot (after the first successful DB connection) and every 10 min.
+const scheduleBookingSweep = () => {
+  if (typeof bookingRouter.sweepCompletedBookings !== 'function') return;
+  const tick = () => bookingRouter.sweepCompletedBookings().catch(() => {});
+  // First sweep after a short delay so Mongo has time to settle on cold starts.
+  setTimeout(tick, 5_000);
+  setInterval(tick, 10 * 60 * 1000); // every 10 minutes
+};
+scheduleBookingSweep();
 
 // Support queries (user → admin contact desk)
 app.use('/api/queries', require('./routes/queryRoutes'));
 
-// Runtime config (e.g., Google Maps API key fetched on-demand by the client)
-app.use('/api/config', require('./routes/configRoutes'));
+// Vendor self-serve routes (guide/hotel payout requests)
+app.use('/api/vendors', require('./routes/vendorRoutes'));
+
+// (Runtime config endpoint /api/config/maps-key was removed when we switched to Leaflet — see PROJECT_TREE.txt)
 
 // Global Error Handler
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`YAATRI_HUB online at 0.0.0.0:${PORT}`);
-}).on('error', (err) => {
-  console.error('SERVER BOOT CRASH DETECTED:', err.message);
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Free it (e.g. taskkill /F /PID <pid> after  netstat -ano | findstr :${PORT}) and try again.`);
-  }
-  process.exit(1);
-});
+// Bind to the port. If something briefly holds it (e.g. an old nodemon child
+// hasn't released yet during a rapid restart), wait + retry instead of dying.
+// Permanent exit only after 5 failed attempts — covers nodemon races cleanly.
+const bindServer = (attempt = 1, maxAttempts = 5, delayMs = 1500) => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`YAATRI_HUB online at 0.0.0.0:${PORT}${attempt > 1 ? ` (after ${attempt - 1} retr${attempt - 1 === 1 ? 'y' : 'ies'})` : ''}`);
+  }).on('error', (err) => {
+    console.error(`SERVER BOOT CRASH (attempt ${attempt}/${maxAttempts}):`, err.message);
+    if (err.code === 'EADDRINUSE') {
+      if (attempt < maxAttempts) {
+        console.warn(`  port ${PORT} in use — retrying in ${delayMs}ms…`);
+        setTimeout(() => bindServer(attempt + 1, maxAttempts, delayMs), delayMs);
+        return;
+      }
+      console.error(`  giving up — port ${PORT} held by another process. Free it manually:`);
+      console.error(`    netstat -ano | findstr :${PORT}    →    taskkill /F /PID <pid>`);
+    }
+    process.exit(1);
+  });
+};
+bindServer();

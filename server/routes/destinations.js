@@ -44,7 +44,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const destinationObj = await destinationService.getDestinationById(req.params.id);
-      
+
     if (!destinationObj) {
       const err = new Error('Destination not found');
       err.statusCode = 404;
@@ -52,6 +52,44 @@ router.get('/:id', async (req, res, next) => {
     }
 
     res.status(200).json(destinationObj);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// @route   GET /api/destinations/:id/reviews
+// @desc    Public list of trip reviews for this destination — feeds the
+//          "Travelers say" section on the destination detail page.
+// @access  Public
+router.get('/:id/reviews', async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const reviews = await Booking.find({
+      destination: req.params.id,
+      'review.rating': { $exists: true, $ne: null },
+    })
+      .select('review user createdAt travelers durationDays')
+      .populate('user', 'username')
+      .sort({ 'review.submittedAt': -1 })
+      .limit(20)
+      .lean();
+
+    const avgRating = reviews.length
+      ? Math.round((reviews.reduce((s, b) => s + Number(b.review?.rating || 0), 0) / reviews.length) * 10) / 10
+      : null;
+
+    res.json({
+      count: reviews.length,
+      averageRating: avgRating,
+      reviews: reviews.map((b) => ({
+        _id: b._id,
+        rating: b.review.rating,
+        comment: b.review.comment,
+        submittedAt: b.review.submittedAt,
+        author: b.user?.username || 'Traveler',
+        tripSize: `${b.travelers}p × ${b.durationDays}d`,
+      })),
+    });
   } catch (err) {
     next(err);
   }

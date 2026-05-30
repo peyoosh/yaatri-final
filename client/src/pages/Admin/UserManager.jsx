@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import RoleBadge from './components/Common/RoleBadge';
-import RoleAssignmentModal from './components/Common/RoleAssignmentModal';
-import { useToast, Toast } from './utils/Toast';
+import RoleBadge from '../../components/Common/RoleBadge';
+import RoleAssignmentModal from '../../components/Common/RoleAssignmentModal';
+import { useToast, Toast } from '../../utils/Toast';
 
 export default function UserManager({
   userList,

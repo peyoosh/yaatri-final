@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Blog = require('../models/Blog');
 const { validateAdmin } = require('../middleware/authMiddleware');
-const { deleteFromCloudinary } = require('../utils/cloudinary');
+// Cloudinary was removed when we moved to inline Base64 storage. Legacy blogs with
+// imagePublicId fields are now orphaned in Cloudinary but no longer touched on delete.
 
 // GET: Fetch all blogs (published, reported, flagged) for Management Panel
 router.get('/', validateAdmin, async (req, res) => {
@@ -56,27 +57,8 @@ router.delete('/:id', validateAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Blog not found' });
     }
 
-    // Delete associated images from Cloudinary
-    if (blog.imagePublicId) {
-      try {
-        await deleteFromCloudinary(blog.imagePublicId);
-      } catch (cloudinaryError) {
-        console.warn('Failed to delete image from Cloudinary:', cloudinaryError);
-        // Don't fail the blog deletion if image deletion fails
-      }
-    }
-
-    // Delete additional images if any
-    if (blog.imagesPublicIds && blog.imagesPublicIds.length > 0) {
-      for (const publicId of blog.imagesPublicIds) {
-        try {
-          await deleteFromCloudinary(publicId);
-        } catch (cloudinaryError) {
-          console.warn(`Failed to delete additional image ${publicId} from Cloudinary:`, cloudinaryError);
-        }
-      }
-    }
-
+    // Images are stored inline as Base64 now — deleting the Blog doc removes them
+    // automatically. (Legacy Cloudinary public IDs, if any, are no longer reaped.)
     await Blog.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Blog and associated images deleted successfully' });
   } catch (err) {

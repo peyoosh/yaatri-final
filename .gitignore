@@ -1,4 +1,19 @@
 node_modules
 .env
+.env.local
 dist
+build
 .DS_Store
+
+# Log dumps from dev servers — never commit
+*.log
+server/server_*.log
+client/vite_*.log
+
+# Editor / OS noise
+.vscode/*.log
+Thumbs.db
+
+# Scratch
+Untitled*.txt
+*.scratch.*

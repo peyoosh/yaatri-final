@@ -16,6 +16,7 @@ import Profile from './pages/Profile/Profile';
 import BookingPage from './pages/Destinations/BookingPage';
 import Explore from './pages/Explore/Explore';
 import Support from './pages/Support/Support';
+import Policies from './pages/Policies/Policies';
 import { AuthContext } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import './index.css';
@@ -53,8 +54,11 @@ const App = () => {
 
   // Detect if we are in a management/dashboard view to hide site-wide nav/footer
   const isManagementView = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
-  // /explore IS the AI chat — hide the floating widget there to avoid two AI surfaces on one page.
+  // The chat bubble shows EVERYWHERE except: /admin/* (ops surface, no customer chat) and /explore
+  // (the full-page AI chat lives there already, two surfaces would be redundant).
+  const isAdminView = location.pathname.startsWith('/admin');
   const isAIPage = location.pathname === '/explore';
+  const showChatBubble = !isAdminView && !isAIPage;
 
   return (
     <div className={`${isManagementView ? "management-shell" : "app-shell"} font-global`}>
@@ -77,6 +81,7 @@ const App = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/policies" element={<Policies />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/register" element={<Auth />} />
           <Route path="/auth" element={<Auth />} />
@@ -88,26 +93,27 @@ const App = () => {
           } />
           {/* ADMIN ROUTING: Wildcard delegates all sub-routes to the AdminDashboard router */}
           <Route path="/admin/*" element={
-            <ProtectedRoute user={loggedInUser} isAdminRoute={true}>
+            <ProtectedRoute user={loggedInUser} allowedRoles={['admin', 'support']}>
               <AdminDashboard />
             </ProtectedRoute>
         } />
       </Routes>
     </main>
 
+      {/* BlogModal + Footer only on the non-management public chrome */}
       {!isManagementView && (
         <>
-      <BlogModal
-        isOpen={isBlogModalOpen}
-        onClose={() => setIsBlogModalOpen(false)}
-        post={selectedBlogNode}
-      />
-
-      {!isAIPage && <AIChatbox />}
-
-      <Footer />
+          <BlogModal
+            isOpen={isBlogModalOpen}
+            onClose={() => setIsBlogModalOpen(false)}
+            post={selectedBlogNode}
+          />
+          <Footer />
         </>
       )}
+
+      {/* AIChatbox rides above the management shell too — only /admin and /explore opt out. */}
+      {showChatBubble && <AIChatbox />}
     </div>
   );
 };

@@ -2,7 +2,18 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { MessageCircle, X, Send, Loader, MapPin, Maximize2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader, MapPin, Maximize2, ExternalLink } from 'lucide-react';
+
+const ROUTE_LABELS = {
+  '/destinations': 'Browse Destinations',
+  '/explore': 'Open AI Explorer',
+  '/blog': 'Read Blog',
+  '/support': 'Get Support',
+  '/login': 'Sign In',
+  '/register': 'Create Account',
+  '/dashboard': 'My Dashboard',
+  '/contact': 'Contact Us',
+};
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AIChatbox = () => {
@@ -62,7 +73,9 @@ const AIChatbox = () => {
         parts: [{ text: String(m.text || '').slice(0, 2000) }],
       }));
 
-      const response = await api.post('/ai/chat', { query: userInput, history });
+      // 45s timeout (vs the default 15s) — Gemini occasionally takes 8–12s and
+      // Render's free tier cold-starts the backend after 15 min idle.
+      const response = await api.post('/ai/chat', { query: userInput, history }, { timeout: 45_000 });
       const { reply, redirectTo, suggestedDestinations } = response.data || {};
 
       const botMessage = {
@@ -75,15 +88,6 @@ const AIChatbox = () => {
       };
 
       setMessages(prev => [...prev, botMessage]);
-
-      // If the model resolved an intent to a known route, give the user 1.5s to read the
-      // confirmation, then deep-link them there.
-      if (redirectTo) {
-        setTimeout(() => {
-          setIsOpen(false);
-          navigate(redirectTo);
-        }, 1500);
-      }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage = {
@@ -126,7 +130,7 @@ const AIChatbox = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="fixed bottom-24 right-6 w-96 max-h-[600px] bg-gradient-to-br from-teal-steel to-obsidian border border-hill-green/30 rounded-2xl shadow-2xl shadow-hill-green/20 flex flex-col overflow-hidden z-40"
+            className="fixed bottom-24 left-6 w-96 max-w-[calc(100vw-2rem)] max-h-[600px] bg-gradient-to-br from-teal-steel to-obsidian border border-hill-green/30 rounded-2xl shadow-2xl shadow-hill-green/20 flex flex-col overflow-hidden z-40"
           >
             {/* HEADER */}
             <div className="bg-gradient-to-r from-hill-green to-[#047D57] p-4 flex justify-between items-center">
@@ -178,6 +182,19 @@ const AIChatbox = () => {
                         {msg.text}
                       </p>
                     </div>
+
+                    {/* REDIRECT BUTTON — user-initiated, never auto-fires */}
+                    {msg.redirectTo && (
+                      <div className="mt-2 ml-0">
+                        <button
+                          onClick={() => { setIsOpen(false); navigate(msg.redirectTo); }}
+                          className="flex items-center gap-1.5 text-xs bg-hill-green/20 hover:bg-hill-green/40 border border-hill-green/50 text-toxic-lime rounded-lg px-3 py-1.5 transition-all"
+                        >
+                          <ExternalLink size={12} />
+                          {ROUTE_LABELS[msg.redirectTo] || msg.redirectTo}
+                        </button>
+                      </div>
+                    )}
 
                     {/* SUGGESTED DESTINATIONS CARDS */}
                     {msg.suggestedDestinations && msg.suggestedDestinations.length > 0 && (
@@ -256,7 +273,7 @@ const AIChatbox = () => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 bg-gradient-to-br from-hill-green to-[#047D57] hover:from-toxic-lime hover:to-[#8BC34A] text-white rounded-full p-4 shadow-lg shadow-hill-green/30 hover:shadow-toxic-lime/30 transition-all z-40 border border-white/10"
+        className="fixed bottom-6 left-6 bg-gradient-to-br from-hill-green to-[#047D57] hover:from-toxic-lime hover:to-[#8BC34A] text-white rounded-full p-4 shadow-lg shadow-hill-green/30 hover:shadow-toxic-lime/30 transition-all z-40 border border-white/10"
         title={isOpen ? 'Close AI Guide' : 'Open AI Guide'}
       >
         {isOpen ? (

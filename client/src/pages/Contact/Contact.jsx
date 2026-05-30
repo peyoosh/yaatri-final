@@ -1,15 +1,62 @@
 import React, { useState } from 'react';
-import { MapPin, Phone, Mail, Send, Clock, Globe2 } from 'lucide-react';
+import { MapPin, Phone, Mail, Send, Clock, Globe2, AlertTriangle, Lightbulb, UserX, Loader } from 'lucide-react';
+import api from '../../api/axios';
+
+// Maps spec'd type tokens → label / icon / colour. Drives the dropdown options
+// and the visual treatment of the active choice. These tokens land directly in
+// the Query.type field on the server and feed the /admin/messages segmentation.
+const TYPE_OPTIONS = [
+  { id: 'bug_report',    label: 'Report a bug',         Icon: AlertTriangle, accent: '#ff6b6b' },
+  { id: 'suggestion',    label: 'Suggestion',           Icon: Lightbulb,     accent: '#A2D729' },
+  { id: 'account_issue', label: 'Something wrong with my account', Icon: UserX,         accent: '#F4A261' },
+];
+
+const inputStyle = {
+  background: 'rgba(0,0,0,0.25)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  color: 'white',
+  padding: '0.75rem 1rem',
+  borderRadius: '6px',
+  outline: 'none',
+  fontSize: '0.9rem',
+};
 
 const Contact = () => {
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
-  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    type: 'suggestion', // default — the most common case
+    subject: '',
+    message: '',
+  });
+  const [status, setStatus] = useState(null); // { kind: 'ok'|'err', text: string, ticketId?: string }
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 4000);
-    setForm({ name: '', email: '', message: '' });
+    if (submitting) return;
+    setStatus(null);
+    setSubmitting(true);
+    try {
+      // POST /api/queries — the support pipeline. Auto-routed to the support team
+      // (assignedTo: 'support') unless escalated by an admin or support staff.
+      const subject = form.subject?.trim() || `[${form.type}] from ${form.name || form.email}`;
+      const { data } = await api.post('/queries', {
+        email: form.email,
+        subject,
+        type: form.type,
+        message: form.message,
+      });
+      setStatus({ kind: 'ok', text: 'Message received — our support team will get back to you within one business day.', ticketId: data?.ticketId });
+      setForm({ name: '', email: '', type: 'suggestion', subject: '', message: '' });
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Could not send. Please try again.';
+      setStatus({ kind: 'err', text: msg });
+    } finally {
+      setSubmitting(false);
+      // Auto-dismiss success notice after 8s.
+      setTimeout(() => setStatus(null), 8000);
+    }
   };
 
   return (
@@ -103,24 +150,50 @@ const Contact = () => {
           >
             <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-white" style={{ marginBottom: '0.5rem' }}>Send us a note</h2>
             <p className="text-sm text-white/65" style={{ marginBottom: '1.5rem' }}>
-              We answer every message within one business day.
+              Pick the kind of message — our support team handles the queue and forwards admin-only issues automatically.
             </p>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* TYPE PICKER — drives Query.type on the backend. */}
+              <div>
+                <label className="text-xs text-white/55" style={{ display: 'block', marginBottom: 6, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 700 }}>
+                  Message type
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+                  {TYPE_OPTIONS.map(({ id, label, Icon, accent }) => {
+                    const active = form.type === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setForm({ ...form, type: id })}
+                        style={{
+                          background: active ? `${accent}1f` : 'rgba(0,0,0,0.25)',
+                          border: `1px solid ${active ? accent : 'rgba(255,255,255,0.08)'}`,
+                          color: active ? accent : 'rgba(255,255,255,0.7)',
+                          padding: '0.6rem 0.75rem',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          textAlign: 'left',
+                        }}
+                      >
+                        <Icon size={14} /> {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <input
                 type="text"
-                placeholder="Your name"
+                placeholder="Your name (optional)"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-                style={{
-                  background: 'rgba(0,0,0,0.25)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'white',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '6px',
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                }}
+                style={inputStyle}
               />
               <input
                 type="email"
@@ -128,44 +201,39 @@ const Contact = () => {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 required
-                style={{
-                  background: 'rgba(0,0,0,0.25)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'white',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '6px',
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                }}
+                style={inputStyle}
+              />
+              <input
+                type="text"
+                placeholder="Subject (one short line)"
+                value={form.subject}
+                onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                maxLength={200}
+                style={inputStyle}
               />
               <textarea
-                placeholder="What's on your mind?"
+                placeholder="What's on your mind? (min 5 characters)"
                 rows={5}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 required
-                style={{
-                  background: 'rgba(0,0,0,0.25)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'white',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '6px',
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                }}
+                minLength={5}
+                maxLength={4000}
+                style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
               />
               <button
                 type="submit"
+                disabled={submitting}
                 className="btn-primary-white"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', opacity: submitting ? 0.6 : 1, cursor: submitting ? 'wait' : 'pointer' }}
               >
-                <Send size={14} /> Send message
+                {submitting ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
+                {submitting ? 'Sending…' : 'Send message'}
               </button>
-              {submitted && (
-                <p className="text-sm" style={{ color: 'var(--hill-green, #059D72)' }}>
-                  Message received — we'll get back to you shortly.
+              {status && (
+                <p className="text-sm" style={{ color: status.kind === 'ok' ? 'var(--hill-green, #059D72)' : '#ff6b6b', lineHeight: 1.5 }}>
+                  {status.text}
+                  {status.ticketId && <span style={{ opacity: 0.6, fontFamily: 'monospace', display: 'block', fontSize: '0.7rem' }}>Ref: {String(status.ticketId).slice(-8).toUpperCase()}</span>}
                 </p>
               )}
             </form>

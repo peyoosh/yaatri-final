@@ -4,7 +4,7 @@ const Blog = require('../models/Blog');
 const Destination = require('../models/Destination');
 const { protect } = require('../middleware/authMiddleware');
 const { blogSchema } = require('../validations/schemas');
-const { deleteFromCloudinary } = require('../utils/cloudinary');
+// Cloudinary helper removed — images are stored inline as Base64 on the Blog doc now.
 // Legacy blogs may still hold Cloudinary public IDs — `deleteFromCloudinary` is retained for the DELETE path only.
 // New blogs store their image as a Base64 data URL directly on the document.
 
@@ -167,27 +167,7 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to delete this blog' });
     }
 
-    // Delete associated images from Cloudinary
-    if (blog.imagePublicId) {
-      try {
-        await deleteFromCloudinary(blog.imagePublicId);
-      } catch (cloudinaryError) {
-        console.warn('Failed to delete image from Cloudinary:', cloudinaryError);
-        // Don't fail the blog deletion if image deletion fails
-      }
-    }
-
-    // Delete additional images if any
-    if (blog.imagesPublicIds && blog.imagesPublicIds.length > 0) {
-      for (const publicId of blog.imagesPublicIds) {
-        try {
-          await deleteFromCloudinary(publicId);
-        } catch (cloudinaryError) {
-          console.warn(`Failed to delete additional image ${publicId} from Cloudinary:`, cloudinaryError);
-        }
-      }
-    }
-
+    // Inline Base64 images vanish with the doc itself — nothing else to clean up.
     await Blog.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Blog deleted successfully' });
   } catch (err) { res.status(400).json({ error: err.message }); }

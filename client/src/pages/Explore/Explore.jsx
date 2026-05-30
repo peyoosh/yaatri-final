@@ -2,7 +2,17 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { Send, Loader, MapPin, Sparkles, ArrowLeft } from 'lucide-react';
+import { Send, Loader, MapPin, Sparkles, ArrowLeft, ExternalLink } from 'lucide-react';
+
+const ROUTE_LABELS = {
+  '/destinations': 'Browse Destinations',
+  '/blog': 'Read Blog',
+  '/support': 'Get Support',
+  '/login': 'Sign In',
+  '/register': 'Create Account',
+  '/dashboard': 'My Dashboard',
+  '/contact': 'Contact Us',
+};
 import { motion } from 'framer-motion';
 
 const STARTER = {
@@ -58,7 +68,8 @@ const Explore = () => {
       }));
       // Drop the last entry (current message) — sendMessage handles it server-side.
       const priorHistory = history.slice(0, -1);
-      const { data } = await api.post('/ai/chat', { query: userMsg.text, history: priorHistory });
+      // 45s timeout (vs default 15s) — see AIChatbox.jsx for rationale.
+      const { data } = await api.post('/ai/chat', { query: userMsg.text, history: priorHistory }, { timeout: 45_000 });
       const { reply, redirectTo, suggestedDestinations } = data || {};
       const botMsg = {
         id: Date.now() + 1,
@@ -69,11 +80,6 @@ const Explore = () => {
         redirectTo: redirectTo || null,
       };
       setMessages(prev => [...prev, botMsg]);
-
-      // Same redirect contract as the floating widget — 1.5s pause so the user can read the confirmation.
-      if (redirectTo) {
-        setTimeout(() => navigate(redirectTo), 1500);
-      }
     } catch (err) {
       setMessages(prev => [...prev, {
         id: Date.now() + 2,
@@ -171,9 +177,26 @@ const Explore = () => {
                 )}
 
                 {m.redirectTo && (
-                  <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 6, fontStyle: 'italic' }}>
-                    → Taking you to {m.redirectTo} in 1.5s…
-                  </p>
+                  <button
+                    onClick={() => navigate(m.redirectTo)}
+                    style={{
+                      marginTop: 8,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: 'rgba(5,157,114,0.15)',
+                      border: '1px solid rgba(5,157,114,0.45)',
+                      color: '#A2D729',
+                      borderRadius: 8,
+                      padding: '0.4rem 0.85rem',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <ExternalLink size={13} />
+                    {ROUTE_LABELS[m.redirectTo] || m.redirectTo}
+                  </button>
                 )}
               </div>
             </motion.div>

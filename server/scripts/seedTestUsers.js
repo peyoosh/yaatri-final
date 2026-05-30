@@ -1,8 +1,4 @@
-// Creates 20 demo accounts: test1..test20, password "1234567890".
-// Safe to re-run — uses upsert keyed on username, so duplicates won't blow up
-// the unique constraint. Run via:
-//
-//   node server/scripts/seedTestUsers.js
+
 
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });

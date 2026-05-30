@@ -56,7 +56,16 @@ const DestinationSchema = new mongoose.Schema(
       default: 0 
     },
     assignedHotels: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' }],
-    assignedGuides: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    assignedGuides: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+    // Micro-itineraries / attractions adjacent to the destination. Admin-managed
+    // via the destination editor. Used by the booking flow to surface paid extras.
+    activities: [{
+      title:       { type: String, required: true },
+      description: { type: String, default: '' },
+      baseCostNPR: { type: Number, default: 0 },
+      durationHours: { type: Number, default: 1 },
+    }]
   },
   {
     timestamps: true,

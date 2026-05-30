@@ -1,8 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const Query = require('../models/Query');
-const { validateAdmin } = require('../middleware/authMiddleware');
+const { validateAdmin, protect } = require('../middleware/authMiddleware');
 const { sendMail } = require('../utils/mailer');
+
+// Inline guard for routes that should accept either a 'support' employee or an
+// 'admin' — both can drive the support workflow.
+const requireSupportOrAdmin = (req, res, next) => {
+  if (!req.user) return res.sendError(401, 'AUTH_REQUIRED', 'Sign in required.');
+  if (req.user.isAdmin || req.user.role === 'admin' || req.user.role === 'support') return next();
+  return res.sendError(403, 'AUTH_SUPPORT_REQUIRED', 'Only support staff and admins can perform this action.');
+};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -33,7 +41,8 @@ router.post('/', async (req, res) => {
     if (!message || String(message).trim().length < 5) {
       return res.status(400).json({ message: 'Message must be at least 5 characters' });
     }
-    const allowedTypes = ['Report Issue', 'Suggestion', 'General Feedback'];
+    // Accept both canonical (snake_case) tokens and legacy human-readable values.
+    const allowedTypes = ['bug_report', 'suggestion', 'account_issue', 'Report Issue', 'Suggestion', 'General Feedback'];
     if (type && !allowedTypes.includes(type)) {
       return res.status(400).json({ message: 'Invalid query type' });
     }
@@ -109,6 +118,30 @@ router.get('/', validateAdmin, async (req, res) => {
     res.json(list);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// PATCH /api/queries/:id/escalate — support staff or admin can escalate a ticket.
+// Flips the ticket to admin ownership with isEscalated + status='escalated'.
+router.patch('/:id/escalate', protect, requireSupportOrAdmin, async (req, res) => {
+  try {
+    const updated = await Query.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          isEscalated: true,
+          assignedTo: 'admin',
+          status: 'escalated',
+        },
+      },
+      { new: true, runValidators: true }
+    );
+    if (!updated) return res.status(404).json({ message: 'Ticket not found' });
+
+    console.log(`[SUPPORT_QUEUE_ESCALATION] Ticket ${updated._id} handed off to Super Admin.`);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 

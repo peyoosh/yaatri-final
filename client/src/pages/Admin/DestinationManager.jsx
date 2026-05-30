@@ -22,6 +22,7 @@ const DestinationManager = () => {
     terrainType: 'Hill', // Default matching the Enum
     latitude: '',
     longitude: '',
+    activities: [], // [{ title, description, baseCostNPR, durationHours }]
     experienceProtocols: {
       adventure: '',
       tradition: '',
@@ -102,6 +103,12 @@ const DestinationManager = () => {
       terrainType: dest.terrainType || 'Hill',
       latitude: dest.latitude ?? '',
       longitude: dest.longitude ?? '',
+      activities: Array.isArray(dest.activities) ? dest.activities.map((a) => ({
+        title: a.title || '',
+        description: a.description || '',
+        baseCostNPR: a.baseCostNPR ?? 0,
+        durationHours: a.durationHours ?? 1,
+      })) : [],
       experienceProtocols: {
         adventure: dest.experienceProtocols?.adventure || '',
         tradition: dest.experienceProtocols?.tradition || '',
@@ -144,6 +151,7 @@ const DestinationManager = () => {
           setFormData({
             name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
             latitude: '', longitude: '',
+            activities: [],
             experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' },
             assignedGuides: [], assignedHotels: []
           });
@@ -160,6 +168,7 @@ const DestinationManager = () => {
           setFormData({
             name: '', region: '', description: '', imageURL: '', terrainType: 'Hill',
             latitude: '', longitude: '',
+            activities: [],
             experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' },
             assignedGuides: [], assignedHotels: []
           });
@@ -363,6 +372,94 @@ const DestinationManager = () => {
                   </div>
                 </div>
 
+                {/* ATTRACTIONS NEAR YOU — micro-itineraries / paid extras at the destination.
+                    Saved as Destination.activities[] and rendered on the user-facing detail page. */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', borderTop: '1px dashed var(--border-light-3)', paddingTop: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--hill-green)' }}>Attractions Near You</h4>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, activities: [...(formData.activities || []), { title: '', description: '', baseCostNPR: 0, durationHours: 1 }] })}
+                      style={{ background: 'rgba(162,215,41,0.1)', border: '1px solid var(--hill-green)', color: 'var(--hill-green)', padding: '0.35rem 0.8rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      + ADD ACTIVITY
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.7rem', opacity: 0.55, marginBottom: '0.75rem' }}>
+                    Micro-itineraries shown on the destination's detail page. Used as paid extras during booking.
+                  </p>
+                  {(formData.activities || []).length === 0 ? (
+                    <p style={{ fontSize: '0.75rem', opacity: 0.4, padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 4, textAlign: 'center', fontStyle: 'italic' }}>
+                      No activities yet. Click "+ ADD ACTIVITY" to add one.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {(formData.activities || []).map((act, idx) => (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 1fr 0.8fr auto', gap: 8, alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.6rem', borderRadius: 4 }}>
+                          <input
+                            type="text"
+                            placeholder="Title (e.g. Sunrise yak ride)"
+                            value={act.title}
+                            onChange={(e) => {
+                              const next = [...formData.activities];
+                              next[idx] = { ...next[idx], title: e.target.value };
+                              setFormData({ ...formData, activities: next });
+                            }}
+                            style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem' }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Short description"
+                            value={act.description}
+                            onChange={(e) => {
+                              const next = [...formData.activities];
+                              next[idx] = { ...next[idx], description: e.target.value };
+                              setFormData({ ...formData, activities: next });
+                            }}
+                            style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem' }}
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="NPR"
+                            value={act.baseCostNPR}
+                            onChange={(e) => {
+                              const next = [...formData.activities];
+                              next[idx] = { ...next[idx], baseCostNPR: Number(e.target.value) || 0 };
+                              setFormData({ ...formData, activities: next });
+                            }}
+                            style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem' }}
+                          />
+                          <input
+                            type="number"
+                            min="0.5"
+                            step="0.5"
+                            placeholder="Hrs"
+                            value={act.durationHours}
+                            onChange={(e) => {
+                              const next = [...formData.activities];
+                              next[idx] = { ...next[idx], durationHours: Number(e.target.value) || 1 };
+                              setFormData({ ...formData, activities: next });
+                            }}
+                            style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = formData.activities.filter((_, i) => i !== idx);
+                              setFormData({ ...formData, activities: next });
+                            }}
+                            style={{ background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.5)', color: '#ff6b6b', padding: '0.4rem 0.7rem', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }}
+                            title="Remove this activity"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ gridColumn: '1 / -1', marginTop: '1rem', borderTop: '1px dashed var(--border-light-3)', paddingTop: '1rem' }}>
                   <h4 style={{ fontSize: '0.9rem', color: 'var(--hill-green)', marginBottom: '1rem' }}>Experience Protocols</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -389,7 +486,7 @@ const DestinationManager = () => {
                 <button type="button" onClick={() => {
                   setEditingId(null);
                   setShowForm(false);
-                  setFormData({ name: '', region: '', description: '', imageURL: '', terrainType: 'Hill', experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }, assignedGuides: [], assignedHotels: [] });
+                  setFormData({ name: '', region: '', description: '', imageURL: '', terrainType: 'Hill', latitude: '', longitude: '', activities: [], experienceProtocols: { adventure: '', tradition: '', landscape: '', tours: '' }, assignedGuides: [], assignedHotels: [] });
                 }} className="action-btn" style={{ padding: '0.5rem 1rem', color: 'var(--text-muted)' }}>CANCEL</button>
                 <button type="submit" className="action-btn info" style={{ border: '1px solid var(--hill-green)', padding: '0.5rem 1rem', borderRadius: '4px' }}>{editingId ? 'UPDATE_NODE' : 'STORE_NODE'}</button>
               </div>

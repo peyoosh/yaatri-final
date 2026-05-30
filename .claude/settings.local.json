@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:5000/api/ai/chat -H \"Content-Type: application/json\" -d '{\"query\":\"I want a 5-day cultural trek\"}')",
+      "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(d\\); console.log\\('FALLBACK:',r._fallback||'NONE'\\); console.log\\('REPLY:',r.reply?.slice\\(0,160\\)+'...'\\); console.log\\('REDIRECT:',r.redirectTo\\); console.log\\('SUGGESTED:',\\(r.suggestedDestinations||[]\\).map\\(x=>x.name\\).join\\(', '\\)||'\\(none\\)'\\);}\\)\")"
+    ]
+  }
+}

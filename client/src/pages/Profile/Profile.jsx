@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
+import { compressImage } from '../../utils/imageCompression';
 import {
   Edit3, Save, Camera, MapPin, ShieldCheck, Languages, Banknote, BookOpen,
   Hotel, Star, ListChecks, Compass, Heart, Award, ArrowLeft
@@ -76,7 +77,9 @@ const Profile = () => {
       return;
     }
     try {
-      const base64 = await convertToBase64(file);
+      // Compress to 480p + <1MB before Base64 — protects MongoDB doc size.
+      const compressed = await compressImage(file);
+      const base64 = await convertToBase64(compressed);
       setDraft((prev) => ({ ...prev, avatar: base64 }));
       setSaveError(null);
     } catch (err) {
@@ -581,6 +584,7 @@ const GuideSidebar = ({ user }) => {
   // bookings on the guide's assigned destinations show up without a page refresh.
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState(null); // { count, averageRating, reviews[] }
 
   useEffect(() => {
     if (!user?._id) return;
@@ -595,6 +599,16 @@ const GuideSidebar = ({ user }) => {
     pull();
     const id = setInterval(pull, 60_000);
     return () => { cancelled = true; clearInterval(id); };
+  }, [user?._id]);
+
+  // Reviews for this guide — refreshes once on mount (not polled, reviews are slow-moving).
+  useEffect(() => {
+    if (!user?._id) return;
+    let cancelled = false;
+    api.get(`/users/${user._id}/reviews`)
+      .then(({ data }) => { if (!cancelled) setReviews(data); })
+      .catch(() => { if (!cancelled) setReviews({ count: 0, averageRating: null, reviews: [] }); });
+    return () => { cancelled = true; };
   }, [user?._id]);
 
   const upcoming = stats?.upcomingEngagements || [];
@@ -649,6 +663,8 @@ const GuideSidebar = ({ user }) => {
           </ul>
         )}
       </Card>
+
+      <ReviewsCard reviews={reviews} />
     </>
   );
 };
@@ -748,6 +764,7 @@ const HotelSidebar = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState(null);
+  const [reviews, setReviews] = useState(null);
 
   useEffect(() => {
     if (!user?._id) return;
@@ -765,6 +782,16 @@ const HotelSidebar = ({ user }) => {
     pull();
     const id = setInterval(pull, 60_000);
     return () => { cancelled = true; clearInterval(id); };
+  }, [user?._id]);
+
+  // Reviews fetch — one-shot, reviews are slow-moving so no need to poll.
+  useEffect(() => {
+    if (!user?._id) return;
+    let cancelled = false;
+    api.get(`/users/${user._id}/reviews`)
+      .then(({ data }) => { if (!cancelled) setReviews(data); })
+      .catch(() => { if (!cancelled) setReviews({ count: 0, averageRating: null, reviews: [] }); });
+    return () => { cancelled = true; };
   }, [user?._id]);
 
   const upcoming = stats?.upcomingReservations || [];
@@ -829,7 +856,56 @@ const HotelSidebar = ({ user }) => {
           </ul>
         )}
       </Card>
+
+      <ReviewsCard reviews={reviews} />
     </>
+  );
+};
+
+/* ----------  REVIEWS CARD (shared between guide + hotel sidebars)  ---------- */
+
+const ReviewsCard = ({ reviews }) => {
+  const list = reviews?.reviews || [];
+  const avg = reviews?.averageRating;
+  const count = reviews?.count || 0;
+  return (
+    <Card title="What travelers say" icon={Star} accent="#A2D729">
+      {list.length === 0 ? (
+        <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>
+          No reviews yet. Trips you complete with travelers will collect reviews here.
+        </p>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 2 }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span key={n} style={{ color: n <= Math.round(avg || 0) ? '#A2D729' : 'rgba(255,255,255,0.18)', fontSize: '1rem' }}>★</span>
+              ))}
+            </div>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#A2D729' }}>{avg}</span>
+            <span style={{ fontSize: '0.7rem', opacity: 0.55 }}>({count} review{count === 1 ? '' : 's'})</span>
+          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {list.slice(0, 5).map((r) => (
+              <li key={r._id} style={{ padding: '0.6rem 0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 6, borderLeft: '3px solid #A2D729' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: '0.75rem', color: '#A2D729' }}>
+                    {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                  </span>
+                  <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{r.destination}</span>
+                </div>
+                {r.comment && (
+                  <p style={{ fontSize: '0.78rem', fontStyle: 'italic', opacity: 0.85, lineHeight: 1.45, marginBottom: 4 }}>
+                    &ldquo;{r.comment}&rdquo;
+                  </p>
+                )}
+                <p style={{ fontSize: '0.65rem', opacity: 0.5 }}>— @{r.author}</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Card>
   );
 };
 

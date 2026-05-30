@@ -212,16 +212,22 @@ router.patch('/users/:id/role', validateAdmin, validate(userRoleUpdateSchema), a
 });
 
 // GET: Fetch users specifically by role to populate destination assignments
+// Also returns vendorLedger so admin hotel/guide managers can show pending payouts.
 router.get('/providers', validateAdmin, async (req, res, next) => {
   try {
     const { role } = req.query;
     let filter = {};
-    if (role) {
+    if (role === 'hotel' || role === 'hotel_owner') {
+      // Accept either spelling — admin UI may request 'hotel_owner' (legacy) or 'hotel' (canonical).
+      filter.role = { $in: ['hotel', 'hotel_owner'] };
+    } else if (role) {
       filter.role = role;
     } else {
-      filter.role = { $in: ['guide', 'hotel_owner'] }; // Defaults to fetch valid providers
+      filter.role = { $in: ['guide', 'hotel', 'hotel_owner'] }; // Defaults to all vendor roles
     }
-    const providers = await User.find(filter).select('username email role profileData').lean();
+    const providers = await User.find(filter)
+      .select('username email role profileData vendorLedger status')
+      .lean();
     res.json(providers);
   } catch (error) {
     next(error);
@@ -239,6 +245,149 @@ router.post('/destinations', validateAdmin, async (req, res, next) => {
     next(err);
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MARKETPLACE FINANCIAL CONTROL — three-tier ledger endpoints
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Statuses considered "captured revenue" for gross-total purposes. The spec
+// lists the canonical three; we additively include the legacy 'pending' and
+// 'confirmed' so historical bookings without canonical statuses still count.
+const ACTIVE_BOOKING_STATUSES = ['escrow_held', 'approved', 'completed', 'pending', 'confirmed'];
+
+// GET /api/admin/financials/overview
+// Returns the 4 KPI tiles for the admin payout dashboard. Uses aggregation
+// pipelines so the work happens inside Mongo, not in node memory.
+router.get('/financials/overview', validateAdmin, async (req, res, next) => {
+  try {
+    const [grossAgg, platformAgg, forfeitAgg, hotelAgg, guideAgg, vendorCounts] = await Promise.all([
+      // totalGrossRevenue: sum of grossTotal (or legacy totalCost) for non-cancelled bookings.
+      Booking.aggregate([
+        { $match: { status: { $in: ACTIVE_BOOKING_STATUSES } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ['$pricing.grossTotal', '$pricing.totalCost'] } } } },
+      ]),
+      // 15% platform commission from active bookings.
+      Booking.aggregate([
+        { $match: { status: { $in: ACTIVE_BOOKING_STATUSES } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ['$pricing.platformShare', 0] } } } },
+      ]),
+      // 20% structural forfeiture from cancelled bookings.
+      Booking.aggregate([
+        { $match: { status: 'cancelled' } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ['$refund.forfeitedAmount', 0] } } } },
+      ]),
+      // Pending payout owed across all hotel-role users (canonical + legacy alias).
+      User.aggregate([
+        { $match: { role: { $in: ['hotel', 'hotel_owner'] } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ['$vendorLedger.pendingPayout', 0] } } } },
+      ]),
+      // Pending payout owed across all guide-role users.
+      User.aggregate([
+        { $match: { role: 'guide' } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ['$vendorLedger.pendingPayout', 0] } } } },
+      ]),
+      // Bonus: vendor counts so the UI can show "owed to N hotels / M guides".
+      Promise.all([
+        User.countDocuments({ role: { $in: ['hotel', 'hotel_owner'] } }),
+        User.countDocuments({ role: 'guide' }),
+      ]),
+    ]);
+
+    const totalGrossRevenue = grossAgg[0]?.total || 0;
+    const platformCommissionFromBookings = platformAgg[0]?.total || 0;
+    const platformForfeitFromCancellations = forfeitAgg[0]?.total || 0;
+    const platformNetEarnings = platformCommissionFromBookings + platformForfeitFromCancellations;
+    const totalOwedToHotels = hotelAgg[0]?.total || 0;
+    const totalOwedToGuides = guideAgg[0]?.total || 0;
+    const [hotelCount, guideCount] = vendorCounts;
+
+    res.json({
+      currency: 'NPR',
+      totalGrossRevenue,
+      platformNetEarnings,
+      platformBreakdown: {
+        commission15Pct: platformCommissionFromBookings,
+        cancellationForfeit20Pct: platformForfeitFromCancellations,
+      },
+      totalOwedToHotels,
+      totalOwedToGuides,
+      vendorCounts: { hotels: hotelCount, guides: guideCount },
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/admin/payouts/deduct
+// Body: { vendorId: ObjectId, amountPaid: Number }
+// Drains pendingPayout by `amountPaid` and credits totalWithdrawn by the same.
+// Uses an atomic findOneAndUpdate with a balance guard so two concurrent
+// admin actions can never overdraw the ledger.
+router.post('/payouts/deduct', validateAdmin, async (req, res, next) => {
+  try {
+    const { vendorId, amountPaid } = req.body || {};
+
+    if (!vendorId || !/^[0-9a-fA-F]{24}$/.test(String(vendorId))) {
+      return res.status(400).json({ message: 'vendorId must be a valid ObjectId' });
+    }
+    const amt = Number(amountPaid);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      return res.status(400).json({ message: 'amountPaid must be a positive number' });
+    }
+
+    // Atomic + guarded: only matches if the vendor's pendingPayout can absorb this debit.
+    const updated = await User.findOneAndUpdate(
+      {
+        _id: vendorId,
+        role: { $in: ['hotel', 'hotel_owner', 'guide'] },
+        'vendorLedger.pendingPayout': { $gte: amt },
+      },
+      {
+        $inc: {
+          'vendorLedger.pendingPayout': -amt,
+          'vendorLedger.totalWithdrawn': amt,
+        },
+      },
+      { new: true, runValidators: true, projection: 'username role email vendorLedger' }
+    );
+
+    if (!updated) {
+      // Figure out which precondition failed so the admin gets a clear message.
+      const existing = await User.findById(vendorId).select('role vendorLedger');
+      if (!existing) {
+        return res.status(404).json({ message: 'Vendor not found' });
+      }
+      if (!['hotel', 'hotel_owner', 'guide'].includes(existing.role)) {
+        return res.status(400).json({ message: `User role "${existing.role}" cannot receive payouts (must be guide or hotel).` });
+      }
+      const have = Number(existing.vendorLedger?.pendingPayout || 0);
+      return res.status(400).json({
+        message: `Payout exceeds pending balance. Requested NPR ${amt.toLocaleString('en-IN')}, available NPR ${have.toLocaleString('en-IN')}.`,
+      });
+    }
+
+    console.log(`[payouts] admin paid out NPR ${amt} to ${updated.username} (${vendorId})`);
+
+    res.status(200).json({
+      message: `Payout of NPR ${amt.toLocaleString('en-IN')} recorded for ${updated.username}.`,
+      vendor: {
+        _id: updated._id,
+        username: updated.username,
+        role: updated.role,
+        email: updated.email,
+      },
+      vendorLedger: updated.vendorLedger,
+      amountPaid: amt,
+      currency: 'NPR',
+      processedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 router.delete('/destinations/:id', validateAdmin, async (req, res, next) => {
   try {

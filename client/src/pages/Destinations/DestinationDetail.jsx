@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/axios';
 import { motion } from 'framer-motion';
-import { Heart, Map, Bed, Compass, ChevronLeft, Mountain, Users, Wind, Camera, Calendar, Ticket } from 'lucide-react';
+import { Heart, Map, Bed, Compass, ChevronLeft, Mountain, Users, Wind, Camera, Calendar, Ticket, Star } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import GoogleMapView from '../../components/Common/GoogleMapView';
 import { coordsForDestination } from '../../utils/loadGoogleMaps';
@@ -20,6 +20,7 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
   const [myBookings, setMyBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [favBusy, setFavBusy] = useState(false);
+  const [reviewsData, setReviewsData] = useState(null); // { count, averageRating, reviews[] }
 
   const nodeToRender = node || remoteNode;
   const handleBackClick = () => {
@@ -96,6 +97,17 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
 
     fetchDestination();
   }, [id, node]);
+
+  // Pull public reviews for this destination — feeds the "Travelers say" block.
+  useEffect(() => {
+    const destId = nodeToRender?._id || id;
+    if (!destId) return;
+    let cancelled = false;
+    api.get(`/destinations/${destId}/reviews`)
+      .then(({ data }) => { if (!cancelled) setReviewsData(data); })
+      .catch(() => { if (!cancelled) setReviewsData({ count: 0, averageRating: null, reviews: [] }); });
+    return () => { cancelled = true; };
+  }, [nodeToRender?._id, id]);
 
   // Pull all published blogs once, filter to those tagged with this destination's region.
   useEffect(() => {
@@ -412,6 +424,99 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
                 <span style={{ fontSize: '0.6rem', opacity: 0.3, fontFamily: 'monospace' }}>[ SECTOR_STATUS: ANALYZED ]</span>
               </div>
             </div>
+
+            {/* ATTRACTIONS NEAR YOU — admin-curated micro-itineraries via DestinationManager. */}
+            {Array.isArray(nodeToRender.activities) && nodeToRender.activities.length > 0 && (
+              <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
+                  <Compass size={20} />
+                  <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>ATTRACTIONS_NEAR_YOU</h3>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+                  {nodeToRender.activities.map((act, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: 8,
+                        padding: '1.1rem 1.2rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                      }}
+                    >
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--himalayan-mist, #F4F2F3)' }}>{act.title}</h4>
+                      {act.description && (
+                        <p style={{ fontSize: '0.78rem', opacity: 0.7, lineHeight: 1.5 }}>{act.description}</p>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        <span style={{ fontSize: '0.7rem', opacity: 0.55 }}>
+                          {Number(act.durationHours || 0)}h
+                        </span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--toxic-lime, #A2D729)' }}>
+                          {Number(act.baseCostNPR) > 0 ? `NPR ${Number(act.baseCostNPR).toLocaleString('en-IN')}` : 'Free'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TRAVELERS SAY — public reviews submitted by travelers who completed this trip. */}
+            {reviewsData && reviewsData.count > 0 && (
+              <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)' }}>
+                    <Star size={20} />
+                    <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>TRAVELERS_SAY</h3>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <span key={n} style={{ color: n <= Math.round(reviewsData.averageRating || 0) ? '#A2D729' : 'rgba(255,255,255,0.18)', fontSize: '1.1rem' }}>★</span>
+                    ))}
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#A2D729', marginLeft: 4 }}>
+                      {reviewsData.averageRating}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>
+                      ({reviewsData.count} review{reviewsData.count === 1 ? '' : 's'})
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {reviewsData.reviews.slice(0, 6).map((r) => (
+                    <div
+                      key={r._id}
+                      style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: 8,
+                        padding: '1.1rem 1.2rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <span key={n} style={{ color: n <= r.rating ? '#A2D729' : 'rgba(255,255,255,0.15)', fontSize: '0.85rem' }}>★</span>
+                          ))}
+                        </div>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.5, fontFamily: 'monospace' }}>{r.tripSize}</span>
+                      </div>
+                      {r.comment && (
+                        <p style={{ fontSize: '0.85rem', lineHeight: 1.55, color: 'var(--himalayan-mist, #F4F2F3)', fontStyle: 'italic', marginBottom: 8 }}>
+                          &ldquo;{r.comment}&rdquo;
+                        </p>
+                      )}
+                      <p style={{ fontSize: '0.7rem', opacity: 0.55, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
+                        — @{r.author} · {new Date(r.submittedAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* PROVIDER OVERVIEW SECTION */}
             <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>

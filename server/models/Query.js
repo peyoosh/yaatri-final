@@ -7,8 +7,10 @@ const QuerySchema = new mongoose.Schema(
     subject: { type: String, required: true, trim: true, maxlength: 200 },
     type: {
       type: String,
-      enum: ['Report Issue', 'Suggestion', 'General Feedback'],
-      default: 'General Feedback',
+      // Canonical going forward (snake_case tokens for the marketplace evolution).
+      // Legacy human-readable values retained so existing rows still validate.
+      enum: ['bug_report', 'suggestion', 'account_issue', 'Report Issue', 'Suggestion', 'General Feedback'],
+      default: 'suggestion',
     },
     message: { type: String, required: true, maxlength: 4000 },
 
@@ -16,10 +18,23 @@ const QuerySchema = new mongoose.Schema(
     // without needing an actual SMTP delivery pipeline.
     mailRendered: { type: String, default: '' },
 
+    // Support-team workflow fields. `assignedTo` indicates which tier currently owns
+    // the ticket; admin can flip `isEscalated` for high-priority items and set
+    // `assignedTo: 'admin'` to claim ownership directly.
+    assignedTo: {
+      type: String,
+      enum: ['support', 'admin'],
+      default: 'support',
+    },
+    isEscalated: { type: Boolean, default: false },
+
     status: {
       type: String,
-      enum: ['new', 'in_progress', 'resolved', 'dismissed'],
-      default: 'new',
+      // Canonical going forward: 'pending' (newly received), 'open' (under work),
+      // 'escalated' (admin-only), 'closed'.
+      // Legacy values kept valid so the existing dashboard filter pills don't break.
+      enum: ['pending', 'open', 'escalated', 'closed', 'new', 'in_progress', 'resolved', 'dismissed'],
+      default: 'pending',
     },
   },
   { timestamps: true }

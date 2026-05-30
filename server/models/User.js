@@ -7,9 +7,10 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: {
     type: String,
-    // Old values (explorer/hotel_owner) kept for backwards-compat with existing rows.
-    // New registrations should use the spec triple: 'user' | 'guide' | 'hotel'.
-    enum: ['explorer', 'user', 'hotel_owner', 'hotel', 'guide', 'admin'],
+    // Canonical going forward: 'user' | 'guide' | 'hotel' | 'support' | 'admin'.
+    // Legacy values (explorer, hotel_owner) retained for backwards-compat with
+    // older rows — see scripts/migrateLegacyRoles.js for the safe cutover.
+    enum: ['user', 'guide', 'hotel', 'support', 'admin', 'explorer', 'hotel_owner'],
     default: 'user'
   },
   isAdmin: { type: Boolean, default: false },
@@ -35,6 +36,15 @@ const userSchema = new mongoose.Schema({
     favoriteDestinations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Destination' }]
   },
   preferences: { type: String, default: 'Adventure, Nature' },
+
+  // Marketplace finance ledger — only meaningful for vendor roles (guide, hotel).
+  // Bookings credit `totalEarned` / `pendingPayout` at 85% of grossTotal share.
+  // Admin payout flow drains `pendingPayout` and increases `totalWithdrawn`.
+  vendorLedger: {
+    totalEarned: { type: Number, default: 0 },      // historical gross attribution
+    totalWithdrawn: { type: Number, default: 0 },   // sum of admin-issued payouts
+    pendingPayout: { type: Number, default: 0 },    // current debt owed to the vendor
+  },
   pricePerNight: { type: Number, default: null },
   dailyFee: { type: Number, default: null },
   tripHistory: [

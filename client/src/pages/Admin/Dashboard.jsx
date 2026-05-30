@@ -9,12 +9,13 @@ import NotificationBar from './NotificationBar';
 
 // Hub Components
 import DestinationManager from './DestinationManager';
-import UserManager from '../../UserManager';
+import UserManager from './UserManager';
 import BlogManager from './BlogManager';
 import GuideManager from './GuideManager';
 import HotelManager from './HotelManager';
 import DashboardOverview from './DashboardOverview';
 import MessagesManager from './MessagesManager';
+import BookingsManager from './BookingsManager';
 
 import './Dashboard.css';
 import api from '../../api/axios';
@@ -204,6 +205,11 @@ export default function AdminDashboard() {
           <Route path="messages" element={
             <ErrorBoundary>
               <MessagesManager />
+            </ErrorBoundary>
+          } />
+          <Route path="bookings" element={
+            <ErrorBoundary>
+              <BookingsManager />
             </ErrorBoundary>
           } />
         </Route>

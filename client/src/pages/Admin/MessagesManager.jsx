@@ -1,22 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import {
-  Mail, AlertCircle, Lightbulb, Smile, Inbox, Loader,
-  ChevronDown, ChevronUp, Check, Trash2, Clock, RefreshCw,
+  Mail, AlertCircle, Lightbulb, Smile, Inbox, Loader, UserX, Banknote,
+  ChevronDown, ChevronUp, Check, Trash2, Clock, RefreshCw, ArrowUpRight,
 } from 'lucide-react';
 
+// Type metadata — both canonical (snake_case) and legacy (human-readable) values
+// are recognised so old tickets still render correctly.
 const TYPE_META = {
-  'Report Issue':     { Icon: AlertCircle, color: '#E63946', tint: 'rgba(230,57,70,0.12)' },
-  'Suggestion':       { Icon: Lightbulb,   color: '#A2D729', tint: 'rgba(162,215,41,0.12)' },
-  'General Feedback': { Icon: Smile,       color: '#059D72', tint: 'rgba(5,157,114,0.12)' },
+  // Canonical (per marketplace spec)
+  bug_report:         { Icon: AlertCircle, color: '#E63946', tint: 'rgba(230,57,70,0.12)', label: 'BUG REPORT' },
+  suggestion:         { Icon: Lightbulb,   color: '#A2D729', tint: 'rgba(162,215,41,0.12)', label: 'SUGGESTION' },
+  account_issue:      { Icon: UserX,       color: '#F4A261', tint: 'rgba(244,162,97,0.12)', label: 'ACCOUNT' },
+  // Legacy human-readable values — kept so historical tickets still display nicely.
+  'Report Issue':     { Icon: AlertCircle, color: '#E63946', tint: 'rgba(230,57,70,0.12)', label: 'REPORT' },
+  'Suggestion':       { Icon: Lightbulb,   color: '#A2D729', tint: 'rgba(162,215,41,0.12)', label: 'SUGGESTION' },
+  'General Feedback': { Icon: Smile,       color: '#059D72', tint: 'rgba(5,157,114,0.12)', label: 'FEEDBACK' },
 };
 
 const STATUS_META = {
-  new:         { label: 'New',          color: '#A2D729' },
-  in_progress: { label: 'In Progress',  color: '#F4A261' },
-  resolved:    { label: 'Resolved',     color: '#059D72' },
-  dismissed:   { label: 'Dismissed',    color: '#A6A180' },
+  // Canonical
+  pending:     { label: 'Pending',     color: '#A2D729' },
+  open:        { label: 'Open',        color: '#F4A261' },
+  escalated:   { label: 'Escalated',   color: '#ff6b6b' },
+  closed:      { label: 'Closed',      color: '#059D72' },
+  // Legacy
+  new:         { label: 'New',         color: '#A2D729' },
+  in_progress: { label: 'In Progress', color: '#F4A261' },
+  resolved:    { label: 'Resolved',    color: '#059D72' },
+  dismissed:   { label: 'Dismissed',   color: '#A6A180' },
 };
+
+// Detect a payout-request ticket — used for the dedicated filter chip + row highlight.
+const isPayoutRequest = (m) => m?.type === 'account_issue' && typeof m?.subject === 'string' && m.subject.startsWith('[PAYOUT REQUEST]');
 
 const MessagesManager = () => {
   const [messages, setMessages] = useState([]);
@@ -63,8 +79,30 @@ const MessagesManager = () => {
     }
   };
 
-  const filtered = filter === 'all' ? messages : messages.filter((m) => m.status === filter);
-  const newCount = messages.filter((m) => m.status === 'new').length;
+  // 'payout_requests' is a virtual filter — it segments by ticket SHAPE (account_issue + PAYOUT REQUEST subject)
+  // rather than status. Everything else filters on status (canonical or legacy).
+  const filtered = (() => {
+    if (filter === 'all') return messages;
+    if (filter === 'payout_requests') return messages.filter(isPayoutRequest);
+    // Treat 'pending' and 'new' as equivalent for the filter chip experience.
+    if (filter === 'pending') return messages.filter((m) => m.status === 'pending' || m.status === 'new');
+    if (filter === 'open') return messages.filter((m) => m.status === 'open' || m.status === 'in_progress');
+    return messages.filter((m) => m.status === filter);
+  })();
+  const newCount = messages.filter((m) => m.status === 'new' || m.status === 'pending').length;
+  const payoutCount = messages.filter(isPayoutRequest).length;
+
+  const escalateTicket = async (id) => {
+    setBusyId(id);
+    try {
+      const { data } = await api.patch(`/queries/${id}/escalate`);
+      setMessages((prev) => prev.map((m) => (m._id === id ? { ...m, ...data } : m)));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Could not escalate ticket.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <>
@@ -100,27 +138,39 @@ const MessagesManager = () => {
               <Inbox size={14} /> {messages.length} total · {newCount} unread
             </span>
 
-            <div style={{ display: 'flex', gap: 6 }}>
-              {['all', 'new', 'in_progress', 'resolved', 'dismissed'].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  style={{
-                    background: filter === f ? 'rgba(162,215,41,0.15)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${filter === f ? '#A2D729' : 'rgba(255,255,255,0.08)'}`,
-                    color: filter === f ? '#A2D729' : 'var(--text-muted, #A6A180)',
-                    padding: '0.4rem 0.85rem',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {f.replace('_', ' ')}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'pending', label: `New (${newCount})` },
+                { id: 'open', label: 'Open' },
+                { id: 'escalated', label: 'Escalated' },
+                { id: 'resolved', label: 'Resolved' },
+                { id: 'payout_requests', label: `💸 Payout requests${payoutCount ? ` (${payoutCount})` : ''}`, accent: '#F4A261' },
+              ].map((f) => {
+                const active = filter === f.id;
+                const accent = f.accent || '#A2D729';
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilter(f.id)}
+                    style={{
+                      background: active ? `${accent}26` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${active ? accent : 'rgba(255,255,255,0.08)'}`,
+                      color: active ? accent : 'var(--text-muted, #A6A180)',
+                      padding: '0.4rem 0.85rem',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -175,13 +225,23 @@ const MessagesManager = () => {
               </thead>
               <tbody>
                 {filtered.map((m) => {
-                  const t = TYPE_META[m.type] || TYPE_META['General Feedback'];
-                  const s = STATUS_META[m.status] || STATUS_META.new;
+                  const t = TYPE_META[m.type] || TYPE_META.suggestion;
+                  const s = STATUS_META[m.status] || STATUS_META.pending;
                   const Icon = t.Icon;
                   const isExpanded = expanded.has(m._id);
+                  const isPayout = isPayoutRequest(m);
+                  const isAlreadyEscalated = m.isEscalated === true || m.status === 'escalated';
                   return (
                     <React.Fragment key={m._id}>
-                      <tr style={{ cursor: 'pointer' }} onClick={() => toggleExpand(m._id)}>
+                      <tr
+                        style={{
+                          cursor: 'pointer',
+                          // Highlight payout-request rows so admins spot them at a glance.
+                          background: isPayout ? 'rgba(244,162,97,0.06)' : undefined,
+                          borderLeft: isPayout ? '3px solid #F4A261' : (isAlreadyEscalated ? '3px solid #ff6b6b' : undefined),
+                        }}
+                        onClick={() => toggleExpand(m._id)}
+                      >
                         <td style={{ width: 36 }}>
                           {isExpanded
                             ? <ChevronUp size={14} style={{ color: '#A2D729' }} />
@@ -209,8 +269,46 @@ const MessagesManager = () => {
                               whiteSpace: 'nowrap',
                             }}
                           >
-                            <Icon size={12} /> {m.type}
+                            <Icon size={12} /> {t.label || m.type}
                           </span>
+                          {isPayout && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                marginLeft: 6,
+                                padding: '2px 6px',
+                                borderRadius: 999,
+                                background: 'rgba(244,162,97,0.15)',
+                                color: '#F4A261',
+                                fontSize: '0.6rem',
+                                fontWeight: 800,
+                                letterSpacing: 1,
+                              }}
+                            >
+                              <Banknote size={10} /> PAYOUT
+                            </span>
+                          )}
+                          {isAlreadyEscalated && !isPayout && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                marginLeft: 6,
+                                padding: '2px 6px',
+                                borderRadius: 999,
+                                background: 'rgba(255,107,107,0.15)',
+                                color: '#ff6b6b',
+                                fontSize: '0.6rem',
+                                fontWeight: 800,
+                                letterSpacing: 1,
+                              }}
+                            >
+                              ESCALATED
+                            </span>
+                          )}
                         </td>
                         <td className="highlight-text" style={{ fontSize: '0.8rem' }}>{m.email}</td>
                         <td style={{ fontSize: '0.85rem', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -265,7 +363,19 @@ const MessagesManager = () => {
                               <Trash2 size={11} style={{ display: 'inline', marginRight: 4 }} /> Dismiss
                             </button>
                           )}
-                          {m.status === 'resolved' || m.status === 'dismissed' ? (
+                          {/* FORWARD TO ADMIN — support staff hands off tough tickets to admin via the escalate endpoint */}
+                          {!isAlreadyEscalated && (
+                            <button
+                              disabled={busyId === m._id}
+                              onClick={() => escalateTicket(m._id)}
+                              className="action-btn"
+                              title="Forward this ticket to the system administrator"
+                              style={{ background: 'rgba(255,107,107,0.1)', color: '#ff6b6b', border: '1px solid #ff6b6b', padding: '4px 10px', borderRadius: 4, fontSize: '0.7rem', cursor: 'pointer', marginRight: 4 }}
+                            >
+                              <ArrowUpRight size={11} style={{ display: 'inline', marginRight: 4 }} /> Forward
+                            </button>
+                          )}
+                          {m.status === 'resolved' || m.status === 'dismissed' || m.status === 'closed' ? (
                             <button
                               disabled={busyId === m._id}
                               onClick={() => updateStatus(m._id, 'new')}

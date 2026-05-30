@@ -34,6 +34,34 @@ const BookingPage = () => {
   const [travelers, setTravelers] = useState(2);
   const [durationDays, setDurationDays] = useState(5);
   const [addOns, setAddOns] = useState([]);
+  const [assignedGuideId, setAssignedGuideId] = useState(''); // empty = no specific guide picked
+
+  // Date picker — defaults to tomorrow so the user has a clear "starts on" expectation.
+  // `min` on the input enforces no past dates client-side (server re-validates).
+  const todayStr = (() => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  })();
+  const tomorrowStr = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const [startDate, setStartDate] = useState(tomorrowStr);
+
+  // Derived end date — purely display; the server recomputes from startDate + durationDays.
+  const endDateStr = (() => {
+    const d = new Date(startDate);
+    if (Number.isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() + Number(durationDays || 0));
+    return d.toISOString().slice(0, 10);
+  })();
+  const fmtPretty = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   useEffect(() => {
     if (!user) {
@@ -76,17 +104,15 @@ const BookingPage = () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const today = new Date();
-      const end = new Date(today);
-      end.setDate(end.getDate() + Number(durationDays));
       const { data } = await api.post('/bookings', {
         destination: id,
         travelers: Number(travelers),
         durationDays: Number(durationDays),
         addOns,
         baseRate: DEFAULT_BASE_RATE,
-        startDate: today.toISOString(),
-        endDate: end.toISOString(),
+        startDate, // server re-derives endDate from startDate + durationDays
+        // Only send the guide id when the guide add-on is active AND a specific guide was picked.
+        assignedGuideId: addOns.includes('guide') && assignedGuideId ? assignedGuideId : undefined,
       });
       setConfirmed(data);
     } catch (err) {
@@ -162,6 +188,32 @@ const BookingPage = () => {
                 </div>
               </div>
 
+              {/* Start date — calendar picker. Min = today so past dates are blocked at the browser. */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A6A180', marginBottom: 8 }}>
+                  <Calendar size={12} style={{ display: 'inline', marginRight: 6 }} /> Start date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  min={todayStr}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={{
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: 'white',
+                    padding: '0.6rem 0.85rem',
+                    borderRadius: 6,
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    colorScheme: 'dark',
+                  }}
+                />
+                <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 6 }}>
+                  Trip arrives <strong style={{ color: '#A2D729' }}>{fmtPretty(startDate)}</strong> · returns <strong>{fmtPretty(endDateStr)}</strong> (auto-completes after this date)
+                </p>
+              </div>
+
               {/* Duration */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A6A180', marginBottom: 8 }}>
@@ -219,6 +271,74 @@ const BookingPage = () => {
                   })}
                 </div>
               </div>
+
+              {/* GUIDE PICKER — only shown when the 'guide' add-on is selected.
+                  Reads destination.assignedGuides (populated server-side with username + profileData).
+                  Honors guide.profileData.ratePerDay if published; server validates the pick. */}
+              {addOns.includes('guide') && (
+                <div style={{ marginTop: '1.25rem', padding: '1rem 1.1rem', background: 'rgba(162,215,41,0.06)', border: '1px solid rgba(162,215,41,0.25)', borderRadius: 8 }}>
+                  <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A2D729', marginBottom: 10, fontWeight: 700 }}>
+                    Pick your local guide
+                  </label>
+                  {(() => {
+                    const guides = Array.isArray(destination?.assignedGuides) ? destination.assignedGuides : [];
+                    if (guides.length === 0) {
+                      return (
+                        <p style={{ fontSize: '0.8rem', opacity: 0.65, lineHeight: 1.5 }}>
+                          No guides linked to <strong>{destination.name}</strong> yet. We'll assign one closer to your trip date — the flat NPR 1,500/day guide rate still applies.
+                        </p>
+                      );
+                    }
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {guides.map((g) => {
+                          const gid = String(g._id || g.id);
+                          const picked = assignedGuideId === gid;
+                          const rate = Number(g.profileData?.ratePerDay) > 0 ? Number(g.profileData.ratePerDay) : 1500;
+                          return (
+                            <button
+                              key={gid}
+                              type="button"
+                              onClick={() => setAssignedGuideId(picked ? '' : gid)}
+                              style={{
+                                background: picked ? 'rgba(162,215,41,0.18)' : 'rgba(0,0,0,0.3)',
+                                border: `1px solid ${picked ? '#A2D729' : 'rgba(255,255,255,0.08)'}`,
+                                color: 'white',
+                                padding: '0.7rem 0.9rem',
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 12,
+                              }}
+                            >
+                              <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 2 }}>
+                                  {picked && <span style={{ color: '#A2D729', marginRight: 6 }}>✓</span>}
+                                  {g.username || 'Guide'}
+                                </p>
+                                <p style={{ fontSize: '0.7rem', opacity: 0.65 }}>
+                                  {g.profileData?.experience || 'Certified local guide'}
+                                </p>
+                              </div>
+                              <span style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                                {formatNPR(rate)}/day
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {assignedGuideId === '' && (
+                          <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
+                            No specific guide selected — we'll pair you with whoever is free.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             {/* RIGHT: live total */}
@@ -226,6 +346,17 @@ const BookingPage = () => {
               <h2 style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#A2D729', marginBottom: '1.5rem' }}>
                 <CreditCard size={14} style={{ display: 'inline', marginRight: 6 }} /> Cost Breakdown
               </h2>
+
+              {/* Date summary at top of breakdown so the user always sees what they're committing to. */}
+              <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: '0.75rem 0.9rem', marginBottom: '1rem', border: '1px solid rgba(162,215,41,0.18)' }}>
+                <p style={{ fontSize: '0.65rem', letterSpacing: 2, color: '#A2D729', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Travel window</p>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, lineHeight: 1.4 }}>
+                  {fmtPretty(startDate)}
+                </p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>
+                  → returns {fmtPretty(endDateStr)} · {durationDays} day{durationDays > 1 ? 's' : ''}
+                </p>
+              </div>
 
               <Row label={`Base × ${travelers} traveler${travelers > 1 ? 's' : ''} × ${durationDays} days`} value={formatNPR(pricing.subtotal)} />
               {addOns.length > 0 && <Row label={`Add-ons × ${travelers} × ${durationDays}`} value={formatNPR(pricing.addOnTotal)} />}
@@ -268,21 +399,90 @@ const Row = ({ label, value, muted }) => (
   </div>
 );
 
-const ConfirmationCard = ({ booking, onDashboard, onAgain }) => (
-  <div style={{ background: 'rgba(162,215,41,0.06)', border: '1px solid #A2D729', borderRadius: 12, padding: '2.5rem', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-    <div style={{ width: 56, height: 56, margin: '0 auto 1rem', borderRadius: '50%', background: '#A2D729', color: '#0D0A02', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Check size={28} />
+const ConfirmationCard = ({ booking, onDashboard, onAgain }) => {
+  const [b, setB] = useState(booking);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState(null);
+  const stage = b.status;
+  const isAwaitingPayment = stage === 'pending_payment' || stage === 'pending';
+  const isInEscrow = stage === 'escrow_held';
+
+  const markAsPaid = async () => {
+    setPaying(true);
+    setPayError(null);
+    try {
+      const { data } = await api.patch(`/bookings/${b._id}/confirm-payment`);
+      setB(data);
+    } catch (err) {
+      setPayError(err?.response?.data?.message || 'Could not confirm payment. Try again.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const total = fmtPayTotal(b.pricing);
+
+  return (
+    <div style={{ background: 'rgba(162,215,41,0.06)', border: '1px solid #A2D729', borderRadius: 12, padding: '2.5rem', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+      <div style={{ width: 56, height: 56, margin: '0 auto 1rem', borderRadius: '50%', background: isAwaitingPayment ? '#F4A261' : '#A2D729', color: '#0D0A02', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Check size={28} />
+      </div>
+
+      {isAwaitingPayment && (
+        <>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>Booking placed — awaiting payment</h2>
+          <p style={{ opacity: 0.75, marginBottom: '0.75rem' }}>
+            Your seat for <strong>{b.destination?.name}</strong> is held. Pay <strong style={{ color: '#A2D729' }}>{total}</strong> by bank transfer to the Yaatri account, then click below to notify us.
+          </p>
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.85rem 1.1rem', borderRadius: 6, fontSize: '0.78rem', maxWidth: 460, margin: '0 auto 1rem', textAlign: 'left' }}>
+            <p style={{ opacity: 0.6, marginBottom: 4 }}>Bank transfer details</p>
+            <p style={{ fontFamily: 'monospace' }}>YAATRI HUB · NIC ASIA BANK · 1234 5678 9012 3456</p>
+            <p style={{ fontFamily: 'monospace', opacity: 0.7 }}>Ref: {String(b._id).slice(-8).toUpperCase()}</p>
+          </div>
+          {payError && <p style={{ color: '#ff6b6b', fontSize: '0.8rem', marginBottom: 12 }}>{payError}</p>}
+          <button
+            onClick={markAsPaid}
+            disabled={paying}
+            className="btn-primary-white"
+            style={{ marginBottom: 12, opacity: paying ? 0.6 : 1, cursor: paying ? 'wait' : 'pointer' }}
+          >
+            {paying ? 'Confirming…' : 'I have paid — confirm'}
+          </button>
+        </>
+      )}
+
+      {isInEscrow && (
+        <>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>Payment received · awaiting admin approval</h2>
+          <p style={{ opacity: 0.75, marginBottom: '1rem' }}>
+            Thanks. We've logged your payment of <strong style={{ color: '#A2D729' }}>{total}</strong> for <strong>{b.destination?.name}</strong>. An admin will verify and approve the booking within a few hours. You'll get an email when it's approved.
+          </p>
+        </>
+      )}
+
+      {!isAwaitingPayment && !isInEscrow && (
+        <>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>Booking confirmed</h2>
+          <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>Your trip to {b.destination?.name} is on the books. Total: <strong style={{ color: '#A2D729' }}>{total}</strong></p>
+        </>
+      )}
+
+      <p style={{ opacity: 0.55, fontSize: '0.8rem', marginBottom: '1.5rem' }}>
+        A detailed invoice has been emailed to your registered address. Check your inbox (and spam folder) in a minute or two.
+      </p>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <button onClick={onDashboard} className="btn-primary-white">View in dashboard</button>
+        <button onClick={onAgain} style={{ background: 'none', border: '1px solid #A2D729', color: '#A2D729', padding: '0.7rem 1.2rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}>
+          <Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} /> Book another
+        </button>
+      </div>
     </div>
-    <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>Booking confirmed</h2>
-    <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>Your trip to {booking.destination?.name} is on the books. Total: <strong style={{ color: '#A2D729' }}>NPR {Number(booking.pricing?.totalCost || 0).toLocaleString('en-IN')}</strong></p>
-    <p style={{ opacity: 0.55, fontSize: '0.8rem', marginBottom: '1.5rem' }}>A detailed invoice has been emailed to your registered address. Check your inbox (and spam folder) in a minute or two.</p>
-    <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-      <button onClick={onDashboard} className="btn-primary-white">View in dashboard</button>
-      <button onClick={onAgain} style={{ background: 'none', border: '1px solid #A2D729', color: '#A2D729', padding: '0.7rem 1.2rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}>
-        <Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} /> Book another
-      </button>
-    </div>
-  </div>
-);
+  );
+};
+
+const fmtPayTotal = (pricing) => {
+  const v = Number(pricing?.grossTotal || pricing?.totalCost || 0);
+  return `NPR ${v.toLocaleString('en-IN')}`;
+};
 
 export default BookingPage;

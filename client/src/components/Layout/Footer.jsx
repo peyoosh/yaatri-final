@@ -228,9 +228,9 @@ const Footer = () => {
         >
           <span>© {year} Yaatri Hub. All rights reserved.</span>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <Link to="/contact" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy policy</Link>
-            <Link to="/contact" style={{ color: 'inherit', textDecoration: 'none' }}>Terms of service</Link>
-            <Link to="/contact" style={{ color: 'inherit', textDecoration: 'none' }}>Cookies settings</Link>
+            <Link to="/policies" style={{ color: 'inherit', textDecoration: 'none' }}>Policies & contract</Link>
+            <Link to="/policies" style={{ color: 'inherit', textDecoration: 'none' }}>Cancellation terms</Link>
+            <Link to="/contact" style={{ color: 'inherit', textDecoration: 'none' }}>Contact</Link>
           </div>
         </div>
       </div>

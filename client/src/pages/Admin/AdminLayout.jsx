@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { FileText, MapPin, ChevronLeft, Users, Home, Compass, Menu, X, Mail } from 'lucide-react';
+import { FileText, MapPin, ChevronLeft, Users, Home, Compass, Menu, X, Mail, Ticket } from 'lucide-react';
 import api from '../../api/axios';
 import './Dashboard.css';
 
@@ -41,46 +41,69 @@ const AdminLayout = ({ user }) => {
         </div>
         
         <nav className="sidebar-nav">
-          <button 
-            className={`nav-item ${location.pathname.includes('/overview') ? 'active' : ''}`}
-            onClick={() => { navigate('/admin/overview'); setIsSidebarOpen(false); }}
-          >
-            <Home size={18} /> <span>Overview</span>
-          </button>
-          <button 
-            className={`nav-item ${location.pathname.includes('/usermanagement') ? 'active' : ''}`}
-            onClick={() => { navigate('/admin/usermanagement'); setIsSidebarOpen(false); }}
-          >
-            <Users size={18} /> <span>Users</span>
-          </button>
-          <button 
-            className={`nav-item ${location.pathname.includes('/destinationmanagement') ? 'active' : ''}`}
-            onClick={() => { navigate('/admin/destinationmanagement'); setIsSidebarOpen(false); }}
-          >
-            <MapPin size={18} /> <span>Destinations</span>
-          </button>
-          <button 
-            className={`nav-item ${location.pathname.includes('/blogmanagement') ? 'active' : ''}`}
-            onClick={() => { navigate('/admin/blogmanagement'); setIsSidebarOpen(false); }}
-          >
-            <FileText size={18} /> <span>Blogs</span>
-          </button>
-          <button 
-            className={`nav-item ${location.pathname.includes('/hotelmanagement') ? 'active' : ''}`}
-            onClick={() => { navigate('/admin/hotelmanagement'); setIsSidebarOpen(false); }}
-          >
-            <Home size={18} /> <span>Hotels</span>
-          </button>
-          <button
-            className={`nav-item ${location.pathname.includes('/userguidemanagement') ? 'active' : ''}`}
-            onClick={() => { navigate('/admin/userguidemanagement'); setIsSidebarOpen(false); }}
-          >
-            <Compass size={18} /> <span>Guides</span>
-          </button>
-          <button
-            className={`nav-item ${location.pathname.includes('/messages') ? 'active' : ''}`}
-            onClick={() => { navigate('/admin/messages'); setIsSidebarOpen(false); }}
-          >
+          {/* Support staff can only access: messages, bookings, blogs.
+              isFullAdmin === true when the user is a system admin (full sidebar). */}
+          {(() => {
+            const isFullAdmin = !!user?.isAdmin || user?.role === 'admin';
+            const showAll = isFullAdmin;
+            return (
+              <>
+                {showAll && (
+                  <button
+                    className={`nav-item ${location.pathname.includes('/overview') ? 'active' : ''}`}
+                    onClick={() => { navigate('/admin/overview'); setIsSidebarOpen(false); }}
+                  >
+                    <Home size={18} /> <span>Overview</span>
+                  </button>
+                )}
+                {showAll && (
+                  <button
+                    className={`nav-item ${location.pathname.includes('/usermanagement') ? 'active' : ''}`}
+                    onClick={() => { navigate('/admin/usermanagement'); setIsSidebarOpen(false); }}
+                  >
+                    <Users size={18} /> <span>Users</span>
+                  </button>
+                )}
+                {showAll && (
+                  <button
+                    className={`nav-item ${location.pathname.includes('/destinationmanagement') ? 'active' : ''}`}
+                    onClick={() => { navigate('/admin/destinationmanagement'); setIsSidebarOpen(false); }}
+                  >
+                    <MapPin size={18} /> <span>Destinations</span>
+                  </button>
+                )}
+                <button
+                  className={`nav-item ${location.pathname.includes('/blogmanagement') ? 'active' : ''}`}
+                  onClick={() => { navigate('/admin/blogmanagement'); setIsSidebarOpen(false); }}
+                >
+                  <FileText size={18} /> <span>Blogs</span>
+                </button>
+                {showAll && (
+                  <button
+                    className={`nav-item ${location.pathname.includes('/hotelmanagement') ? 'active' : ''}`}
+                    onClick={() => { navigate('/admin/hotelmanagement'); setIsSidebarOpen(false); }}
+                  >
+                    <Home size={18} /> <span>Hotels</span>
+                  </button>
+                )}
+                {showAll && (
+                  <button
+                    className={`nav-item ${location.pathname.includes('/userguidemanagement') ? 'active' : ''}`}
+                    onClick={() => { navigate('/admin/userguidemanagement'); setIsSidebarOpen(false); }}
+                  >
+                    <Compass size={18} /> <span>Guides</span>
+                  </button>
+                )}
+                <button
+                  className={`nav-item ${location.pathname.includes('/bookings') ? 'active' : ''}`}
+                  onClick={() => { navigate('/admin/bookings'); setIsSidebarOpen(false); }}
+                >
+                  <Ticket size={18} /> <span>Bookings</span>
+                </button>
+                <button
+                  className={`nav-item ${location.pathname.includes('/messages') ? 'active' : ''}`}
+                  onClick={() => { navigate('/admin/messages'); setIsSidebarOpen(false); }}
+                >
             <Mail size={18} />
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               Messages
@@ -101,7 +124,10 @@ const AdminLayout = ({ user }) => {
                 </span>
               )}
             </span>
-          </button>
+                </button>
+              </>
+            );
+          })()}
         </nav>
 
         <div style={{ marginTop: 'auto' }}>

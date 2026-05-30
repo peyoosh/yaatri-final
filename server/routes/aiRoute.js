@@ -82,7 +82,20 @@ const buildSystemPrompt = (destinationDocs) => {
 ${liveDestinations}
 
 # Yaatri Platform Routes (for redirectTo)
-Set redirectTo ONLY when the user clearly wants to go there. Otherwise null with a substantive reply.
+**Default is ALWAYS null.** Only set redirectTo when the user uses explicit navigation language: "take me to", "go to", "open", "show me the [page name] page", "navigate to". Informational questions — even if they touch a topic a page covers — get null and a real answer.
+
+BAD (do NOT redirect):
+- "where can I book?" → answer conversationally, redirectTo: null
+- "show me some treks" → list treks in reply, redirectTo: null
+- "how do I cancel?" → explain steps, redirectTo: null
+- "I want to explore destinations" → describe a few, redirectTo: null
+
+GOOD (redirect is justified):
+- "take me to the destinations page" → redirectTo: "/destinations"
+- "go to login" → redirectTo: "/login"
+- "open my dashboard" → redirectTo: "/dashboard"
+
+Routes:
 - "/destinations" — browse all destinations (also has a map view toggle)
 - "/blog" — community travel journals
 - "/support" — file a support ticket or complaint
@@ -91,7 +104,7 @@ Set redirectTo ONLY when the user clearly wants to go there. Otherwise null with
 - "/dashboard" — their bookings, favourites, profile
 - "/contact" — office contact info
 - "/explore" — they are ALREADY here if they're talking to you in the full-page chat; never redirect to it
-- null — substantive conversational answer
+- null — substantive conversational answer (the DEFAULT for almost every message)
 
 # Yaatri platform features you can mention
 - 4% State Tax + 12% GST on bookings. Default base rate NPR 2,500/traveller/day.
@@ -113,7 +126,7 @@ Set redirectTo ONLY when the user clearly wants to go there. Otherwise null with
 
 const sanitizeHistory = (raw) => {
   if (!Array.isArray(raw)) return [];
-  return raw
+  const cleaned = raw
     .filter((m) => m && typeof m === 'object' && (m.role === 'user' || m.role === 'model') && Array.isArray(m.parts))
     .slice(-12) // keep the last ~6 turns to bound prompt size
     .map((m) => ({
@@ -121,6 +134,27 @@ const sanitizeHistory = (raw) => {
       parts: m.parts.filter((p) => p && typeof p.text === 'string').map((p) => ({ text: String(p.text).slice(0, 2000) })),
     }))
     .filter((m) => m.parts.length > 0);
+
+  // Gemini's startChat() requires the first history entry to be from 'user'.
+  // The frontend's welcome greeting is a 'model' message with no preceding user
+  // turn, so we drop any leading 'model' entries to satisfy the API.
+  while (cleaned.length > 0 && cleaned[0].role !== 'user') {
+    cleaned.shift();
+  }
+
+  // Gemini also requires strict alternation (user/model/user/model). Collapse any
+  // consecutive same-role entries by keeping the most recent one in each run.
+  const alternating = [];
+  for (const entry of cleaned) {
+    if (alternating.length === 0 || alternating[alternating.length - 1].role !== entry.role) {
+      alternating.push(entry);
+    } else {
+      // Replace the previous same-role entry with the newer one (preserves context).
+      alternating[alternating.length - 1] = entry;
+    }
+  }
+
+  return alternating;
 };
 
 router.post('/chat', async (req, res) => {

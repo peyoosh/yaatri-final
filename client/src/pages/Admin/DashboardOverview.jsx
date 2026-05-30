@@ -21,6 +21,9 @@ export default function DashboardOverview({ stats: initialStats }) {
   // fetches once), then take over with our own polling so the tiles stay live.
   const [stats, setStats] = useState(initialStats || null);
   const [pulseAt, setPulseAt] = useState(0); // bumped on each refresh — drives a subtle "live" indicator
+  const [financials, setFinancials] = useState(null);
+  const [financialsLoading, setFinancialsLoading] = useState(false);
+  const [showFinancials, setShowFinancials] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,6 +40,21 @@ export default function DashboardOverview({ stats: initialStats }) {
     const id = setInterval(pull, 30_000); // every 30s — matches a comfortable "live" cadence without hammering Mongo
     return () => { cancelled = true; clearInterval(id); };
   }, []);
+
+  // Lazy-fetch the marketplace breakdown only when the modal is opened.
+  const openFinancials = async () => {
+    setShowFinancials(true);
+    if (financials) return; // already cached
+    setFinancialsLoading(true);
+    try {
+      const { data } = await api.get('/admin/financials/overview');
+      setFinancials(data);
+    } catch (err) {
+      console.error('Failed to load financials breakdown', err);
+    } finally {
+      setFinancialsLoading(false);
+    }
+  };
 
   const bookings = stats?.bookings || {};
   const topDestinations = stats?.topDestinations || [];
@@ -63,7 +81,14 @@ export default function DashboardOverview({ stats: initialStats }) {
 
       {/* PRIMARY KPIs — driven by real bookings */}
       <div className="summary-grid">
-        <div className="summary-card bg-teal-steel">
+        {/* TOTAL_REVENUE tile is clickable — opens the marketplace breakdown popup */}
+        <button
+          type="button"
+          onClick={openFinancials}
+          className="summary-card bg-teal-steel"
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', position: 'relative', font: 'inherit', color: 'inherit' }}
+          title="Click for full marketplace breakdown (commission, forfeit, vendor balances)"
+        >
           <span className="card-label">TOTAL_REVENUE</span>
           <span className="card-value">{fmtNPR(stats?.revenue)}</span>
           {Number(stats?.cancelledRevenue) > 0 && (
@@ -71,7 +96,10 @@ export default function DashboardOverview({ stats: initialStats }) {
               cancelled: {fmtNPR(stats.cancelledRevenue)}
             </span>
           )}
-        </div>
+          <span style={{ position: 'absolute', top: 8, right: 10, fontSize: '0.55rem', opacity: 0.5, letterSpacing: 1.5, fontFamily: 'monospace' }}>
+            ▸ BREAKDOWN
+          </span>
+        </button>
         <div className="summary-card bg-teal-steel">
           <span className="card-label">TOTAL_BOOKINGS</span>
           <span className="card-value">{bookings.total ?? 0}</span>
@@ -182,6 +210,101 @@ export default function DashboardOverview({ stats: initialStats }) {
           )}
         </div>
       </section>
+
+      {/* MARKETPLACE BREAKDOWN MODAL — opens on TOTAL_REVENUE click. Pulls /admin/financials/overview. */}
+      {showFinancials && (
+        <div
+          onClick={() => setShowFinancials(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--obsidian, #0D0A02)',
+              border: '1px solid var(--hill-green, #059D72)',
+              borderRadius: 12,
+              padding: '2rem',
+              maxWidth: 640,
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              color: 'var(--himalayan-mist, #F4F2F3)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+              <div>
+                <p style={{ fontSize: '0.65rem', letterSpacing: 3, color: '#A2D729', fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>
+                  Marketplace breakdown
+                </p>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Where the money is</h2>
+              </div>
+              <button
+                onClick={() => setShowFinancials(false)}
+                style={{ background: 'none', border: 'none', color: '#A6A180', cursor: 'pointer', fontSize: '1.5rem', lineHeight: 1 }}
+                aria-label="Close"
+              >×</button>
+            </div>
+
+            {financialsLoading || !financials ? (
+              <p style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>Loading…</p>
+            ) : (
+              <>
+                {/* Gross revenue at top */}
+                <div style={{ background: 'rgba(162,215,41,0.08)', border: '1px solid rgba(162,215,41,0.3)', borderRadius: 8, padding: '1rem 1.2rem', marginBottom: '1.25rem' }}>
+                  <p style={{ fontSize: '0.65rem', letterSpacing: 2, opacity: 0.7, textTransform: 'uppercase' }}>Total gross revenue (NPR)</p>
+                  <p style={{ fontSize: '2rem', fontWeight: 900, color: '#A2D729', letterSpacing: '-0.02em' }}>
+                    {fmtNPR(financials.totalGrossRevenue)}
+                  </p>
+                  <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
+                    From bookings in <code>escrow_held</code> / <code>approved</code> / <code>completed</code> (incl. legacy pending/confirmed)
+                  </p>
+                </div>
+
+                {/* Two-column split: what Yaatri keeps vs what Yaatri owes */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div style={{ background: 'rgba(5,157,114,0.1)', border: '1px solid rgba(5,157,114,0.4)', borderRadius: 8, padding: '1rem' }}>
+                    <p style={{ fontSize: '0.65rem', letterSpacing: 2, opacity: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>Platform earnings</p>
+                    <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#059D72' }}>{fmtNPR(financials.platformNetEarnings)}</p>
+                    <div style={{ fontSize: '0.72rem', opacity: 0.7, marginTop: 10, lineHeight: 1.7 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Commission (15%)</span><span style={{ fontWeight: 700, color: '#A2D729' }}>{fmtNPR(financials.platformBreakdown.commission15Pct)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Forfeit (20%)</span><span style={{ fontWeight: 700, color: '#F4A261' }}>{fmtNPR(financials.platformBreakdown.cancellationForfeit20Pct)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.4)', borderRadius: 8, padding: '1rem' }}>
+                    <p style={{ fontSize: '0.65rem', letterSpacing: 2, opacity: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>Outstanding payouts owed</p>
+                    <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ff6b6b' }}>
+                      {fmtNPR(Number(financials.totalOwedToHotels) + Number(financials.totalOwedToGuides))}
+                    </p>
+                    <div style={{ fontSize: '0.72rem', opacity: 0.7, marginTop: 10, lineHeight: 1.7 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>To {financials.vendorCounts?.hotels || 0} hotel(s)</span><span style={{ fontWeight: 700 }}>{fmtNPR(financials.totalOwedToHotels)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>To {financials.vendorCounts?.guides || 0} guide(s)</span><span style={{ fontWeight: 700 }}>{fmtNPR(financials.totalOwedToGuides)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: '0.7rem', opacity: 0.55, fontStyle: 'italic', textAlign: 'center', marginBottom: '0.5rem' }}>
+                  Drain individual vendor balances from <strong>/admin/hotelmanagement</strong> or <strong>/admin/userguidemanagement</strong>.
+                </p>
+                <p style={{ fontSize: '0.6rem', opacity: 0.35, textAlign: 'center', fontFamily: 'monospace' }}>
+                  generated {new Date(financials.generatedAt).toLocaleTimeString()}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
