@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const Destination = require('../models/Destination');
 
 if (!process.env.GEMINI_API_KEY) {
   console.warn('[ai] GEMINI_API_KEY is not set — /api/ai/chat will use the fallback path.');
 }
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'YOUR_API_KEY');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 // Routes the AI is allowed to deep-link to. Anything else is whitelisted to null
 // before being returned to the client — defence-in-depth against prompt injection.
@@ -179,11 +179,13 @@ router.post('/chat', async (req, res) => {
 
     const systemPrompt = buildSystemPrompt(destinations);
 
-    // 2. Use startChat for true multi-turn context. systemInstruction stays fixed; history rotates.
-    const model = genAI.getGenerativeModel({
+    // 2. Use new @google/genai SDK — supports AQ. key format from AI Studio.
+    const chatHistory = sanitizeHistory(history);
+    const chat = ai.chats.create({
       model: 'gemini-2.0-flash',
-      systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
-      generationConfig: {
+      history: chatHistory,
+      config: {
+        systemInstruction: systemPrompt,
         responseMimeType: 'application/json',
         temperature: 0.75,
         topP: 0.92,
@@ -191,10 +193,8 @@ router.post('/chat', async (req, res) => {
       },
     });
 
-    const chatHistory = sanitizeHistory(history);
-    const chat = model.startChat({ history: chatHistory });
-    const result = await chat.sendMessage(String(query).slice(0, 4000));
-    const responseText = result.response.text();
+    const result = await chat.sendMessage({ message: String(query).slice(0, 4000) });
+    const responseText = result.text;
 
     // 3. Safe JSON parse with fallback.
     let parsed;
