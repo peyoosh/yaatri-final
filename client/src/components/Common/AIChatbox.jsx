@@ -89,15 +89,47 @@ const AIChatbox = () => {
 
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
-      console.error('Chat error:', error);
-      const errorMessage = {
-        id: Date.now() + 1,
-        type: 'bot',
-        text: '❌ Sorry, I encountered an issue. Please make sure your API key is configured correctly in the server .env file (GEMINI_API_KEY=your_key_here). Try asking about specific terrain types or regions!',
-        timestamp: new Date(),
-        suggestedDestinations: []
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      const isNetwork = !error.response && (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED' || error.message === 'Network Error');
+      const isTimeout = error.code === 'ECONNABORTED';
+
+      if (isNetwork) {
+        // Render free tier cold-starts take ~30s — show a friendly waiting message then auto-retry once
+        const waitMsg = {
+          id: Date.now() + 1,
+          type: 'bot',
+          text: "The guide is waking up from sleep — this takes about 30 seconds on the free server. Retrying automatically...",
+          timestamp: new Date(),
+          suggestedDestinations: [],
+        };
+        setMessages(prev => [...prev, waitMsg]);
+        setIsLoading(true);
+        await new Promise(r => setTimeout(r, 12000));
+        try {
+          const history = messages.slice(-12).map((m) => ({
+            role: m.type === 'user' ? 'user' : 'model',
+            parts: [{ text: String(m.text || '').slice(0, 2000) }],
+          }));
+          const retry = await api.post('/ai/chat', { query: userInput || userMessage.text, history }, { timeout: 60_000 });
+          const { reply, redirectTo, suggestedDestinations } = retry.data || {};
+          setMessages(prev => [
+            ...prev.filter(m => m.id !== waitMsg.id),
+            { id: Date.now() + 2, type: 'bot', text: reply, timestamp: new Date(), suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }
+          ]);
+          return;
+        } catch {
+          setMessages(prev => prev.map(m => m.id === waitMsg.id
+            ? { ...m, text: "Still waking up — please try again in a moment." }
+            : m
+          ));
+        }
+      } else {
+        const text = isTimeout
+          ? "That took too long to respond. Try a shorter question, or try again."
+          : "Something went wrong on my end. Please try again.";
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1, type: 'bot', text, timestamp: new Date(), suggestedDestinations: []
+        }]);
+      }
     } finally {
       setIsLoading(false);
     }

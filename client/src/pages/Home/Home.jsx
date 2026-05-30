@@ -26,47 +26,34 @@ const Home = ({ onNavigate, onSelectNode }) => {
   
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        
-        // Fetch real metrics from backend stats endpoint
-        const statsRes = await api.get(`/stats/metrics`);
-        const stats = statsRes.data || {};
-        
-        // Fetch destinations for the carousel
-        const destsRes = await api.get(`/destinations`);
-        const destinations = destsRes.data || [];
-        
-        // Fetch settings for marquee title
-        const settingsRes = await api.get(`/settings`);
-        const settings = settingsRes.data || {};
-        
-        // Update metrics with real data from backend
+      // Fire all three independently — one failure must not wipe the others.
+      const [statsRes, destsRes, settingsRes] = await Promise.allSettled([
+        api.get('/stats/metrics'),
+        api.get('/destinations'),
+        api.get('/settings'),
+      ]);
+
+      if (statsRes.status === 'fulfilled') {
+        const s = statsRes.value.data || {};
         setMetrics({
-          locations: stats.locations || 0,
-          views: stats.views || 0,
-          years: stats.years || 0,
-          guides: stats.guides || 0,
-          users: stats.users || 0
+          locations: s.locations || 0,
+          views:     s.views     || 0,
+          years:     s.years     || 0,
+          guides:    s.guides    || 0,
+          users:     s.users     || 0,
         });
-        
-        setTopModules(destinations);
-        setMarqueeTitle(settings.marqueeTitle || "SYNCING_ATMOSPHERE...");
-      } catch (err) {
-        console.error('Error fetching home data:', err);
-        console.error('API Error Details:', {
-          message: err.message,
-          code: err.code,
-          status: err.response?.status,
-          data: err.response?.data
-        });
-        // Fallback: keep metrics at 0 instead of using fake data
-        setMetrics({
-          locations: 0,
-          views: 0,
-          years: 0,
-          guides: 0,
-          users: 0
-        });
+      } else {
+        console.warn('[Home] metrics unavailable:', statsRes.reason?.message);
+      }
+
+      if (destsRes.status === 'fulfilled') {
+        setTopModules(destsRes.value.data || []);
+      } else {
+        console.warn('[Home] destinations unavailable:', destsRes.reason?.message);
+      }
+
+      if (settingsRes.status === 'fulfilled') {
+        setMarqueeTitle(settingsRes.value.data?.marqueeTitle || 'SYNCING_ATMOSPHERE...');
       }
     };
     fetchData();
