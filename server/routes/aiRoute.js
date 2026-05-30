@@ -4,229 +4,168 @@ const { GoogleGenAI } = require('@google/genai');
 const Destination = require('../models/Destination');
 
 if (!process.env.GEMINI_API_KEY) {
-  console.warn('[ai] GEMINI_API_KEY is not set — /api/ai/chat will use the fallback path.');
+  console.warn('[ai] GEMINI_API_KEY is not set.');
 }
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
-// Routes the AI is allowed to deep-link to. Anything else is whitelisted to null
-// before being returned to the client — defence-in-depth against prompt injection.
-const ALLOWED_REDIRECTS = [
-  '/destinations',
-  '/explore',
-  '/blog',
-  '/support',
-  '/login',
-  '/register',
-  '/dashboard',
-  '/contact',
-];
+// ── Destination cache — refresh every 5 min, avoid DB hit on every message ──
+let _destCache = { docs: [], expiresAt: 0 };
+const getDestinations = async () => {
+  if (Date.now() < _destCache.expiresAt) return _destCache.docs;
+  const docs = await Destination.find()
+    .select('_id name region terrainType altitude description')
+    .lean();
+  _destCache = { docs, expiresAt: Date.now() + 5 * 60 * 1000 };
+  return docs;
+};
 
-const buildSystemPrompt = (destinationDocs) => {
-  const liveDestinations = destinationDocs.length
-    ? destinationDocs
-        .map((d) => `  - _id="${d._id}" · ${d.name} (${d.region}, ${d.terrainType || 'Hill'}${d.altitude ? `, ${d.altitude}m` : ''}) — ${d.description ? d.description.slice(0, 140) : 'no description'}`)
-        .join('\n')
-    : '  (none currently in the database — direct users to /destinations to populate)';
+// ── Per-IP rate limit — max 8 requests per 60 s ───────────────────────────
+const _ipBuckets = new Map();
+const isRateLimited = (ip) => {
+  const now = Date.now();
+  const bucket = _ipBuckets.get(ip) || { count: 0, resetAt: now + 60_000 };
+  if (now > bucket.resetAt) { bucket.count = 0; bucket.resetAt = now + 60_000; }
+  bucket.count += 1;
+  _ipBuckets.set(ip, bucket);
+  return bucket.count > 8;
+};
 
-  return `You are the **Yaatri AI Guide** — a warm, knowledgeable Nepal travel concierge embedded in the Yaatri MERN platform. You are NOT a generic chatbot. You are a real travel buddy who has done every classic Nepal trek, knows the regions, seasons, food, and culture, and helps users plan honest trips.
+const ALLOWED_REDIRECTS = ['/destinations','/explore','/blog','/support','/login','/register','/dashboard','/contact'];
 
-# Persona & Tone
-- Speak naturally and warmly, like a friend who happens to be a guide. Avoid corporate filler ("As an AI…", "I'd be happy to help…").
-- 2–4 sentences is the sweet spot. For complex itinerary questions, up to ~6 short sentences. Never one-liners that just punt to a route.
-- Light Nepali words are welcome when they fit (Namaste, dai/didi, dal bhat, paani, jhola) — never forced.
-- Never end with filler like "How can I help further?". End with substance.
-- If the user asks something unrelated to Nepal travel, gently steer back: "I'm built for Nepal travel — want me to help plan a trip instead?"
+const buildSystemPrompt = (destinations) => {
+  const destList = destinations.length
+    ? destinations.map(d =>
+        `  - _id="${d._id}" ${d.name} (${d.region}, ${d.terrainType || 'Hill'}${d.altitude ? `, ${d.altitude}m` : ''})`
+      ).join('\n')
+    : '  (no destinations yet)';
 
-# Real Nepal Knowledge (use freely, accurately)
+  return `You are Yaatri AI — a warm Nepal travel buddy embedded in the Yaatri booking platform. You know Nepal deeply: treks (EBC 12-14d, ABC 7-10d, Annapurna Circuit 12-20d, Langtang 7-10d, Mustang restricted $500 permit, Manaslu restricted, Rara Lake, Poon Hill 4-5d), seasons (pre-monsoon Mar-May, monsoon Jun-Sep avoid except Mustang/Dolpo, post-monsoon Sep-Nov peak, winter Dec-Feb quiet), AMS safety (max 500m gain/night above 3000m), costs (budget NPR 3000/day, mid 5000-7000, porter 2000-3000/day), food (dal bhat, momos, sel roti), festivals (Dashain Sep-Oct, Tihar Oct-Nov, Holi Mar).
 
-## Geography (south → north, 3 belts)
-- **Terai** (60–300m, hot/humid lowlands): Chitwan National Park, Bardiya, Lumbini (Buddha's birthplace). Wildlife safaris, Buddhist heritage.
-- **Hill region** (300–3,000m, temperate): Kathmandu Valley, Pokhara, Bandipur, Tansen, Ilam (tea country), Ghandruk. Bulk of population, Newar/Gurung/Magar/Tamang culture.
-- **Himalayan region** (3,000m+, alpine→arctic): Khumbu (Everest), Annapurna, Manaslu, Langtang, Mustang, Dolpo. Rugged, Sherpa/Tibetan culture, high-altitude trekking.
+Platform: Yaatri booking — base rate NPR 2500/person/day + 4% state tax + 12% GST. Add-ons: guide 1500/day, premium lodging 2000/night, transport 800, meals 600. Heart icon = save to favourites. Invoice emailed after booking. Cancel: dashboard → Trips.
 
-## Classic Trekking Circuits — realistic logistics
-- **Everest Base Camp (EBC)**: 12–14 days. Peak Mar–May and Sep–Nov. Max altitude 5,545m at Kala Patthar. Starts with the Lukla flight (one of the world's most dramatic). Requires Sagarmatha National Park + Khumbu Pasang Lhamu permits. Tea houses throughout. Full guided cost ~NPR 90,000–150,000.
-- **Annapurna Base Camp (ABC)**: 7–10 days. Easier than EBC. Max 4,130m. Based out of Pokhara. ACAP + TIMS permits.
-- **Annapurna Circuit**: 12–20 days. Crosses Thorong La (5,416m). Best Oct–Nov. Partial circuits popular now due to road access.
-- **Langtang Valley**: 7–10 days. Closest to Kathmandu. Devastated by 2015 earthquake but fully rebuilt. Kyanjin Gompa (3,870m) is the highlight.
-- **Upper Mustang**: 10–12 days. RESTRICTED area — USD 500 permit (10 days), then USD 50/day extra. Tibetan-Buddhist culture, Lo Manthang the walled capital. Rain-shadow: trekkable in monsoon.
-- **Manaslu Circuit**: 14–18 days. RESTRICTED — USD 100/week. Less crowded than Annapurna. Larkya La pass (5,106m).
-- **Dolpo / Shey Phoksundo**: 14–21 days. RESTRICTED — USD 500/10 days. Most remote, true wilderness, Bon religion. Phoksundo lake is famously turquoise.
-- **Rara Lake**: 8–10 days. Mugu district, far west. Largest lake in Nepal (167m deep). Quietest of the classics.
-- **Mardi Himal / Ghorepani Poon Hill**: 4–5 days. Short, beautiful, great for first-timers or winter.
+Tone: warm, direct, 2-4 sentences. No "As an AI" or "I'd be happy to". No filler endings. Steer off-topic questions back to Nepal travel.
 
-## Seasons (critical Nepal advice)
-- **Pre-monsoon (Mar–May)**: clear mornings, blooming rhododendrons, ideal for high-altitude. Days warm, nights cold.
-- **Monsoon (Jun – mid Sep)**: leeches, landslides, cloudy peaks. AVOID trekking — except Upper Mustang and Dolpo (rain-shadow, perfect).
-- **Post-monsoon (Sep–Nov)**: PEAK trekking season. Clearest skies, busiest trails, book lodges ahead.
-- **Winter (Dec–Feb)**: cold but stable, fewer crowds, high passes may close. Lower-elevation treks shine.
+Live destinations (recommend by _id):
+${destList}
 
-## Altitude & Safety
-- **AMS (acute mountain sickness)** is real. Rule of thumb: above 3,000m, no more than 500m elevation gain per sleeping night. Diamox (acetazolamide) is common.
-- Tea houses are bunk-style and basic — bring a sleeping bag rated to −10°C for anything above 4,000m.
-- Tipping guides/porters: ~10–15% of trek cost.
+redirectTo: ONLY set when user explicitly says "take me to", "go to", "open [page]". Informational questions always get null.
+Allowed: /destinations /blog /support /login /register /dashboard /contact /explore (never redirect to /explore)
 
-## Food & Culture
-- **Dal bhat** (lentils + rice + curry, unlimited refills) is the trekker staple — "Dal bhat power, 24 hour" is a real slogan.
-- **Sel roti** (rice donut) for festivals, **Newari khaja set** for snacks, **momos** (steamed dumplings).
-- Major festivals: **Dashain** (Sep–Oct, biggest), **Tihar** (Oct–Nov, festival of lights), **Holi** (Mar), **Buddha Jayanti** (May), **Indra Jatra** (Sep, Kathmandu).
-
-## Realistic 2026 Costs (NPR)
-- Budget guide: 3,000/day. Mid-tier: 5,000–7,000/day. Premium: 10,000+/day.
-- Porter: 2,000–3,000/day (carries up to 25 kg).
-- Tea house room at altitude: 500–1,500/night. Meals: 600–1,200 each.
-- Domestic flights (KTM↔Lukla, KTM↔Pokhara): 12,000–20,000.
-- TIMS card: 2,000. ACAP/Sagarmatha entry: 3,000 each.
-
-# Destinations currently on the Yaatri platform (recommend these by _id)
-${liveDestinations}
-
-# Yaatri Platform Routes (for redirectTo)
-**Default is ALWAYS null.** Only set redirectTo when the user uses explicit navigation language: "take me to", "go to", "open", "show me the [page name] page", "navigate to". Informational questions — even if they touch a topic a page covers — get null and a real answer.
-
-BAD (do NOT redirect):
-- "where can I book?" → answer conversationally, redirectTo: null
-- "show me some treks" → list treks in reply, redirectTo: null
-- "how do I cancel?" → explain steps, redirectTo: null
-- "I want to explore destinations" → describe a few, redirectTo: null
-
-GOOD (redirect is justified):
-- "take me to the destinations page" → redirectTo: "/destinations"
-- "go to login" → redirectTo: "/login"
-- "open my dashboard" → redirectTo: "/dashboard"
-
-Routes:
-- "/destinations" — browse all destinations (also has a map view toggle)
-- "/blog" — community travel journals
-- "/support" — file a support ticket or complaint
-- "/login" — sign in
-- "/register" — create an account
-- "/dashboard" — their bookings, favourites, profile
-- "/contact" — office contact info
-- "/explore" — they are ALREADY here if they're talking to you in the full-page chat; never redirect to it
-- null — substantive conversational answer (the DEFAULT for almost every message)
-
-# Yaatri platform features you can mention
-- 4% State Tax + 12% GST on bookings. Default base rate NPR 2,500/traveller/day.
-- Add-ons available at booking: guide (1,500/day), premium-lodging (2,000/night), transport (800), meals (600).
-- Heart icon on every destination card → saves to favourites (visible on /dashboard).
-- After booking, an invoice email is sent automatically.
-- Cancellation: dashboard → Trips → "Cancel booking" on pending/confirmed trips.
-
-# Output Format (STRICT — single JSON object, no markdown fences)
-{
-  "reply": "<your natural conversational response, 2–6 sentences>",
-  "redirectTo": "<one allowed path or null>",
-  "suggestedDestinations": ["<_id>", "<_id>"]
-}
-
-- "suggestedDestinations" is 0–3 _ids from the live list above. Empty array is fine when no destination is relevant.
-- Recommend destinations whenever they fit the user's intent, even if you don't redirect (e.g., the user asks "where should I trek for first time?" → mention Ghandruk in reply + put its _id in suggestedDestinations + redirectTo: "/destinations").`;
+Output ONLY valid JSON (no markdown):
+{"reply":"...","redirectTo":null,"suggestedDestinations":["_id1"]}
+suggestedDestinations: 0-3 _ids from the live list above.`;
 };
 
 const sanitizeHistory = (raw) => {
   if (!Array.isArray(raw)) return [];
   const cleaned = raw
-    .filter((m) => m && typeof m === 'object' && (m.role === 'user' || m.role === 'model') && Array.isArray(m.parts))
-    .slice(-12) // keep the last ~6 turns to bound prompt size
-    .map((m) => ({
+    .filter(m => m && (m.role === 'user' || m.role === 'model') && Array.isArray(m.parts))
+    .slice(-6) // last 3 turns only — keeps tokens low
+    .map(m => ({
       role: m.role,
-      parts: m.parts.filter((p) => p && typeof p.text === 'string').map((p) => ({ text: String(p.text).slice(0, 2000) })),
+      parts: m.parts.filter(p => typeof p.text === 'string').map(p => ({ text: p.text.slice(0, 800) })),
     }))
-    .filter((m) => m.parts.length > 0);
+    .filter(m => m.parts.length > 0);
 
-  // Gemini's startChat() requires the first history entry to be from 'user'.
-  // The frontend's welcome greeting is a 'model' message with no preceding user
-  // turn, so we drop any leading 'model' entries to satisfy the API.
-  while (cleaned.length > 0 && cleaned[0].role !== 'user') {
-    cleaned.shift();
-  }
+  while (cleaned.length > 0 && cleaned[0].role !== 'user') cleaned.shift();
 
-  // Gemini also requires strict alternation (user/model/user/model). Collapse any
-  // consecutive same-role entries by keeping the most recent one in each run.
   const alternating = [];
   for (const entry of cleaned) {
-    if (alternating.length === 0 || alternating[alternating.length - 1].role !== entry.role) {
+    if (!alternating.length || alternating[alternating.length - 1].role !== entry.role) {
       alternating.push(entry);
     } else {
-      // Replace the previous same-role entry with the newer one (preserves context).
       alternating[alternating.length - 1] = entry;
     }
   }
-
   return alternating;
 };
 
 router.post('/chat', async (req, res) => {
   const { query, history } = req.body || {};
 
-  const safeFallback = (reason) => ({
-    reply: `Namaste! I'm having a moment connecting to my brain — but I'm still here. Ask me about specific treks (EBC, ABC, Mustang), seasons, or which destination on Yaatri fits your style.`,
-    redirectTo: null,
-    suggestedDestinations: [],
-    _fallback: reason || undefined,
-  });
+  // Rate limit
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || 'unknown';
+  if (isRateLimited(clientIp)) {
+    return res.status(429).json({
+      reply: "You're sending messages too fast — give me a moment to breathe! Try again in about a minute.",
+      redirectTo: null,
+      suggestedDestinations: [],
+    });
+  }
+
+  if (!query || !String(query).trim()) {
+    return res.json({ reply: "What's on your mind? Ask me about a trek, a season, or where to go in Nepal.", redirectTo: null, suggestedDestinations: [] });
+  }
 
   try {
-    if (!query || !String(query).trim()) {
-      return res.json({ reply: "What's on your mind? Ask me about a destination, a trek, or anything Nepal-travel-related.", redirectTo: null, suggestedDestinations: [] });
-    }
-
-    // 1. Fetch the live destination catalogue so the model recommends real records by _id.
-    const destinations = await Destination.find()
-      .select('_id name region terrainType altitude description latitude longitude')
-      .lean();
-
-    const systemPrompt = buildSystemPrompt(destinations);
-
-    // 2. Use new @google/genai SDK — supports AQ. key format from AI Studio.
+    const destinations = await getDestinations();
     const chatHistory = sanitizeHistory(history);
+
     const chat = ai.chats.create({
       model: 'gemini-2.0-flash',
       history: chatHistory,
       config: {
-        systemInstruction: systemPrompt,
+        systemInstruction: buildSystemPrompt(destinations),
         responseMimeType: 'application/json',
-        temperature: 0.75,
-        topP: 0.92,
-        maxOutputTokens: 1024,
+        temperature: 0.7,
+        maxOutputTokens: 512,
       },
     });
 
-    const result = await chat.sendMessage({ message: String(query).slice(0, 4000) });
+    const result = await chat.sendMessage({ message: String(query).slice(0, 2000) });
     const responseText = result.text;
 
-    // 3. Safe JSON parse with fallback.
     let parsed;
     try {
       parsed = JSON.parse(responseText);
-    } catch (parseErr) {
-      console.warn('[ai] non-JSON response — using fallback:', parseErr.message, '— raw:', String(responseText).slice(0, 200));
-      return res.json(safeFallback('invalid_json_from_model'));
+    } catch {
+      // Model returned non-JSON — extract reply text if possible
+      return res.json({
+        reply: responseText.slice(0, 300) || "I got confused there — could you rephrase?",
+        redirectTo: null,
+        suggestedDestinations: [],
+      });
     }
 
-    // 4. Sanitize redirect target.
-    const redirectTo =
-      typeof parsed.redirectTo === 'string' && ALLOWED_REDIRECTS.includes(parsed.redirectTo)
-        ? parsed.redirectTo
-        : null;
+    const redirectTo = typeof parsed.redirectTo === 'string' && ALLOWED_REDIRECTS.includes(parsed.redirectTo)
+      ? parsed.redirectTo : null;
 
-    // 5. Resolve suggestedDestinations: prefer explicit _ids from the model, fall back to none.
-    const idIndex = new Map(destinations.map((d) => [String(d._id), d]));
-    const explicitIds = Array.isArray(parsed.suggestedDestinations) ? parsed.suggestedDestinations : [];
-    const suggestedDestinations = explicitIds
-      .map((id) => idIndex.get(String(id)))
-      .filter(Boolean)
-      .slice(0, 3);
+    const idIndex = new Map(destinations.map(d => [String(d._id), d]));
+    const suggestedDestinations = (Array.isArray(parsed.suggestedDestinations) ? parsed.suggestedDestinations : [])
+      .map(id => idIndex.get(String(id))).filter(Boolean).slice(0, 3);
 
     const reply = typeof parsed.reply === 'string' && parsed.reply.trim()
       ? parsed.reply.trim()
-      : "I'm here to help — ask me about treks, seasons, or which Yaatri destination fits your style.";
+      : "Ask me about treks, seasons, or which destination fits your style.";
 
     res.json({ reply, redirectTo, suggestedDestinations });
+
   } catch (error) {
-    console.error('[ai] generation error:', error?.message || error);
-    res.json(safeFallback('model_or_network_error'));
+    const msg = error?.message || '';
+    const isQuota = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
+    const isKey   = msg.includes('API_KEY') || msg.includes('401') || msg.includes('403');
+
+    if (isQuota) {
+      return res.status(429).json({
+        reply: "The guide is taking a breather — free tier limit reached. Try again in a minute.",
+        redirectTo: null,
+        suggestedDestinations: [],
+      });
+    }
+    if (isKey) {
+      console.error('[ai] API key error — check GEMINI_API_KEY env var');
+      return res.json({
+        reply: "I'm having trouble connecting right now. Please try again shortly.",
+        redirectTo: null,
+        suggestedDestinations: [],
+      });
+    }
+    console.error('[ai] error:', msg.slice(0, 200));
+    res.json({
+      reply: "Something went wrong on my end. Try again in a moment.",
+      redirectTo: null,
+      suggestedDestinations: [],
+    });
   }
 });
 

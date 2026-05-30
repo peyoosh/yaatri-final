@@ -89,46 +89,30 @@ const AIChatbox = () => {
 
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
+      const status = error.response?.status;
+      const serverMsg = error.response?.data?.reply;
       const isNetwork = !error.response && (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED' || error.message === 'Network Error');
-      const isTimeout = error.code === 'ECONNABORTED';
 
-      if (isNetwork) {
-        // Render free tier cold-starts take ~30s — show a friendly waiting message then auto-retry once
-        const waitMsg = {
-          id: Date.now() + 1,
-          type: 'bot',
-          text: "The guide is waking up from sleep — this takes about 30 seconds on the free server. Retrying automatically...",
-          timestamp: new Date(),
-          suggestedDestinations: [],
-        };
+      if (status === 429 && serverMsg) {
+        // Quota or rate-limit — server already has a friendly message
+        setMessages(prev => [...prev, { id: Date.now() + 1, type: 'bot', text: serverMsg, timestamp: new Date(), suggestedDestinations: [] }]);
+      } else if (isNetwork) {
+        const waitMsg = { id: Date.now() + 1, type: 'bot', text: "The guide is waking up from sleep — retrying in 15 seconds...", timestamp: new Date(), suggestedDestinations: [] };
         setMessages(prev => [...prev, waitMsg]);
         setIsLoading(true);
-        await new Promise(r => setTimeout(r, 12000));
+        await new Promise(r => setTimeout(r, 15000));
         try {
-          const history = messages.slice(-12).map((m) => ({
-            role: m.type === 'user' ? 'user' : 'model',
-            parts: [{ text: String(m.text || '').slice(0, 2000) }],
-          }));
-          const retry = await api.post('/ai/chat', { query: userInput || userMessage.text, history }, { timeout: 60_000 });
+          const history = messages.slice(-6).map(m => ({ role: m.type === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, 800) }] }));
+          const retry = await api.post('/ai/chat', { query: userMessage.text, history }, { timeout: 60_000 });
           const { reply, redirectTo, suggestedDestinations } = retry.data || {};
-          setMessages(prev => [
-            ...prev.filter(m => m.id !== waitMsg.id),
-            { id: Date.now() + 2, type: 'bot', text: reply, timestamp: new Date(), suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }
-          ]);
+          setMessages(prev => [...prev.filter(m => m.id !== waitMsg.id), { id: Date.now() + 2, type: 'bot', text: reply, timestamp: new Date(), suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }]);
           return;
         } catch {
-          setMessages(prev => prev.map(m => m.id === waitMsg.id
-            ? { ...m, text: "Still waking up — please try again in a moment." }
-            : m
-          ));
+          setMessages(prev => prev.map(m => m.id === waitMsg.id ? { ...m, text: "Still waking up — please try again in a moment." } : m));
         }
       } else {
-        const text = isTimeout
-          ? "That took too long to respond. Try a shorter question, or try again."
-          : "Something went wrong on my end. Please try again.";
-        setMessages(prev => [...prev, {
-          id: Date.now() + 1, type: 'bot', text, timestamp: new Date(), suggestedDestinations: []
-        }]);
+        const text = error.code === 'ECONNABORTED' ? "That took too long. Try a shorter question." : "Something went wrong. Please try again.";
+        setMessages(prev => [...prev, { id: Date.now() + 1, type: 'bot', text, timestamp: new Date(), suggestedDestinations: [] }]);
       }
     } finally {
       setIsLoading(false);

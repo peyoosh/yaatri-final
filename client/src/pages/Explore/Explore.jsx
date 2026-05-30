@@ -81,47 +81,27 @@ const Explore = () => {
       };
       setMessages(prev => [...prev, botMsg]);
     } catch (err) {
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.reply;
       const isNetwork = !err.response && (err.code === 'ERR_NETWORK' || err.code === 'ERR_CONNECTION_REFUSED' || err.message === 'Network Error');
-      const isTimeout = err.code === 'ECONNABORTED';
 
-      if (isNetwork) {
+      if (status === 429 && serverMsg) {
+        setMessages(prev => [...prev, { id: Date.now() + 2, type: 'bot', text: serverMsg, timestamp: new Date(), suggestedDestinations: [] }]);
+      } else if (isNetwork) {
         const waitId = Date.now() + 2;
-        setMessages(prev => [...prev, {
-          id: waitId,
-          type: 'bot',
-          text: "The guide is waking up from sleep — this takes about 30 seconds on the free server. Retrying automatically...",
-          timestamp: new Date(),
-          suggestedDestinations: [],
-        }]);
+        setMessages(prev => [...prev, { id: waitId, type: 'bot', text: "The guide is waking up from sleep — retrying in 15 seconds...", timestamp: new Date(), suggestedDestinations: [] }]);
         setIsLoading(true);
-        await new Promise(r => setTimeout(r, 12000));
+        await new Promise(r => setTimeout(r, 15000));
         try {
-          const retryHistory = [...messages, userMsg].slice(-12).map(m => ({
-            role: m.type === 'user' ? 'user' : 'model',
-            parts: [{ text: String(m.text || '').slice(0, 2000) }],
-          })).slice(0, -1);
+          const retryHistory = [...messages, userMsg].slice(-6).map(m => ({ role: m.type === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, 800) }] })).slice(0, -1);
           const { data } = await api.post('/ai/chat', { query: userMsg.text, history: retryHistory }, { timeout: 60_000 });
           const { reply, redirectTo, suggestedDestinations } = data || {};
-          setMessages(prev => [
-            ...prev.filter(m => m.id !== waitId),
-            { id: Date.now() + 3, type: 'bot', text: reply, timestamp: new Date(), suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null },
-          ]);
+          setMessages(prev => [...prev.filter(m => m.id !== waitId), { id: Date.now() + 3, type: 'bot', text: reply, timestamp: new Date(), suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }]);
         } catch {
-          setMessages(prev => prev.map(m => m.id === waitId
-            ? { ...m, text: "Still waking up — please try again in a moment." }
-            : m
-          ));
+          setMessages(prev => prev.map(m => m.id === waitId ? { ...m, text: "Still waking up — please try again." } : m));
         }
       } else {
-        setMessages(prev => [...prev, {
-          id: Date.now() + 2,
-          type: 'bot',
-          text: isTimeout
-            ? "That took too long. Try a shorter question or try again."
-            : "Something went wrong on my end. Please try again.",
-          timestamp: new Date(),
-          suggestedDestinations: [],
-        }]);
+        setMessages(prev => [...prev, { id: Date.now() + 2, type: 'bot', text: err.code === 'ECONNABORTED' ? "That took too long. Try a shorter question." : "Something went wrong. Please try again.", timestamp: new Date(), suggestedDestinations: [] }]);
       }
     } finally {
       setIsLoading(false);
