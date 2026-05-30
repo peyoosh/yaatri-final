@@ -1,5 +1,7 @@
 services:
   # ── Backend API (Node/Express) ─────────────────────────────────────────────
+  # Frontend static site (yaatri-final) is managed directly in the Render
+  # dashboard and intentionally excluded here to avoid Blueprint conflicts.
   - type: web
     name: yaatri-backend
     env: node
@@ -34,11 +36,3 @@ services:
         sync: false
       - key: SUPPORT_INBOX
         sync: false
-
-  # ── Frontend static site (React/Vite) ─────────────────────────────────────
-  - type: web
-    name: yaatri-final
-    env: static
-    rootDir: client
-    buildCommand: npm run build
-    staticPublishPath: dist
