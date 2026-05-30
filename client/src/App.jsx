@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+};
 import Home from './pages/Home/Home';
 import Blog from './pages/Blog/Blog';
 import DestinationDetail from './pages/Destinations/DestinationDetail';
@@ -62,6 +68,7 @@ const App = () => {
 
   return (
     <div className={`${isManagementView ? "management-shell" : "app-shell"} font-global`}>
+      <ScrollToTop />
       {!isManagementView && (
         <Navbar loggedInUser={loggedInUser} handleLogout={handleLogout} />
       )}

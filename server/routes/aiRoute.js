@@ -181,7 +181,7 @@ router.post('/chat', async (req, res) => {
 
     // 2. Use startChat for true multi-turn context. systemInstruction stays fixed; history rotates.
     const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
+      model: 'gemini-2.0-flash',
       systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
       generationConfig: {
         responseMimeType: 'application/json',

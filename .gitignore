@@ -17,3 +17,6 @@ Thumbs.db
 # Scratch
 Untitled*.txt
 *.scratch.*
+
+# Local deploy helper — reads .env, never commit
+render-deploy.ps1
