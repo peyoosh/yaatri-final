@@ -1,6 +1,7 @@
 services:
+  # ── Backend API (Node/Express) ─────────────────────────────────────────────
   - type: web
-    name: yaatri-final
+    name: yaatri-backend
     env: node
     region: oregon
     plan: free
@@ -11,6 +12,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: CLIENT_URL
+        value: https://yaatri-final.onrender.com
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
@@ -31,5 +34,11 @@ services:
         sync: false
       - key: SUPPORT_INBOX
         sync: false
-      - key: CLIENT_URL
-        value: https://yaatri-final.onrender.com
+
+  # ── Frontend static site (React/Vite) ─────────────────────────────────────
+  - type: web
+    name: yaatri-final
+    env: static
+    rootDir: client
+    buildCommand: npm run build
+    staticPublishPath: dist
