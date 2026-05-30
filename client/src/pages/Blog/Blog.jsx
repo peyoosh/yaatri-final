@@ -88,12 +88,40 @@ const Blog = ({ onSeeBlog }) => {
   };
 
   const handleLike = async (id) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    // Optimistic toggle
+    setPosts(prev => prev.map(p => {
+      if (p._id !== id) return p;
+      const alreadyLiked = (p.likedBy || []).some(uid => uid === user._id || uid?._id === user._id);
+      return {
+        ...p,
+        likeCount: alreadyLiked ? Math.max(0, (p.likeCount || 1) - 1) : (p.likeCount || 0) + 1,
+        likedBy: alreadyLiked
+          ? (p.likedBy || []).filter(uid => uid !== user._id && uid?._id !== user._id)
+          : [...(p.likedBy || []), user._id],
+      };
+    }));
     try {
       const { data } = await api.patch(`/blogs/${id}/like`);
-      setPosts(prev => prev.map(p => p._id === id ? { ...p, likeCount: data?.likeCount ?? (p.likeCount || 0) + 1 } : p));
+      // Reconcile with authoritative server count
+      setPosts(prev => prev.map(p => p._id === id ? { ...p, likeCount: data.likeCount } : p));
     } catch (e) {
-      console.warn("Liking requires backend support", e);
-      setPosts(prev => prev.map(p => p._id === id ? { ...p, likeCount: (p.likeCount || 0) + 1 } : p));
+      // Roll back optimistic update on failure
+      setPosts(prev => prev.map(p => {
+        if (p._id !== id) return p;
+        const wasLiked = !(p.likedBy || []).some(uid => uid === user._id || uid?._id === user._id);
+        return {
+          ...p,
+          likeCount: wasLiked ? Math.max(0, (p.likeCount || 1) - 1) : (p.likeCount || 0) + 1,
+          likedBy: wasLiked
+            ? (p.likedBy || []).filter(uid => uid !== user._id && uid?._id !== user._id)
+            : [...(p.likedBy || []), user._id],
+        };
+      }));
+      if (e.response?.status === 401) navigate('/login');
     }
   };
 
@@ -394,7 +422,11 @@ const Blog = ({ onSeeBlog }) => {
                         }}
                         className="flex items-center gap-1.5 text-himalayan-mist hover:text-toxic-lime transition-colors"
                       >
-                        <Heart size={22} className={post.likeCount > 0 ? "fill-red-500 text-red-500" : ""} />
+                        <Heart size={22} className={
+                          user && (post.likedBy || []).some(uid => uid === user._id || uid?._id === user._id)
+                            ? "fill-red-500 text-red-500"
+                            : ""
+                        } />
                         <span className="font-semibold text-sm">{post.likeCount || 0}</span>
                       </button>
                       <button className="flex items-center gap-1.5 text-himalayan-mist hover:text-hill-green transition-colors">

@@ -143,16 +143,25 @@ router.patch('/:id/report', protect, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-// PATCH: Like a blog
+// PATCH: Toggle like — one like per user, toggles on/off
 router.patch('/:id/like', protect, async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
 
-    blog.likeCount += 1;
+    const userId = req.user._id;
+    const alreadyLiked = blog.likedBy.some(id => id.equals(userId));
+
+    if (alreadyLiked) {
+      blog.likedBy.pull(userId);
+      blog.likeCount = Math.max(0, blog.likeCount - 1);
+    } else {
+      blog.likedBy.addToSet(userId);
+      blog.likeCount += 1;
+    }
+
     await blog.save();
-    
-    res.json({ success: true, likeCount: blog.likeCount });
+    res.json({ success: true, likeCount: blog.likeCount, liked: !alreadyLiked });
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
