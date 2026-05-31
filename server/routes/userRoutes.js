@@ -338,6 +338,23 @@ router.get('/:id/role-stats', protect, async (req, res) => {
 // GET /api/users/:id/reviews — Public list of trip reviews involving this user as a
 // vendor (guide or hotel-owner). Joins through the Booking collection. Used by the
 // guide and hotel profile sidebars to surface "what travelers say".
+// GET /api/users/:id/bookings — public booking history for a user's profile page
+// Returns only the destination name, dates, status, duration — no pricing details
+router.get('/:id/bookings', async (req, res) => {
+  try {
+    const Booking = require('../models/Booking');
+    const bookings = await Booking.find({ user: req.params.id })
+      .select('destination travelers durationDays startDate status pricing.totalCost')
+      .populate('destination', 'name region')
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id/reviews', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('role');

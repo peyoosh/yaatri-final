@@ -369,7 +369,8 @@ router.get('/me', protect, async (req, res) => {
     await sweepCompletedBookings(); // ensure any newly-elapsed trips flip before the user sees their list
     const list = await Booking.find({ user: req.user._id })
       .populate('destination', 'name region imageURL')
-      .populate('assignedGuide', 'username profileData.experience')
+      .populate('assignedGuide', 'guideName dailyFee userId')
+      .populate('assignedHotel', 'name basePrice userId')
       .sort({ createdAt: -1 })
       .lean();
     res.json(list);

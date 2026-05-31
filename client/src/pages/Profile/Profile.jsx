@@ -38,6 +38,8 @@ const Profile = () => {
   const fileInputRef = useRef(null);
 
   const [profileUser, setProfileUser] = useState(null);
+  const [guideRecord, setGuideRecord] = useState(null);   // Guide collection doc
+  const [hotelRecord, setHotelRecord] = useState(null);   // Hotel collection doc
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -57,6 +59,20 @@ const Profile = () => {
           role: normalizeRole(res.data.role),
           ...res.data.profileData,
         });
+        // Fetch role-specific collection record to show richer public data
+        const r = normalizeRole(res.data.role);
+        if (r === 'guide') {
+          api.get('/guides').then(({ data }) => {
+            const match = data.find(g => String(g.userId?._id || g.userId) === String(res.data._id));
+            if (match) setGuideRecord(match);
+          }).catch(() => {});
+        }
+        if (r === 'hotel') {
+          api.get('/hotels').then(({ data }) => {
+            const match = data.find(h => String(h.userId?._id || h.userId) === String(res.data._id));
+            if (match) setHotelRecord(match);
+          }).catch(() => {});
+        }
       } catch (err) {
         console.error('Failed to fetch user profile', err);
       } finally {
@@ -314,6 +330,7 @@ const Profile = () => {
             {role === 'guide' && (
               <GuidePanel
                 user={profileUser}
+                guideRecord={guideRecord}
                 editing={isOwnProfile && editing}
                 draft={draft}
                 setDraft={setDraft}
@@ -322,6 +339,7 @@ const Profile = () => {
             {role === 'hotel' && (
               <HotelPanel
                 user={profileUser}
+                hotelRecord={hotelRecord}
                 editing={isOwnProfile && editing}
                 draft={draft}
                 setDraft={setDraft}
@@ -509,51 +527,69 @@ const UserPanel = ({ user }) => {
 };
 
 const UserSidebar = ({ user }) => {
-  const upcoming = (user.tripHistory || []).slice(0, 4);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // /api/users/:id/bookings returns public booking history for any user
+    api.get(`/users/${user._id}/bookings`).then(({ data }) => {
+      setBookings(Array.isArray(data) ? data : []);
+    }).catch(() => setBookings([])).finally(() => setLoading(false));
+  }, [user._id]);
+
+  const upcoming = bookings.filter(b => ['pending','confirmed','escrow_held','approved'].includes(b.status));
+  const past = bookings.filter(b => ['completed','cancelled'].includes(b.status));
+
   return (
-    <Card title="Active Itinerary" icon={Compass}>
-      {upcoming.length === 0 ? (
-        <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No itineraries booked.</p>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {upcoming.map((t, i) => (
-            <li key={i} style={{ padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <p style={{ fontSize: '0.85rem', fontWeight: 700 }}>{t.dest || 'Destination TBD'}</p>
-              <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{t.date || '—'} · {t.status || 'planned'}</p>
-            </li>
-          ))}
-        </ul>
+    <>
+      <Card title="Active trips" icon={Compass}>
+        {loading ? <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>Loading…</p>
+        : upcoming.length === 0 ? <p style={{ opacity: 0.5, fontSize: '0.85rem' }}>No active trips.</p>
+        : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {upcoming.slice(0, 4).map(b => (
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700 }}>{b.destination?.name || 'Destination'}</p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{b.startDate ? new Date(b.startDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '—'} · {b.travelers}p · {b.status}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      {past.length > 0 && (
+        <Card title="Past trips" icon={Award} accent="#F4A261">
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {past.slice(0, 4).map(b => (
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>{b.destination?.name || 'Destination'}</p>
+                <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{b.durationDays}d · {b.status} · NPR {Number(b.pricing?.totalCost||0).toLocaleString('en-IN')}</p>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
-    </Card>
+    </>
   );
 };
 
 /* ----------  GUIDE  ---------- */
 
-const GuidePanel = ({ user, editing, draft, setDraft }) => {
+const GuidePanel = ({ user, guideRecord, editing, draft, setDraft }) => {
   const languages = (editing ? draft.languages : user.profileData?.languages) || [];
-  const rate = editing ? draft.ratePerDay : user.profileData?.ratePerDay;
+  const rate = guideRecord?.dailyFee || (editing ? draft.ratePerDay : user.profileData?.ratePerDay);
   const license = editing ? draft.licenseNumber : user.profileData?.licenseNumber;
+  const bio = guideRecord?.bio || user.bio;
+  const expertise = guideRecord?.expertise || [];
 
   return (
     <>
-      <Card title="Professional Telemetry" icon={Award}>
+      <Card title="Guide Profile" icon={Award}>
+        {bio && <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.6, marginBottom: '1rem' }}>{bio}</p>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
           {editing ? (
             <>
-              <TextInput
-                label="License No."
-                value={draft.licenseNumber}
-                onChange={(v) => setDraft({ ...draft, licenseNumber: v })}
-                placeholder="NTB-12345"
-              />
-              <TextInput
-                label="Rate / day (NPR)"
-                type="number"
-                value={draft.ratePerDay}
-                onChange={(v) => setDraft({ ...draft, ratePerDay: v })}
-                placeholder="5000"
-              />
+              <TextInput label="License No." value={draft.licenseNumber} onChange={(v) => setDraft({ ...draft, licenseNumber: v })} placeholder="NTB-12345" />
+              <TextInput label="Rate / day (NPR)" type="number" value={draft.ratePerDay} onChange={(v) => setDraft({ ...draft, ratePerDay: v })} placeholder="5000" />
             </>
           ) : (
             <>
@@ -561,16 +597,23 @@ const GuidePanel = ({ user, editing, draft, setDraft }) => {
               <Stat label="Rate / day" value={rate ? `NPR ${Number(rate).toLocaleString()}` : '—'} icon={Banknote} />
             </>
           )}
-          <Stat label="Verification" value={user.profileData?.isVerified ? 'Verified ✓' : 'Pending'} accent={user.profileData?.isVerified ? '#A2D729' : '#F4A261'} />
+          <Stat label="Tours completed" value={guideRecord?.completedTours ?? '—'} icon={Compass} />
+          <Stat label="Rating" value={guideRecord?.rating > 0 ? `${guideRecord.rating} ★` : 'New'} accent="#A2D729" />
+          <Stat label="Verified" value={(guideRecord?.isVerified || user.profileData?.isVerified) ? 'Yes ✓' : 'Pending'} accent={(guideRecord?.isVerified || user.profileData?.isVerified) ? '#A2D729' : '#F4A261'} />
           <Stat label="Member since" value={new Date(user.joinDate || Date.now()).getFullYear()} />
         </div>
+        {expertise.length > 0 && (
+          <div style={{ marginTop: '1rem' }}>
+            <p style={{ fontSize: '0.65rem', opacity: 0.55, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Expertise</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {expertise.map((e, i) => <span key={i} style={{ background: 'rgba(5,157,114,0.15)', color: '#A2D729', padding: '3px 10px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600 }}>{e}</span>)}
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card title="Languages" icon={Languages}>
-        <ChipList
-          items={languages}
-          editing={editing}
-          addLabel="Add a language (e.g. Nepali)"
+        <ChipList items={languages} editing={editing} addLabel="Add a language (e.g. Nepali)"
           onAdd={(v) => setDraft({ ...draft, languages: [...(draft.languages || []), v] })}
           onRemove={(i) => setDraft({ ...draft, languages: draft.languages.filter((_, idx) => idx !== i) })}
         />
@@ -671,7 +714,7 @@ const GuideSidebar = ({ user }) => {
 
 /* ----------  HOTEL  ---------- */
 
-const HotelPanel = ({ user, editing, draft, setDraft }) => {
+const HotelPanel = ({ user, hotelRecord, editing, draft, setDraft }) => {
   const presetAmenities = ['WiFi', 'AC', 'Breakfast included', 'Parking', 'Hot Water', 'Laundry'];
   const current = (editing ? draft.amenities : user.profileData?.amenities) || [];
 
@@ -691,28 +734,15 @@ const HotelPanel = ({ user, editing, draft, setDraft }) => {
       <Card title="Hotel Details" icon={Hotel}>
         {editing ? (
           <>
-            <TextInput
-              label="Hotel Name"
-              value={draft.hotelName}
-              onChange={(v) => setDraft({ ...draft, hotelName: v })}
-              placeholder="Mountain View Lodge"
-            />
-            <TextInput
-              label="Base Room Rate (NPR / night)"
-              type="number"
-              value={draft.baseRoomRate}
-              onChange={(v) => setDraft({ ...draft, baseRoomRate: v })}
-              placeholder="2500"
-            />
+            <TextInput label="Hotel Name" value={draft.hotelName} onChange={(v) => setDraft({ ...draft, hotelName: v })} placeholder="Mountain View Lodge" />
+            <TextInput label="Base Room Rate (NPR / night)" type="number" value={draft.baseRoomRate} onChange={(v) => setDraft({ ...draft, baseRoomRate: v })} placeholder="2500" />
           </>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-            <Stat label="Hotel Name" value={user.profileData?.hotelName || '—'} />
-            <Stat
-              label="Base Room Rate"
-              value={user.profileData?.baseRoomRate ? `NPR ${Number(user.profileData.baseRoomRate).toLocaleString()}` : '—'}
-              icon={Banknote}
-            />
+            <Stat label="Hotel Name" value={hotelRecord?.name || user.profileData?.hotelName || '—'} />
+            <Stat label="Base Rate / night" value={hotelRecord?.basePrice ? `NPR ${Number(hotelRecord.basePrice).toLocaleString()}` : user.profileData?.baseRoomRate ? `NPR ${Number(user.profileData.baseRoomRate).toLocaleString()}` : '—'} icon={Banknote} />
+            <Stat label="Total rooms" value={hotelRecord?.totalRooms ?? '—'} />
+            <Stat label="Available" value={hotelRecord ? `${(hotelRecord.totalRooms||0) - (hotelRecord.bookedRooms||0)} free` : '—'} accent={hotelRecord && (hotelRecord.totalRooms - hotelRecord.bookedRooms) > 0 ? '#A2D729' : '#ff6b6b'} />
           </div>
         )}
       </Card>

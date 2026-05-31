@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { motion } from 'framer-motion';
 import { Heart, Map, Bed, Compass, ChevronLeft, Mountain, Users, Wind, Camera, Calendar, Ticket, Star } from 'lucide-react';
@@ -529,21 +529,18 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Guides</h4>
                   {nodeToRender.assignedGuides && nodeToRender.assignedGuides.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {nodeToRender.assignedGuides.map(guide => {
-                        const avgRating = (Math.random() * (5.0 - 4.0) + 4.0).toFixed(1);
-                        const isHigh = avgRating >= 4.5;
-                        return (
-                        <div key={guide._id || guide.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {nodeToRender.assignedGuides.map(guide => (
+                        <div key={guide._id || guide.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
                           <div>
-                            <span style={{ fontWeight: 'bold', display: 'block', color: 'var(--himalayan-mist)' }}>{guide.username}</span>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{guide.profileData?.experience || 'Experienced Guide'}</span>
+                            <Link to={`/profile/${guide._id || guide.id}`} style={{ fontWeight: 'bold', display: 'block', color: '#A2D729', textDecoration: 'none' }}>
+                              {guide.username} ↗
+                            </Link>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{guide.profileData?.experience || 'Certified local guide'}</span>
                           </div>
-                          <div style={{ background: 'var(--obsidian)', color: isHigh ? '#A2D729' : 'var(--text-muted)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 'bold', border: `1px solid ${isHigh ? '#A2D729' : 'var(--border-light-3)'}` }}>
-                            ★ {avgRating} Avg
-                          </div>
+                          <span style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 700 }}>View profile</span>
                         </div>
-                      )})}
+                      ))}
                     </div>
                   ) : (
                     <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No guides assigned to this node.</p>
@@ -553,21 +550,18 @@ const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Hotels</h4>
                   {nodeToRender.assignedHotels && nodeToRender.assignedHotels.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {nodeToRender.assignedHotels.map(hotel => {
-                        const avgRating = (Math.random() * (5.0 - 3.5) + 3.5).toFixed(1);
-                        const isHigh = avgRating >= 4.5;
-                        return (
-                        <div key={hotel._id || hotel.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {nodeToRender.assignedHotels.map(hotel => (
+                        <div key={hotel._id || hotel.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
                           <div>
-                            <span style={{ fontWeight: 'bold', display: 'block', color: 'var(--himalayan-mist)' }}>{hotel.name}</span>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{hotel.features?.join(', ') || 'Premium Lodging'} - ${hotel.basePrice}/night</span>
+                            <Link to={`/profile/${hotel.userId?._id || hotel.userId || hotel._id}`} style={{ fontWeight: 'bold', display: 'block', color: '#A2D729', textDecoration: 'none' }}>
+                              {hotel.name} ↗
+                            </Link>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{hotel.features?.slice(0,2).join(', ') || 'Premium Lodging'} · NPR {hotel.basePrice?.toLocaleString() || '—'}/night</span>
                           </div>
-                          <div style={{ background: 'var(--obsidian)', color: isHigh ? '#A2D729' : 'var(--text-muted)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 'bold', border: `1px solid ${isHigh ? '#A2D729' : 'var(--border-light-3)'}` }}>
-                            ★ {avgRating} Avg
-                          </div>
+                          <span style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 700 }}>View profile</span>
                         </div>
-                      )})}
+                      ))}
                     </div>
                   ) : (
                     <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No hotels assigned to this node.</p>

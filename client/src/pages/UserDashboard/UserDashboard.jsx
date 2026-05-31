@@ -355,6 +355,21 @@ const BookingCard = ({ b, onCancel, cancelling, onReview }) => {
             NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}
           </span>
         </div>
+        {/* Guide / Hotel assigned — tap to view their profile */}
+        {(b.assignedGuide || b.assignedHotel) && (
+          <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {b.assignedGuide && (
+              <a href={`/profile/${b.assignedGuide.userId?._id || b.assignedGuide._id || b.assignedGuide}`} style={{ fontSize: '0.72rem', color: '#059D72', border: '1px solid rgba(5,157,114,0.35)', borderRadius: 99, padding: '2px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                👤 {b.assignedGuide.guideName || b.assignedGuide.username || 'Guide'} ↗
+              </a>
+            )}
+            {b.assignedHotel && (
+              <a href={`/profile/${b.assignedHotel.userId?._id || b.assignedHotel.userId || b.assignedHotel._id || b.assignedHotel}`} style={{ fontSize: '0.72rem', color: '#F4A261', border: '1px solid rgba(244,162,97,0.35)', borderRadius: 99, padding: '2px 10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                🏨 {b.assignedHotel.name || 'Hotel'} ↗
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Review display — if the traveler has rated this trip, show it here */}
         {hasReview && (
