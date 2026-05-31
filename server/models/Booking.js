@@ -6,7 +6,8 @@ const BookingSchema = new mongoose.Schema(
     destination: { type: mongoose.Schema.Types.ObjectId, ref: 'Destination', required: true },
     // Optional: a specific guide the traveller picked from the destination's assignedGuides list.
     // Populated only when the 'guide' add-on is selected AND the destination has guides linked.
-    assignedGuide: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    assignedGuide: { type: mongoose.Schema.Types.ObjectId, ref: 'Guide', default: null, index: true },
+    assignedHotel: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', default: null, index: true },
 
     travelers: { type: Number, required: true, min: 1 },
     durationDays: { type: Number, required: true, min: 1 },

@@ -72,7 +72,8 @@ router.post('/', protect, async (req, res) => {
       endDate,
       addOns = [],
       baseRate,
-      assignedGuideId, // optional — must be one of the destination's assignedGuides
+      assignedGuideId,  // optional — any active guide
+      assignedHotelId,  // optional — any active hotel
     } = req.body || {};
 
     if (!destination) return res.status(400).json({ message: 'destination is required' });
@@ -112,28 +113,40 @@ router.post('/', protect, async (req, res) => {
     const addOnRates = { guide: 1500, 'premium-lodging': 2000, transport: 800, meals: 600 };
     const addOnList = Array.isArray(addOns) ? addOns.filter(a => addOnRates[a]) : [];
 
-    // Validate the picked guide: must be in the destination's assignedGuides list.
-    // Only enforced when the 'guide' add-on is selected.
+    // Guide: accept any verified guide, use their published dailyFee
     let resolvedGuideId = null;
-    let effectiveGuideRate = addOnRates.guide; // default flat rate
+    let effectiveGuideRate = addOnRates.guide;
     if (addOnList.includes('guide') && assignedGuideId) {
-      const destAssignedIds = (dest.assignedGuides || []).map((g) => String(g));
-      if (!destAssignedIds.includes(String(assignedGuideId))) {
-        return res.status(400).json({ message: 'Selected guide is not assigned to this destination.' });
-      }
-      resolvedGuideId = assignedGuideId;
-      // Honour the guide's own ratePerDay if they've published one in their profile.
+      const Guide = require('../models/Guide');
       try {
-        const guideUser = await User.findById(assignedGuideId).select('profileData.ratePerDay role');
-        if (guideUser?.role === 'guide' && Number.isFinite(Number(guideUser.profileData?.ratePerDay)) && Number(guideUser.profileData.ratePerDay) > 0) {
-          effectiveGuideRate = Number(guideUser.profileData.ratePerDay);
+        const guide = await Guide.findById(assignedGuideId).select('dailyFee userId');
+        if (guide) {
+          resolvedGuideId = assignedGuideId;
+          if (Number.isFinite(Number(guide.dailyFee)) && Number(guide.dailyFee) > 0) {
+            effectiveGuideRate = Number(guide.dailyFee);
+          }
+        }
+      } catch (_) { /* fall back to flat rate */ }
+    }
+
+    // Hotel: resolve selected hotel for notifications / ledger
+    let resolvedHotelId = null;
+    let effectiveHotelRate = addOnRates['premium-lodging'];
+    if (addOnList.includes('premium-lodging') && assignedHotelId) {
+      try {
+        const hotel = await Hotel.findById(assignedHotelId).select('basePrice userId');
+        if (hotel) {
+          resolvedHotelId = assignedHotelId;
+          if (Number.isFinite(Number(hotel.basePrice)) && Number(hotel.basePrice) > 0) {
+            effectiveHotelRate = Number(hotel.basePrice);
+          }
         }
       } catch (_) { /* fall back to flat rate */ }
     }
 
     const addOnPerPersonPerDay = addOnList.reduce((sum, a) => {
-      // Substitute the resolved per-guide rate when the guide add-on is picked.
       if (a === 'guide') return sum + effectiveGuideRate;
+      if (a === 'premium-lodging') return sum + effectiveHotelRate;
       return sum + addOnRates[a];
     }, 0);
 
@@ -154,6 +167,7 @@ router.post('/', protect, async (req, res) => {
       user: req.user._id,
       destination,
       assignedGuide: resolvedGuideId,
+      assignedHotel: resolvedHotelId,
       travelers: t,
       durationDays: d,
       pricing: {

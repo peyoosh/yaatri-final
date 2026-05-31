@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
 import {
   Users, Calendar, MapPin, Loader, Check, X, CreditCard, ChevronLeft, ShieldCheck, Sparkles,
+  Star, Building2, UserCheck, ExternalLink, ChevronDown, ChevronUp,
 } from 'lucide-react';
 
 // Two-tier tax structure per the Yaatri invoicing spec.
@@ -34,7 +35,13 @@ const BookingPage = () => {
   const [travelers, setTravelers] = useState(2);
   const [durationDays, setDurationDays] = useState(5);
   const [addOns, setAddOns] = useState([]);
-  const [assignedGuideId, setAssignedGuideId] = useState(''); // empty = no specific guide picked
+  const [assignedGuideId, setAssignedGuideId] = useState('');
+  const [assignedHotelId, setAssignedHotelId] = useState('');
+
+  const [guides, setGuides] = useState([]);
+  const [hotels, setHotels] = useState([]);
+  const [showGuides, setShowGuides] = useState(false);
+  const [showHotels, setShowHotels] = useState(false);
 
   // Date picker — defaults to tomorrow so the user has a clear "starts on" expectation.
   // `min` on the input enforces no past dates client-side (server re-validates).
@@ -69,12 +76,18 @@ const BookingPage = () => {
       return;
     }
     let cancelled = false;
-    api.get(`/destinations/${id}`)
-      .then(({ data }) => { if (!cancelled) setDestination(data); })
-      .catch((err) => {
-        if (!cancelled) console.error('Failed to load destination', err);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    Promise.all([
+      api.get(`/destinations/${id}`),
+      api.get('/guides'),
+      api.get('/hotels'),
+    ]).then(([destRes, guidesRes, hotelsRes]) => {
+      if (cancelled) return;
+      setDestination(destRes.data);
+      setGuides(Array.isArray(guidesRes.data) ? guidesRes.data : []);
+      setHotels(Array.isArray(hotelsRes.data) ? hotelsRes.data : []);
+    }).catch((err) => {
+      if (!cancelled) console.error('Failed to load booking data', err);
+    }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [id, user, navigate]);
 
@@ -84,7 +97,11 @@ const BookingPage = () => {
     const t = Math.max(1, Number(travelers) || 1);
     const d = Math.max(1, Number(durationDays) || 1);
     const subtotal = baseRate * t * d;
+    const selectedGuide = guides.find(g => g._id === assignedGuideId);
+    const selectedHotel = hotels.find(h => h._id === assignedHotelId);
     const addOnPerPersonPerDay = addOns.reduce((sum, id) => {
+      if (id === 'guide') return sum + (selectedGuide?.dailyFee || 1500);
+      if (id === 'premium-lodging') return sum + (selectedHotel?.basePrice || 2000);
       const a = ADDONS.find(x => x.id === id);
       return sum + (a ? a.rate : 0);
     }, 0);
@@ -94,10 +111,18 @@ const BookingPage = () => {
     const gst = Math.round(beforeTax * GST_RATE);
     const totalCost = beforeTax + stateTax + gst;
     return { baseRate, subtotal, addOnTotal, beforeTax, stateTax, gst, totalCost };
-  }, [travelers, durationDays, addOns]);
+  }, [travelers, durationDays, addOns, assignedGuideId, assignedHotelId, guides, hotels]);
 
   const toggleAddon = (id) => {
-    setAddOns((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    const isOn = addOns.includes(id);
+    setAddOns((prev) => isOn ? prev.filter(x => x !== id) : [...prev, id]);
+    if (!isOn) {
+      if (id === 'guide') setShowGuides(true);
+      if (id === 'premium-lodging') setShowHotels(true);
+    } else {
+      if (id === 'guide') { setAssignedGuideId(''); setShowGuides(false); }
+      if (id === 'premium-lodging') { setAssignedHotelId(''); setShowHotels(false); }
+    }
   };
 
   const handleConfirm = async () => {
@@ -113,6 +138,7 @@ const BookingPage = () => {
         startDate, // server re-derives endDate from startDate + durationDays
         // Only send the guide id when the guide add-on is active AND a specific guide was picked.
         assignedGuideId: addOns.includes('guide') && assignedGuideId ? assignedGuideId : undefined,
+        assignedHotelId: addOns.includes('premium-lodging') && assignedHotelId ? assignedHotelId : undefined,
       });
       setConfirmed(data);
     } catch (err) {
@@ -272,71 +298,103 @@ const BookingPage = () => {
                 </div>
               </div>
 
-              {/* GUIDE PICKER — only shown when the 'guide' add-on is selected.
-                  Reads destination.assignedGuides (populated server-side with username + profileData).
-                  Honors guide.profileData.ratePerDay if published; server validates the pick. */}
+              {/* GUIDE PICKER */}
               {addOns.includes('guide') && (
-                <div style={{ marginTop: '1.25rem', padding: '1rem 1.1rem', background: 'rgba(162,215,41,0.06)', border: '1px solid rgba(162,215,41,0.25)', borderRadius: 8 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A2D729', marginBottom: 10, fontWeight: 700 }}>
-                    Pick your local guide
-                  </label>
-                  {(() => {
-                    const guides = Array.isArray(destination?.assignedGuides) ? destination.assignedGuides : [];
-                    if (guides.length === 0) {
-                      return (
-                        <p style={{ fontSize: '0.8rem', opacity: 0.65, lineHeight: 1.5 }}>
-                          No guides linked to <strong>{destination.name}</strong> yet. We'll assign one closer to your trip date — the flat NPR 1,500/day guide rate still applies.
-                        </p>
-                      );
-                    }
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {guides.map((g) => {
-                          const gid = String(g._id || g.id);
-                          const picked = assignedGuideId === gid;
-                          const rate = Number(g.profileData?.ratePerDay) > 0 ? Number(g.profileData.ratePerDay) : 1500;
-                          return (
-                            <button
-                              key={gid}
-                              type="button"
-                              onClick={() => setAssignedGuideId(picked ? '' : gid)}
-                              style={{
-                                background: picked ? 'rgba(162,215,41,0.18)' : 'rgba(0,0,0,0.3)',
-                                border: `1px solid ${picked ? '#A2D729' : 'rgba(255,255,255,0.08)'}`,
-                                color: 'white',
-                                padding: '0.7rem 0.9rem',
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                gap: 12,
-                              }}
-                            >
-                              <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 2 }}>
-                                  {picked && <span style={{ color: '#A2D729', marginRight: 6 }}>✓</span>}
-                                  {g.username || 'Guide'}
-                                </p>
-                                <p style={{ fontSize: '0.7rem', opacity: 0.65 }}>
-                                  {g.profileData?.experience || 'Certified local guide'}
-                                </p>
+                <div style={{ marginTop: '1.25rem', background: 'rgba(162,215,41,0.05)', border: '1px solid rgba(162,215,41,0.25)', borderRadius: 8, overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowGuides(v => !v)}
+                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.1rem', background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}
+                  >
+                    <span><UserCheck size={13} style={{ display: 'inline', marginRight: 6 }} />
+                      {assignedGuideId ? `Guide: ${guides.find(g => g._id === assignedGuideId)?.guideName || 'Selected'}` : 'Choose a guide'}
+                    </span>
+                    {showGuides ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                  {showGuides && (
+                    <div style={{ padding: '0 1rem 1rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {guides.length === 0 ? (
+                        <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>No guides available yet. We'll assign one closer to your trip.</p>
+                      ) : guides.map(g => {
+                        const picked = assignedGuideId === g._id;
+                        return (
+                          <div key={g._id} style={{ background: picked ? 'rgba(162,215,41,0.12)' : 'rgba(0,0,0,0.3)', border: `1px solid ${picked ? '#A2D729' : 'rgba(255,255,255,0.08)'}`, borderRadius: 8, padding: '0.75rem 0.9rem', display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <button type="button" onClick={() => setAssignedGuideId(picked ? '' : g._id)} style={{ flex: 1, background: 'none', border: 'none', color: 'white', textAlign: 'left', cursor: 'pointer', padding: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                  <p style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 2 }}>
+                                    {picked && <span style={{ color: '#A2D729', marginRight: 6 }}>✓</span>}
+                                    {g.guideName}
+                                    {g.isVerified && <span style={{ marginLeft: 6, fontSize: '0.65rem', background: 'rgba(162,215,41,0.2)', color: '#A2D729', padding: '1px 6px', borderRadius: 99, fontWeight: 700 }}>VERIFIED</span>}
+                                  </p>
+                                  <p style={{ fontSize: '0.72rem', opacity: 0.6, marginBottom: 2 }}>{g.bio || 'Professional local guide'}</p>
+                                  {g.expertise?.length > 0 && <p style={{ fontSize: '0.68rem', color: '#A2D729', opacity: 0.8 }}>{g.expertise.slice(0, 3).join(' · ')}</p>}
+                                  <p style={{ fontSize: '0.68rem', opacity: 0.5, marginTop: 2 }}>{g.completedTours || 0} tours completed · {g.rating > 0 ? `${g.rating}★` : 'New'}</p>
+                                </div>
+                                <span style={{ fontSize: '0.8rem', color: '#A2D729', fontWeight: 800, whiteSpace: 'nowrap', marginLeft: 12 }}>{formatNPR(g.dailyFee)}/day</span>
                               </div>
-                              <span style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 800, whiteSpace: 'nowrap' }}>
-                                {formatNPR(rate)}/day
-                              </span>
                             </button>
-                          );
-                        })}
-                        {assignedGuideId === '' && (
-                          <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
-                            No specific guide selected — we'll pair you with whoever is free.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
+                            {g.userId?._id && (
+                              <a href={`/profile/${g.userId._id}`} target="_blank" rel="noreferrer" title="View profile" style={{ color: '#A6A180', flexShrink: 0 }}>
+                                <ExternalLink size={14} />
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {!assignedGuideId && <p style={{ fontSize: '0.7rem', opacity: 0.45, marginTop: 2 }}>No guide selected — we'll pair you with whoever is free.</p>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* HOTEL PICKER */}
+              {addOns.includes('premium-lodging') && (
+                <div style={{ marginTop: '1.25rem', background: 'rgba(162,215,41,0.05)', border: '1px solid rgba(162,215,41,0.25)', borderRadius: 8, overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowHotels(v => !v)}
+                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.1rem', background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}
+                  >
+                    <span><Building2 size={13} style={{ display: 'inline', marginRight: 6 }} />
+                      {assignedHotelId ? `Hotel: ${hotels.find(h => h._id === assignedHotelId)?.name || 'Selected'}` : 'Choose a hotel'}
+                    </span>
+                    {showHotels ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                  {showHotels && (
+                    <div style={{ padding: '0 1rem 1rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {hotels.length === 0 ? (
+                        <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>No hotels registered yet. We'll arrange accommodation.</p>
+                      ) : hotels.map(h => {
+                        const picked = assignedHotelId === h._id;
+                        const available = (h.totalRooms || 0) - (h.bookedRooms || 0);
+                        return (
+                          <div key={h._id} style={{ background: picked ? 'rgba(162,215,41,0.12)' : 'rgba(0,0,0,0.3)', border: `1px solid ${picked ? '#A2D729' : 'rgba(255,255,255,0.08)'}`, borderRadius: 8, padding: '0.75rem 0.9rem', display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <button type="button" onClick={() => setAssignedHotelId(picked ? '' : h._id)} style={{ flex: 1, background: 'none', border: 'none', color: 'white', textAlign: 'left', cursor: 'pointer', padding: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                  <p style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 2 }}>
+                                    {picked && <span style={{ color: '#A2D729', marginRight: 6 }}>✓</span>}
+                                    {h.name}
+                                    <span style={{ marginLeft: 8, fontSize: '0.65rem', background: available > 0 ? 'rgba(162,215,41,0.2)' : 'rgba(231,76,60,0.2)', color: available > 0 ? '#A2D729' : '#e74c3c', padding: '1px 6px', borderRadius: 99, fontWeight: 700 }}>{available > 0 ? `${available} rooms free` : 'Full'}</span>
+                                  </p>
+                                  {h.features?.length > 0 && <p style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: 2 }}>{h.features.slice(0, 3).join(' · ')}</p>}
+                                  <p style={{ fontSize: '0.68rem', opacity: 0.5 }}>Managed by {h.username || h.userId?.username || 'Yaatri Partner'}</p>
+                                </div>
+                                <span style={{ fontSize: '0.8rem', color: '#A2D729', fontWeight: 800, whiteSpace: 'nowrap', marginLeft: 12 }}>{formatNPR(h.basePrice)}/night</span>
+                              </div>
+                            </button>
+                            {h.userId?._id && (
+                              <a href={`/profile/${h.userId._id}`} target="_blank" rel="noreferrer" title="View profile" style={{ color: '#A6A180', flexShrink: 0 }}>
+                                <ExternalLink size={14} />
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {!assignedHotelId && <p style={{ fontSize: '0.7rem', opacity: 0.45, marginTop: 2 }}>No hotel selected — we'll arrange accommodation for you.</p>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
