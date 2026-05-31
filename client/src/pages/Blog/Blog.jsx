@@ -29,7 +29,8 @@ const Blog = ({ onSeeBlog }) => {
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(true);
   const [isLoadingHotels, setIsLoadingHotels] = useState(true);
   const [isLoadingGuides, setIsLoadingGuides] = useState(true);
-  
+  const [openComments, setOpenComments] = useState({}); // { [postId]: { list, loading, text, posting } }
+
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -123,6 +124,47 @@ const Blog = ({ onSeeBlog }) => {
       }));
       if (e.response?.status === 401) navigate('/login');
     }
+  };
+
+  const toggleComments = async (postId) => {
+    if (openComments[postId]) {
+      setOpenComments(prev => { const n = { ...prev }; delete n[postId]; return n; });
+      return;
+    }
+    setOpenComments(prev => ({ ...prev, [postId]: { list: [], loading: true, text: '', posting: false } }));
+    try {
+      const { data } = await api.get(`/blogs/${postId}/comments`);
+      setOpenComments(prev => ({ ...prev, [postId]: { ...prev[postId], list: data, loading: false } }));
+    } catch {
+      setOpenComments(prev => ({ ...prev, [postId]: { ...prev[postId], loading: false } }));
+    }
+  };
+
+  const handleCommentSubmit = async (e, postId) => {
+    e.preventDefault();
+    if (!user) { navigate('/login'); return; }
+    const text = openComments[postId]?.text?.trim();
+    if (!text) return;
+    setOpenComments(prev => ({ ...prev, [postId]: { ...prev[postId], posting: true } }));
+    try {
+      const { data } = await api.post(`/blogs/${postId}/comments`, { text });
+      setOpenComments(prev => ({
+        ...prev,
+        [postId]: { ...prev[postId], list: [...(prev[postId]?.list || []), data], text: '', posting: false }
+      }));
+    } catch {
+      setOpenComments(prev => ({ ...prev, [postId]: { ...prev[postId], posting: false } }));
+    }
+  };
+
+  const handleCommentDelete = async (postId, commentId) => {
+    try {
+      await api.delete(`/blogs/${postId}/comments/${commentId}`);
+      setOpenComments(prev => ({
+        ...prev,
+        [postId]: { ...prev[postId], list: prev[postId].list.filter(c => c._id !== commentId) }
+      }));
+    } catch { /* silent */ }
   };
 
   const handleImageChange = async (e) => {
@@ -429,8 +471,12 @@ const Blog = ({ onSeeBlog }) => {
                         } />
                         <span className="font-semibold text-sm">{post.likeCount || 0}</span>
                       </button>
-                      <button className="flex items-center gap-1.5 text-himalayan-mist hover:text-hill-green transition-colors">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleComments(post._id); }}
+                        className={`flex items-center gap-1.5 transition-colors ${openComments[post._id] ? 'text-hill-green' : 'text-himalayan-mist hover:text-hill-green'}`}
+                      >
                         <MessageSquare size={20} />
+                        <span className="text-sm font-semibold">{(openComments[post._id]?.list || []).length || ''}</span>
                       </button>
                     </div>
 
@@ -459,6 +505,56 @@ const Blog = ({ onSeeBlog }) => {
                       </div>
                     )}
                   </div>
+
+                  {/* COMMENTS SECTION */}
+                  {openComments[post._id] && (
+                    <div className="border-t border-hill-green/10 px-5 pb-4 bg-obsidian/60" onClick={e => e.stopPropagation()}>
+                      {/* Comment list */}
+                      <div className="py-3 space-y-3 max-h-52 overflow-y-auto">
+                        {openComments[post._id].loading ? (
+                          <p className="text-xs text-terai-harvest text-center py-2">Loading...</p>
+                        ) : openComments[post._id].list.length === 0 ? (
+                          <p className="text-xs text-terai-harvest text-center py-2">No comments yet — be the first!</p>
+                        ) : openComments[post._id].list.map(c => (
+                          <div key={c._id} className="flex items-start gap-2 group">
+                            <div className="w-6 h-6 rounded-full bg-hill-green/40 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                              {c.authorId?.username?.charAt(0).toUpperCase() || 'U'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-bold text-himalayan-mist mr-2">{c.authorId?.username || 'User'}</span>
+                              <span className="text-xs text-himalayan-mist/80 break-words">{c.text}</span>
+                            </div>
+                            {(user && (user._id === c.authorId?._id || user.role === 'admin')) && (
+                              <button
+                                onClick={() => handleCommentDelete(post._id, c._id)}
+                                className="text-red-400/40 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                              >✕</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add comment input */}
+                      <form onSubmit={e => handleCommentSubmit(e, post._id)} className="flex gap-2 mt-2">
+                        <input
+                          type="text"
+                          value={openComments[post._id]?.text || ''}
+                          onChange={e => setOpenComments(prev => ({ ...prev, [post._id]: { ...prev[post._id], text: e.target.value } }))}
+                          placeholder={user ? "Add a comment..." : "Sign in to comment"}
+                          disabled={!user || openComments[post._id]?.posting}
+                          maxLength={500}
+                          className="flex-1 bg-teal-steel/30 border border-hill-green/20 rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-hill-green disabled:opacity-50"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!user || !openComments[post._id]?.text?.trim() || openComments[post._id]?.posting}
+                          className="bg-hill-green hover:bg-[#047D57] disabled:bg-gray-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          {openComments[post._id]?.posting ? '...' : 'Post'}
+                        </button>
+                      </form>
+                    </div>
+                  )}
                 </motion.div>
               ))
             ) : (

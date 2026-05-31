@@ -196,8 +196,9 @@ app.use('/api/guides', require('./routes/guideProfileRoutes'));
 // Billing and invoices
 app.use('/api/billing', require('./routes/billingRoutes'));
 
-// Blogs
+// Blogs + nested comments
 app.use('/api/blogs', require('./routes/blogRoutes'));
+app.use('/api/blogs/:blogId/comments', require('./routes/commentRoutes'));
 
 // AI Authentic Guide
 app.use('/api/ai', require('./routes/aiRoute'));
