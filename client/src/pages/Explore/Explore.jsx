@@ -1,31 +1,18 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Sparkles, Send, MapPin, Compass, ArrowUpRight, Loader2 } from 'lucide-react';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { Send, Loader, MapPin, Sparkles, ArrowLeft, ExternalLink } from 'lucide-react';
-
-const ROUTE_LABELS = {
-  '/destinations': 'Browse Destinations',
-  '/blog': 'Read Blog',
-  '/support': 'Get Support',
-  '/login': 'Sign In',
-  '/register': 'Create Account',
-  '/dashboard': 'My Dashboard',
-  '/contact': 'Contact Us',
-};
-import { motion } from 'framer-motion';
 
 const STARTER = {
   id: 1,
   type: 'bot',
-  text: "Namaste! I'm your Yaatri guide. Ask me anything about trekking in Nepal — seasons, permits, what to pack, food, costs — or tell me what kind of trip you're after and I'll point you somewhere good.",
-  timestamp: new Date(),
+  text: "Namaste! I'm your Yaatri AI guide. Ask me anything about trekking in Nepal — seasons, permits, what to pack, costs — or tell me what kind of trip you're after and I'll point you somewhere good.",
   suggestedDestinations: [],
 };
 
-// Full-page version of the AI chat experience. Accepts `location.state.messages` and `location.state.userInput`
-// from AIChatbox's expand button so the conversation continues seamlessly.
-const Explore = () => {
+export default function Explore() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useContext(AuthContext);
@@ -36,191 +23,174 @@ const Explore = () => {
   const endRef = useRef(null);
   const inputRef = useRef(null);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
   const sendMessage = async (e) => {
     e?.preventDefault?.();
-    if (!userInput.trim()) return;
+    if (!userInput.trim() || isLoading) return;
 
-    const userMsg = {
-      id: Date.now(),
-      type: 'user',
-      text: userInput,
-      timestamp: new Date(),
-      suggestedDestinations: [],
-    };
+    const userMsg = { id: Date.now(), type: 'user', text: userInput, suggestedDestinations: [] };
     setMessages(prev => [...prev, userMsg]);
     setUserInput('');
     setIsLoading(true);
 
     try {
-      // Send the running conversation as Gemini-flavoured history so the model
-      // can reference prior turns ("the trek you mentioned earlier", etc.).
-      const history = [...messages, userMsg].slice(-12).map((m) => ({
+      const history = [...messages, userMsg].slice(-12).map(m => ({
         role: m.type === 'user' ? 'user' : 'model',
         parts: [{ text: String(m.text || '').slice(0, 2000) }],
       }));
-      // Drop the last entry (current message) — sendMessage handles it server-side.
       const priorHistory = history.slice(0, -1);
-      // 45s timeout (vs default 15s) — see AIChatbox.jsx for rationale.
+
       const { data } = await api.post('/ai/chat', { query: userMsg.text, history: priorHistory }, { timeout: 45_000 });
       const { reply, redirectTo, suggestedDestinations } = data || {};
-      const botMsg = {
+
+      setMessages(prev => [...prev, {
         id: Date.now() + 1,
         type: 'bot',
-        text: reply,
-        timestamp: new Date(),
+        text: reply || "Ask me about treks, seasons, or which destination fits your style.",
         suggestedDestinations: suggestedDestinations || [],
         redirectTo: redirectTo || null,
-      };
-      setMessages(prev => [...prev, botMsg]);
+      }]);
     } catch (err) {
       const status = err.response?.status;
       const serverMsg = err.response?.data?.reply;
-      const isNetwork = !err.response && (err.code === 'ERR_NETWORK' || err.code === 'ERR_CONNECTION_REFUSED' || err.message === 'Network Error');
+      const isNetwork = !err.response && (err.code === 'ERR_NETWORK' || err.message === 'Network Error');
 
       if (status === 429 && serverMsg) {
-        setMessages(prev => [...prev, { id: Date.now() + 2, type: 'bot', text: serverMsg, timestamp: new Date(), suggestedDestinations: [] }]);
+        setMessages(prev => [...prev, { id: Date.now() + 2, type: 'bot', text: serverMsg, suggestedDestinations: [] }]);
       } else if (isNetwork) {
         const waitId = Date.now() + 2;
-        setMessages(prev => [...prev, { id: waitId, type: 'bot', text: "The guide is waking up from sleep — retrying in 15 seconds...", timestamp: new Date(), suggestedDestinations: [] }]);
-        setIsLoading(true);
+        setMessages(prev => [...prev, { id: waitId, type: 'bot', text: "The guide is waking up — retrying in 15 seconds…", suggestedDestinations: [] }]);
         await new Promise(r => setTimeout(r, 15000));
         try {
           const retryHistory = [...messages, userMsg].slice(-6).map(m => ({ role: m.type === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, 800) }] })).slice(0, -1);
           const { data } = await api.post('/ai/chat', { query: userMsg.text, history: retryHistory }, { timeout: 60_000 });
           const { reply, redirectTo, suggestedDestinations } = data || {};
-          setMessages(prev => [...prev.filter(m => m.id !== waitId), { id: Date.now() + 3, type: 'bot', text: reply, timestamp: new Date(), suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }]);
+          setMessages(prev => [...prev.filter(m => m.id !== waitId), { id: Date.now() + 3, type: 'bot', text: reply, suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }]);
         } catch {
           setMessages(prev => prev.map(m => m.id === waitId ? { ...m, text: "Still waking up — please try again." } : m));
         }
       } else {
-        setMessages(prev => [...prev, { id: Date.now() + 2, type: 'bot', text: err.code === 'ECONNABORTED' ? "That took too long. Try a shorter question." : "Something went wrong. Please try again.", timestamp: new Date(), suggestedDestinations: [] }]);
+        setMessages(prev => [...prev, {
+          id: Date.now() + 2,
+          type: 'bot',
+          text: err.code === 'ECONNABORTED' ? "That took too long. Try a shorter question." : "Something went wrong. Please try again.",
+          suggestedDestinations: [],
+        }]);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   const prompts = [
-    'I want a 5-day cultural trek',
-    'Show me destinations with hot springs',
-    'Read travelers\' stories about Mustang',
-    'Help me plan an itinerary',
+    '🏔️ What gear do I need for Everest Base Camp?',
+    '🎒 Tell me about Upper Mustang difficulty.',
+    '🌧️ When is the monsoon season in Nepal?',
+    '💰 How much does an EBC trek cost?',
   ];
 
+  const ROUTE_LABELS = {
+    '/destinations': 'Browse Destinations',
+    '/blog': 'Read Blog',
+    '/support': 'Get Support',
+    '/login': 'Sign In',
+    '/dashboard': 'My Dashboard',
+    '/contact': 'Contact Us',
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--obsidian, #0D0A02)', color: 'white', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ padding: '1.5rem 6%', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div className="flex flex-col bg-slate-50" style={{ minHeight: 'calc(100vh - 80px)', marginTop: '80px' }}>
+
+      {/* Header */}
+      <header className="bg-white h-16 border-b border-slate-100 px-6 flex items-center justify-between shadow-sm shrink-0">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
-            style={{ background: 'none', border: 'none', color: '#A6A180', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-            title="Back"
+            className="p-2 rounded-lg hover:bg-slate-100 text-gray-500 hover:text-brand-slate transition-colors cursor-pointer"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <p style={{ fontSize: '0.65rem', letterSpacing: 3, color: '#A2D729', fontWeight: 700, textTransform: 'uppercase' }}>Yaatri</p>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={18} style={{ color: '#A2D729' }} /> Explore Engine
+            <span className="text-[9px] font-bold text-brand-pink uppercase tracking-widest block">YAATRI HUB</span>
+            <h1 className="text-sm font-extrabold text-brand-slate tracking-tight flex items-center gap-1">
+              <Sparkles className="w-4 h-4 text-brand-saffron fill-brand-saffron" />
+              ✦ Explore AI Engine
             </h1>
           </div>
         </div>
-        {user && <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>signed in as @{user.username}</span>}
+        {user && (
+          <span className="text-xs font-semibold text-gray-500 hidden sm:block">
+            Consulting as: <strong className="text-brand-blue">@{user.username}</strong>
+          </span>
+        )}
       </header>
 
-      {/* MESSAGES */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '2rem 6%' }}>
-        <div style={{ maxWidth: 920, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {messages.map((m) => (
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 no-scrollbar">
+        <div className="max-w-3xl w-full mx-auto flex flex-col gap-6">
+          {messages.map(m => (
             <motion.div
               key={m.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ display: 'flex', justifyContent: m.type === 'user' ? 'flex-end' : 'flex-start' }}
+              className={`flex flex-col max-w-[85%] ${m.type === 'user' ? 'self-end items-end' : 'self-start items-start'}`}
             >
-              <div style={{ maxWidth: '70%' }}>
-                <div
-                  style={{
-                    background: m.type === 'user' ? 'var(--hill-green, #059D72)' : 'rgba(255,255,255,0.04)',
-                    color: m.type === 'user' ? 'white' : 'white',
-                    border: m.type === 'user' ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                    padding: '0.9rem 1.1rem',
-                    borderRadius: m.type === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    fontSize: '0.95rem',
-                    lineHeight: 1.55,
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
-                  {m.text}
-                </div>
-
-                {m.suggestedDestinations && m.suggestedDestinations.length > 0 && (
-                  <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                    {m.suggestedDestinations.map((d) => (
-                      <button
-                        key={d._id}
-                        onClick={() => navigate(`/destination/${d._id}`)}
-                        style={{
-                          textAlign: 'left',
-                          background: 'rgba(5,157,114,0.12)',
-                          border: '1px solid rgba(5,157,114,0.4)',
-                          borderRadius: 8,
-                          padding: '0.6rem 0.85rem',
-                          cursor: 'pointer',
-                          color: 'white',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <MapPin size={14} style={{ color: '#A2D729' }} />
-                        <div>
-                          <p style={{ fontSize: '0.85rem', fontWeight: 700 }}>{d.name}</p>
-                          <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{d.region} · {d.terrainType}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {m.redirectTo && (
-                  <button
-                    onClick={() => navigate(m.redirectTo)}
-                    style={{
-                      marginTop: 8,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      background: 'rgba(5,157,114,0.15)',
-                      border: '1px solid rgba(5,157,114,0.45)',
-                      color: '#A2D729',
-                      borderRadius: 8,
-                      padding: '0.4rem 0.85rem',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <ExternalLink size={13} />
-                    {ROUTE_LABELS[m.redirectTo] || m.redirectTo}
-                  </button>
-                )}
+              {/* Bubble */}
+              <div className={`p-4 text-sm leading-relaxed ${
+                m.type === 'user'
+                  ? 'bg-brand-blue text-white rounded-[20px] rounded-tr-sm shadow-md'
+                  : 'bg-white text-slate-800 rounded-[20px] rounded-tl-sm border border-slate-100 shadow-sm font-medium'
+              }`}>
+                {m.text}
               </div>
+
+              {/* Redirect button */}
+              {m.redirectTo && ROUTE_LABELS[m.redirectTo] && (
+                <button
+                  onClick={() => navigate(m.redirectTo)}
+                  className="mt-2 flex items-center gap-1.5 text-xs bg-brand-green/10 hover:bg-brand-green/20 border border-brand-green/30 text-brand-green rounded-lg px-3 py-1.5 transition-all cursor-pointer font-semibold"
+                >
+                  <ArrowUpRight className="w-3 h-3" />
+                  {ROUTE_LABELS[m.redirectTo]}
+                </button>
+              )}
+
+              {/* Suggested destinations */}
+              {m.suggestedDestinations?.length > 0 && (
+                <div className="mt-4 flex flex-col gap-3 w-full sm:w-80 self-start">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Related expedition files</p>
+                  {m.suggestedDestinations.map(dest => (
+                    <motion.div
+                      key={dest._id}
+                      whileHover={{ scale: 1.02 }}
+                      onClick={() => navigate(`/destination/${dest._id}`)}
+                      className="bg-white border border-slate-100 rounded-xl p-3.5 shadow-md shadow-slate-100 flex items-center justify-between gap-3 cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img src={dest.imageURL} alt={dest.name} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                        <div className="text-xs">
+                          <h4 className="font-extrabold text-brand-slate group-hover:text-brand-blue line-clamp-1">{dest.name}</h4>
+                          <p className="text-[10px] text-gray-400 font-semibold flex items-center gap-0.5 mt-0.5">
+                            <MapPin className="w-2.5 h-2.5 text-brand-pink" />
+                            {dest.region}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-1.5 bg-brand-blue/5 text-brand-blue rounded-lg shrink-0">
+                        <ArrowUpRight className="w-4 h-4" />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           ))}
 
+          {/* Thinking indicator */}
           {isLoading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#A2D729' }}>
-              <Loader size={14} className="animate-spin" />
-              <span style={{ fontSize: '0.85rem' }}>Thinking…</span>
+            <div className="self-start flex items-center gap-3 p-4 bg-white/70 border border-slate-100 rounded-[20px] rounded-tl-sm shadow-sm">
+              <Loader2 className="w-4 h-4 text-brand-blue animate-spin" />
+              <span className="text-xs font-semibold text-gray-400">Consulting Himalayan registers…</span>
             </div>
           )}
 
@@ -228,24 +198,18 @@ const Explore = () => {
         </div>
       </div>
 
-      {/* INPUT + QUICK PROMPTS */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '1.25rem 6%', flexShrink: 0, background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ maxWidth: 920, margin: '0 auto' }}>
-          {messages.length <= 1 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-              {prompts.map((p) => (
+      {/* Footer input */}
+      <footer className="bg-white border-t border-slate-100 p-6 shrink-0">
+        <div className="max-w-3xl w-full mx-auto flex flex-col gap-4">
+
+          {/* Quick prompts (only on first message) */}
+          {messages.length <= 1 && !isLoading && (
+            <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar text-xs font-bold text-gray-600">
+              {prompts.map(p => (
                 <button
                   key={p}
-                  onClick={() => setUserInput(p)}
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#A6A180',
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: 999,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                  }}
+                  onClick={() => setUserInput(p.replace(/[-]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[‑-⛿]|\uD83E[\uDC00-\uDFFF]/g, '').trim())}
+                  className="px-3.5 py-2 rounded-full border border-slate-100 hover:border-brand-blue bg-slate-50 hover:bg-brand-blue/5 transition-all shrink-0 cursor-pointer whitespace-nowrap"
                 >
                   {p}
                 </button>
@@ -253,49 +217,31 @@ const Explore = () => {
             </div>
           )}
 
-          <form onSubmit={sendMessage} style={{ display: 'flex', gap: 8 }}>
+          <form
+            onSubmit={sendMessage}
+            className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-full px-5 py-3 focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/10 transition-all"
+          >
+            <Compass className="w-5 h-5 text-gray-400 shrink-0" />
             <input
               ref={inputRef}
               type="text"
+              placeholder="Ask about weather, altitudes, or trekking gear…"
               value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Ask about destinations, journals, planning, or login…"
+              onChange={e => setUserInput(e.target.value)}
               disabled={isLoading}
-              style={{
-                flex: 1,
-                background: 'rgba(0,0,0,0.4)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: 'white',
-                padding: '0.85rem 1rem',
-                borderRadius: 8,
-                fontSize: '0.95rem',
-                outline: 'none',
-              }}
+              className="flex-1 bg-transparent border-none text-sm text-brand-slate font-semibold focus:outline-none placeholder-gray-400"
             />
             <button
               type="submit"
               disabled={isLoading || !userInput.trim()}
-              style={{
-                background: '#A2D729',
-                color: '#0D0A02',
-                border: 'none',
-                padding: '0.85rem 1.2rem',
-                borderRadius: 8,
-                cursor: isLoading || !userInput.trim() ? 'not-allowed' : 'pointer',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                opacity: isLoading || !userInput.trim() ? 0.5 : 1,
-              }}
+              className="p-2.5 rounded-full bg-brand-blue hover:bg-brand-blue/90 text-white disabled:bg-gray-200 disabled:text-gray-400 transition-colors cursor-pointer shrink-0"
             >
-              <Send size={14} /> Send
+              <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
-      </div>
+      </footer>
+
     </div>
   );
-};
-
-export default Explore;
+}

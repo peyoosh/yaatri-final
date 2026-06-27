@@ -1,998 +1,476 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft, Heart, Star, MapPin, Compass, ShieldCheck, ChevronRight,
+  X, Sparkles, HelpCircle, History, Map, Users, Mountain
+} from 'lucide-react';
 import api from '../../api/axios';
-import { motion } from 'framer-motion';
-import { Heart, Map, Bed, Compass, ChevronLeft, Mountain, Users, Wind, Camera, Calendar, Ticket, Star } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import GoogleMapView from '../../components/Common/GoogleMapView';
-import { coordsForDestination } from '../../utils/loadGoogleMaps';
 
-const DestinationDetail = ({ node, onBack, onSeeBlog }) => {
+export default function DestinationDetail({ onSeeBlog }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user: authUser, setUser } = useContext(AuthContext);
-  const [activeProtocol, setActiveProtocol] = useState(null);
-  const [remoteNode, setRemoteNode] = useState(null);
-  const [loading, setLoading] = useState(false);
+
+  const [dest, setDest] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+  const [activeProtocol, setActiveProtocol] = useState(null);
   const [regionBlogs, setRegionBlogs] = useState([]);
-  const [blogsLoading, setBlogsLoading] = useState(false);
+  const [reviews, setReviews] = useState({ count: 0, averageRating: null, reviews: [] });
   const [myBookings, setMyBookings] = useState([]);
-  const [bookingsLoading, setBookingsLoading] = useState(false);
   const [favBusy, setFavBusy] = useState(false);
-  const [reviewsData, setReviewsData] = useState(null); // { count, averageRating, reviews[] }
 
-  const nodeToRender = node || remoteNode;
-  const handleBackClick = () => {
-    if (onBack) return onBack();
-    navigate('/destinations');
-  };
-
-  // Derived: is this destination in the logged-in user's favourites?
   const favIds = (authUser?.profileData?.favoriteDestinations || []).map(String);
-  const targetId = nodeToRender?._id || id;
-  const isFavorite = !!targetId && favIds.includes(String(targetId));
-
-  const handleToggleFavorite = async () => {
-    if (!authUser) {
-      navigate('/login');
-      return;
-    }
-    if (!targetId || favBusy) return;
-    setFavBusy(true);
-
-    const prev = favIds;
-    const next = isFavorite
-      ? prev.filter((x) => String(x) !== String(targetId))
-      : [...prev, String(targetId)];
-
-    // Optimistic AuthContext update — UI flips instantly without waiting on the network.
-    setUser?.({
-      ...authUser,
-      profileData: {
-        ...(authUser.profileData || {}),
-        favoriteDestinations: next,
-      },
-    });
-
-    try {
-      // Server-side toggle: send just the id, backend decides push vs pull. Avoids
-      // race conditions when multiple favourite actions happen in quick succession.
-      const { data } = await api.put('/users/profile', { toggleFavoriteId: String(targetId) });
-      if (data && (data._id || data.user)) {
-        const fresh = data.user || data;
-        setUser?.(fresh);
-      }
-    } catch (err) {
-      console.error('Failed to update favourites:', err);
-      // Roll back on failure so the heart matches the server state.
-      setUser?.({
-        ...authUser,
-        profileData: {
-          ...(authUser.profileData || {}),
-          favoriteDestinations: prev,
-        },
-      });
-    } finally {
-      setFavBusy(false);
-    }
-  };
+  const isFav = !!id && favIds.includes(String(id));
 
   useEffect(() => {
-    if (node || !id) return;
+    if (!id) return;
+    setLoading(true);
+    api.get(`/destinations/${id}`)
+      .then(({ data }) => { setDest(data); setFetchError(null); })
+      .catch(() => setFetchError('Could not load destination.'))
+      .finally(() => setLoading(false));
+  }, [id]);
 
-    const fetchDestination = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(`/destinations/${id}`);
-        setRemoteNode(res.data);
-        setFetchError(null);
-      } catch (error) {
-        console.error('Failed to load destination:', error);
-        setFetchError('Could not load destination information.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDestination();
-  }, [id, node]);
-
-  // Pull public reviews for this destination — feeds the "Travelers say" block.
   useEffect(() => {
-    const destId = nodeToRender?._id || id;
-    if (!destId) return;
-    let cancelled = false;
-    api.get(`/destinations/${destId}/reviews`)
-      .then(({ data }) => { if (!cancelled) setReviewsData(data); })
-      .catch(() => { if (!cancelled) setReviewsData({ count: 0, averageRating: null, reviews: [] }); });
-    return () => { cancelled = true; };
-  }, [nodeToRender?._id, id]);
+    if (!id) return;
+    api.get(`/destinations/${id}/reviews`)
+      .then(({ data }) => setReviews(data))
+      .catch(() => {});
+  }, [id]);
 
-  // Pull all published blogs once, filter to those tagged with this destination's region.
   useEffect(() => {
-    if (!nodeToRender?.region) return;
+    if (!dest?.region) return;
+    api.get('/blogs').then(({ data }) => {
+      const r = (dest.region || '').toLowerCase().trim();
+      setRegionBlogs((data || []).filter(p => (p?.locationId?.region || '').toLowerCase().trim() === r));
+    }).catch(() => {});
+  }, [dest?.region]);
 
-    const fetchRegionBlogs = async () => {
-      try {
-        setBlogsLoading(true);
-        const res = await api.get('/blogs');
-        const list = Array.isArray(res.data) ? res.data : [];
-        const region = (nodeToRender.region || '').toLowerCase().trim();
-        const matched = list.filter((post) => {
-          const blogRegion = (post?.locationId?.region || '').toLowerCase().trim();
-          return blogRegion && blogRegion === region;
-        });
-        setRegionBlogs(matched);
-      } catch (err) {
-        console.error('Failed to load region blogs:', err);
-        setRegionBlogs([]);
-      } finally {
-        setBlogsLoading(false);
-      }
-    };
-
-    fetchRegionBlogs();
-  }, [nodeToRender?.region]);
-
-  // Pull the logged-in user's bookings so we can compute personalized travel intel for this destination.
   useEffect(() => {
-    if (!authUser) {
-      setMyBookings([]);
-      return;
-    }
-    let cancelled = false;
-    setBookingsLoading(true);
-    api.get('/bookings/me')
-      .then(({ data }) => { if (!cancelled) setMyBookings(Array.isArray(data) ? data : []); })
-      .catch(() => { if (!cancelled) setMyBookings([]); })
-      .finally(() => { if (!cancelled) setBookingsLoading(false); });
-    return () => { cancelled = true; };
+    if (!authUser) return;
+    api.get('/bookings/me').then(({ data }) => setMyBookings(Array.isArray(data) ? data : [])).catch(() => {});
   }, [authUser?._id]);
 
-  if (loading) {
-    return <div className="loading-container">Loading destination details...</div>;
-  }
-
-  if (fetchError) {
-    return (
-      <div className="error-page">
-        <p>{fetchError}</p>
-        <button onClick={handleBackClick}>Back to Destinations</button>
-      </div>
-    );
-  }
-
-  if (!nodeToRender) return null;
-
-  // Fallback image when a blog has no uploaded picture
-  const fallbackBlogImage = 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=400';
-
-  const protocols = [
-    { id: 'adventure', title: 'Adventure on foot', icon: Mountain, defaultDesc: 'Expert-led trekking modules with localized survival data specific to this node.' },
-    { id: 'tradition', title: 'Living traditions', icon: Users, defaultDesc: 'Connect with heritage through neural-mapped cultural immersion protocols.' },
-    { id: 'landscape', title: 'Landscape that moves', icon: Wind, defaultDesc: 'Dynamic topographic tracking optimized for shifting regional weather nodes.' },
-    { id: 'tours', title: 'Guided Cultural Tours', icon: Camera, defaultDesc: 'Structured sector exploration focusing on historical and Newari lineage markers.' }
-  ];
-
-  const mockImages = [
-    { id: 1, url: 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=600', author: '@trekker_88', likes: 342 },
-    { id: 2, url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=600', author: '@kathmandu_eyes', likes: 289 },
-    { id: 3, url: 'https://images.unsplash.com/photo-1585016495481-91613a3ab1bc?w=600', author: '@himalayan_soul', likes: 412 }
-  ];
-
-  const mockGuides = [
-    { id: 1, name: 'Pasang Sherpa', experience: '12 Years', rating: 4.9, language: 'English, Nepali, Sherpa' },
-    { id: 2, name: 'Anil Gurung', experience: '8 Years', rating: 4.7, language: 'English, Nepali, Hindi' },
-    { id: 3, name: 'Sita Tamang', experience: '5 Years', rating: 4.8, language: 'English, Nepali' }
-  ];
-
-  const handleBookNow = () => {
-    if (!authUser) {
-      navigate('/login');
-      return;
-    }
-    const targetId = nodeToRender._id || id;
-    if (!targetId) return;
-    navigate(`/destinations/book/${targetId}`);
+  const handleToggleFavorite = async () => {
+    if (!authUser) { navigate('/login'); return; }
+    if (!id || favBusy) return;
+    setFavBusy(true);
+    const prev = favIds;
+    setUser?.({ ...authUser, profileData: { ...(authUser.profileData || {}), favoriteDestinations: isFav ? prev.filter(x => x !== id) : [...prev, id] } });
+    try {
+      const { data } = await api.put('/users/profile', { toggleFavoriteId: id });
+      if (data?._id || data?.user) setUser?.(data.user || data);
+    } catch {
+      setUser?.({ ...authUser, profileData: { ...(authUser.profileData || {}), favoriteDestinations: prev } });
+    } finally { setFavBusy(false); }
   };
 
-  return (
-    <>
-      {/* FLOATING ACTION CLUSTER — top-right, stays visible during scroll */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '7rem',
-          right: '1.5rem',
-          zIndex: 60,
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-        }}
-      >
-        {/* HEART TOGGLE — save / unsave to favourites */}
-        <motion.button
-          onClick={handleToggleFavorite}
-          disabled={favBusy}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          whileHover={{ scale: favBusy ? 1 : 1.08 }}
-          whileTap={{ scale: 0.92 }}
-          title={
-            !authUser
-              ? 'Sign in to save favourites'
-              : isFavorite
-                ? 'Remove from favourites'
-                : 'Save to favourites'
-          }
-          aria-label={isFavorite ? 'Remove from favourites' : 'Save to favourites'}
-          aria-pressed={isFavorite}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 46,
-            height: 46,
-            padding: 0,
-            background: isFavorite
-              ? 'linear-gradient(135deg, rgba(162,215,41,0.95), rgba(5,157,114,0.85))'
-              : 'rgba(13,10,2,0.85)',
-            color: isFavorite ? '#0D0A02' : 'var(--toxic-lime, #A2D729)',
-            border: `1px solid ${isFavorite ? '#A2D729' : 'rgba(162,215,41,0.4)'}`,
-            borderRadius: '999px',
-            cursor: favBusy ? 'wait' : 'pointer',
-            boxShadow: isFavorite
-              ? '0 8px 24px rgba(162,215,41,0.35)'
-              : '0 6px 18px rgba(0,0,0,0.35)',
-            backdropFilter: 'blur(6px)',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <Heart
-            size={18}
-            fill={isFavorite ? '#0D0A02' : 'none'}
-            strokeWidth={2}
-          />
-        </motion.button>
+  const protocols = [
+    { id: 'adventure', title: 'High Adventure', icon: '🏔️', description: 'Acclimatization tracking, glacier safety lines, private GPS checkpoints, and 24/7 satellite emergency monitoring.' },
+    { id: 'tradition', title: 'Monastery Tradition', icon: '📿', description: 'Morning prayer schedules, cultural Sherpa community briefings, historical temple entries, and Newari cooking loops.' },
+    { id: 'landscape', title: 'Landscape Wildlife', icon: '🦅', description: 'Botanical photography guides, rare mammal migration checklists, and dedicated avian sanctuary exploration maps.' },
+    { id: 'tours', title: 'Helicopter Logistics', icon: '🚁', description: 'Direct Lukla/Namche private flight arrangements, custom baggage handling, and immediate mountain emergency air evacuation.' },
+  ];
 
-        {/* BOOK BUTTON */}
-        <motion.button
-          onClick={handleBookNow}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          title={authUser ? `Book a trip to ${nodeToRender.name || 'this destination'}` : 'Sign in to book'}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            padding: '0.85rem 1.4rem',
-            background: 'linear-gradient(135deg, #A2D729, #059D72)',
-            color: '#0D0A02',
-            border: 'none',
-            borderRadius: '999px',
-            cursor: 'pointer',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            letterSpacing: '0.5px',
-            boxShadow: '0 10px 30px rgba(5,157,114,0.35), 0 0 0 1px rgba(255,255,255,0.05)',
-          }}
-        >
-          <Ticket size={16} />
-          <span>Book this trip</span>
-        </motion.button>
+  if (loading) return (
+    <div className="w-full min-h-screen bg-slate-50 pt-28 flex items-center justify-center">
+      <div className="text-center flex flex-col items-center gap-3">
+        <Compass className="w-10 h-10 text-brand-blue animate-spin" />
+        <p className="text-sm font-semibold text-gray-400">Loading destination…</p>
       </div>
+    </div>
+  );
 
-      <section className="destinations-split-layout">
-        {/* LEFT COLUMN: 25% - USER INTEL FEED */}
-        <aside className="dest-sidebar" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 6rem)' }}>
-          <button onClick={handleBackClick} style={{ background: 'none', border: 'none', color: 'var(--hill-green)', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '2rem', fontWeight: 'bold', fontSize: '0.7rem' }}>
-            <ChevronLeft size={14} /> BACK_TO_RANKINGS
+  if (fetchError || !dest) return (
+    <div className="w-full min-h-screen bg-slate-50 pt-28 flex items-center justify-center px-6">
+      <div className="text-center">
+        <p className="font-bold text-brand-slate mb-4">{fetchError || 'Destination not found.'}</p>
+        <button onClick={() => navigate('/destinations')} className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl cursor-pointer">
+          Back to Destinations
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        {/* ── LEFT SIDEBAR ── */}
+        <aside className="lg:col-span-3 flex flex-col gap-6">
+          <button
+            onClick={() => navigate('/destinations')}
+            className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-brand-blue transition-colors cursor-pointer group self-start"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            BACK TO RANKINGS
           </button>
 
-          <p className="sidebar-kicker">JOURNALS_FROM_{(nodeToRender.region || 'REGION').toUpperCase()}</p>
-
-          {blogsLoading ? (
-            <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '1rem' }}>Loading journals…</p>
-          ) : regionBlogs.length === 0 ? (
-            <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '1rem' }}>
-              No journals posted from this region yet. Be the first to share.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {regionBlogs.map((post) => {
-                const cover = post.image || (Array.isArray(post.images) && post.images[0]) || fallbackBlogImage;
-                return (
+          {/* Region journals */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-4">
+            <h3 className="text-[10px] font-bold text-brand-pink uppercase tracking-widest">
+              JOURNALS_FROM_{(dest.region || 'REGION').replace(/\s+/g, '_').toUpperCase()}
+            </h3>
+            {regionBlogs.length === 0 ? (
+              <p className="text-xs text-gray-400 font-medium">No journals from this region yet. Be the first!</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {regionBlogs.slice(0, 5).map(post => (
                   <div
                     key={post._id}
                     onClick={() => onSeeBlog && onSeeBlog(post)}
-                    className="intel-node-mini"
-                    style={{ border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', padding: '10px', cursor: 'pointer', transition: 'all 0.3s ease' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hill-green)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)')}
+                    className="group cursor-pointer flex gap-3 items-center border-b border-slate-50 pb-3 last:border-0 last:pb-0"
                   >
-                    <img
-                      src={cover}
-                      alt={post.title || 'Journal'}
-                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover' }}
-                    />
-                    <div style={{ padding: '10px 5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 900, letterSpacing: '1px' }}>
-                        @{(post.authorId?.username || 'anon').toUpperCase()}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--hill-green)' }}>
-                        <Heart size={12} fill="var(--hill-green)" />
-                        <span style={{ fontSize: '0.65rem' }}>{post.likeCount || 0}</span>
-                      </div>
+                    <img src={post.image || 'https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=100'} alt={post.title} className="w-12 h-12 rounded-lg object-cover bg-slate-100 shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-bold text-brand-slate group-hover:text-brand-blue transition-colors line-clamp-1">{post.title}</h4>
+                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5">♥ {post.likeCount || 0}</p>
                     </div>
-                    {post.locationId?.name && (
-                      <p style={{ padding: '0 5px 6px', fontSize: '0.6rem', opacity: 0.5, fontFamily: 'monospace' }}>
-                        @ {post.locationId.name}
-                      </p>
-                    )}
                   </div>
-                );
-              })}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick stats */}
+          <div className="text-white p-5 rounded-2xl border border-slate-800 shadow-sm" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+            <span className="text-[9px] font-bold text-brand-saffron uppercase tracking-widest block mb-2">QUICK STATS</span>
+            <div className="flex flex-col gap-3 font-mono text-xs text-slate-300">
+              {dest.altitude && (
+                <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                  <span>ALTITUDE:</span>
+                  <span className="text-white font-bold">{dest.altitude}m</span>
+                </div>
+              )}
+              <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                <span>TERRAIN:</span>
+                <span className="text-white font-bold">{dest.terrainType}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>POPULARITY:</span>
+                <span className="text-white font-bold">{dest.popularityScore}%</span>
+              </div>
             </div>
-          )}
+          </div>
         </aside>
 
-        {/* RIGHT COLUMN: 75% - SECTOR ANALYSIS */}
-        <main className="dest-rankings" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 6rem)' }}>
-          <div style={{ position: 'relative', padding: '4rem 0' }}>
-            <p className="rank-region">{nodeToRender.region}</p>
-            <h2 className="vibrant-title" style={{ fontSize: '4rem', margin: '1rem 0' }}>{nodeToRender.name || nodeToRender.title}</h2>
-            <p style={{ color: 'var(--terai-harvest)', fontSize: '1.1rem', maxWidth: '700px', lineHeight: '1.6' }}>
-              Detailed analysis of coordinate node {nodeToRender.rank || (nodeToRender._id ? nodeToRender._id.substring(nodeToRender._id.length - 4) : 'XYZ')}. This sector represents the peak of high-altitude exploration in the Nepal system. 
-              Topographic stability is currently rated at 94%.
-            </p>
+        {/* ── MAIN CONTENT ── */}
+        <main className="lg:col-span-9 flex flex-col gap-8">
 
-            {/* CONTENT GRID */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', marginTop: '4rem' }}>
-              
-              {/* ACTIVITIES */}
-              <div className="info-block">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
-                  <Compass size={20} />
-                  <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>POSSIBLE_ACTIVITIES</h3>
-                </div>
-                <ul style={{ listStyle: 'none', padding: 0, opacity: 0.8 }}>
-                  <li style={{ marginBottom: '1rem' }}>
-                    <strong style={{ display: 'block', color: 'var(--himalayan-mist)' }}>Base Camp Expedition</strong>
-                    <span style={{ fontSize: '0.85rem' }}>12-day calculated trek route via Namche node.</span>
-                  </li>
-                  <li style={{ marginBottom: '1rem' }}>
-                    <strong style={{ display: 'block', color: 'var(--himalayan-mist)' }}>Kala Patthar Summit</strong>
-                    <span style={{ fontSize: '0.85rem' }}>Visual analysis point for 360° terrain mapping.</span>
-                  </li>
-                </ul>
+          {/* Hero banner */}
+          <div className="relative h-[420px] rounded-3xl overflow-hidden shadow-md">
+            <img src={dest.imageURL} alt={dest.name} className="w-full h-full object-cover" />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #0f172a 0%, rgba(15,23,42,0.45) 55%, transparent 100%)' }} />
+
+            <div className="absolute bottom-8 left-8 right-8 text-white flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <span className="px-3.5 py-1 rounded-full bg-brand-blue/30 backdrop-blur-sm border border-brand-blue/30 text-xs font-bold uppercase tracking-wider text-white">
+                  {dest.region}
+                </span>
+                <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white mt-3 leading-tight max-w-2xl">
+                  {dest.name}
+                </h1>
               </div>
 
-              {/* LOGISTICS */}
-              <div className="info-block">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
-                  <Bed size={20} />
-                  <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>LOCAL_LOGISTICS</h3>
-                </div>
-                <ul style={{ listStyle: 'none', padding: 0, opacity: 0.8 }}>
-                  <li style={{ marginBottom: '1rem' }}>
-                    <strong style={{ display: 'block', color: 'var(--himalayan-mist)' }}>Everest View Hotel</strong>
-                    <span style={{ fontSize: '0.85rem' }}>Highest oxygen-compressed lodging node.</span>
-                  </li>
-                  <li style={{ marginBottom: '1rem' }}>
-                    <strong style={{ display: 'block', color: 'var(--himalayan-mist)' }}>Yeti Mountain Home</strong>
-                    <span style={{ fontSize: '0.85rem' }}>Premium recovery station in Phakding sector.</span>
-                  </li>
-                </ul>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={favBusy}
+                  className="p-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white hover:text-brand-pink transition-all shadow-md cursor-pointer"
+                >
+                  <Heart className={`w-5 h-5 ${isFav ? 'fill-brand-pink text-brand-pink' : 'text-white'}`} />
+                </button>
+                <button
+                  onClick={() => authUser ? navigate(`/destinations/book/${dest._id}`) : navigate('/login')}
+                  className="px-6 py-3.5 bg-brand-blue hover:bg-brand-blue/90 text-white text-xs font-bold rounded-xl shadow-lg shadow-brand-blue/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  Book this trip
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            </div>
-
-            {/* EXPERIENCE PROTOCOLS SECTOR */}
-            <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '2.5rem' }}>
-                <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>EXPERIENCE_PROTOCOLS</h3>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem' }}>
-                {protocols.map((proto) => {
-                  const Icon = proto.icon;
-                  const desc = nodeToRender.experienceProtocols?.[proto.id] || proto.defaultDesc;
-                  return (
-                    <div 
-                      key={proto.id}
-                      onClick={() => setActiveProtocol({ id: proto.id, title: proto.title, description: desc, icon: proto.icon })}
-                      style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.3s ease' }}
-                      onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--hill-green)'}
-                      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
-                    >
-                      <Icon size={20} style={{ color: 'var(--hill-green)', marginBottom: '1rem' }} />
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem' }}>{proto.title}</h4>
-                      <p style={{ fontSize: '0.75rem', opacity: 0.6, lineHeight: '1.5' }}>
-                        {desc.length > 80 ? desc.substring(0, 80) + '...' : desc}
-                      </p>
-                      <div style={{ marginTop: '1rem', fontSize: '0.7rem', color: 'var(--hill-green)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <span style={{ fontWeight: 'bold' }}>READ MORE</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
-                <span style={{ fontSize: '0.6rem', opacity: 0.3, fontFamily: 'monospace' }}>[ SECTOR_STATUS: ANALYZED ]</span>
-              </div>
-            </div>
-
-            {/* ATTRACTIONS NEAR YOU — admin-curated micro-itineraries via DestinationManager. */}
-            {Array.isArray(nodeToRender.activities) && nodeToRender.activities.length > 0 && (
-              <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
-                  <Compass size={20} />
-                  <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>ATTRACTIONS_NEAR_YOU</h3>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
-                  {nodeToRender.activities.map((act, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: 8,
-                        padding: '1.1rem 1.2rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 8,
-                      }}
-                    >
-                      <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--himalayan-mist, #F4F2F3)' }}>{act.title}</h4>
-                      {act.description && (
-                        <p style={{ fontSize: '0.78rem', opacity: 0.7, lineHeight: 1.5 }}>{act.description}</p>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        <span style={{ fontSize: '0.7rem', opacity: 0.55 }}>
-                          {Number(act.durationHours || 0)}h
-                        </span>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--toxic-lime, #A2D729)' }}>
-                          {Number(act.baseCostNPR) > 0 ? `NPR ${Number(act.baseCostNPR).toLocaleString('en-IN')}` : 'Free'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* TRAVELERS SAY — public reviews submitted by travelers who completed this trip. */}
-            {reviewsData && reviewsData.count > 0 && (
-              <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)' }}>
-                    <Star size={20} />
-                    <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>TRAVELERS_SAY</h3>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <span key={n} style={{ color: n <= Math.round(reviewsData.averageRating || 0) ? '#A2D729' : 'rgba(255,255,255,0.18)', fontSize: '1.1rem' }}>★</span>
-                    ))}
-                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#A2D729', marginLeft: 4 }}>
-                      {reviewsData.averageRating}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>
-                      ({reviewsData.count} review{reviewsData.count === 1 ? '' : 's'})
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                  {reviewsData.reviews.slice(0, 6).map((r) => (
-                    <div
-                      key={r._id}
-                      style={{
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: 8,
-                        padding: '1.1rem 1.2rem',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div style={{ display: 'flex', gap: 2 }}>
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <span key={n} style={{ color: n <= r.rating ? '#A2D729' : 'rgba(255,255,255,0.15)', fontSize: '0.85rem' }}>★</span>
-                          ))}
-                        </div>
-                        <span style={{ fontSize: '0.65rem', opacity: 0.5, fontFamily: 'monospace' }}>{r.tripSize}</span>
-                      </div>
-                      {r.comment && (
-                        <p style={{ fontSize: '0.85rem', lineHeight: 1.55, color: 'var(--himalayan-mist, #F4F2F3)', fontStyle: 'italic', marginBottom: 8 }}>
-                          &ldquo;{r.comment}&rdquo;
-                        </p>
-                      )}
-                      <p style={{ fontSize: '0.7rem', opacity: 0.55, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
-                        — @{r.author} · {new Date(r.submittedAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* PROVIDER OVERVIEW SECTION */}
-            <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
-                <Users size={20} />
-                <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>PROVIDER_OVERVIEW</h3>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Guides</h4>
-                  {nodeToRender.assignedGuides && nodeToRender.assignedGuides.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {nodeToRender.assignedGuides.map(guide => (
-                        <div key={guide._id || guide.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
-                          <div>
-                            <Link to={`/profile/${guide._id || guide.id}`} style={{ fontWeight: 'bold', display: 'block', color: '#A2D729', textDecoration: 'none' }}>
-                              {guide.username} ↗
-                            </Link>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{guide.profileData?.experience || 'Certified local guide'}</span>
-                          </div>
-                          <span style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 700 }}>View profile</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No guides assigned to this node.</p>
-                  )}
-                </div>
-
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h4 style={{ color: 'var(--terai-harvest)', marginBottom: '1rem', fontSize: '1rem' }}>Assigned Hotels</h4>
-                  {nodeToRender.assignedHotels && nodeToRender.assignedHotels.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {nodeToRender.assignedHotels.map(hotel => (
-                        <div key={hotel._id || hotel.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
-                          <div>
-                            <Link to={`/profile/${hotel.userId?._id || hotel.userId || hotel._id}`} style={{ fontWeight: 'bold', display: 'block', color: '#A2D729', textDecoration: 'none' }}>
-                              {hotel.name} ↗
-                            </Link>
-                            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>{hotel.features?.slice(0,2).join(', ') || 'Premium Lodging'} · NPR {hotel.basePrice?.toLocaleString() || '—'}/night</span>
-                          </div>
-                          <span style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 700 }}>View profile</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ fontSize: '0.8rem', opacity: 0.5 }}>No hotels assigned to this node.</p>
-                  )}
-                </div>
-
-              </div>
-            </div>
-
-            {/* LIVE MAP — pin for this destination */}
-            <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
-                <Map size={20} />
-                <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>LOCATION_ON_MAP</h3>
-                {(() => {
-                  const c = coordsForDestination(nodeToRender);
-                  const hasOwnCoords = Number.isFinite(Number(nodeToRender.latitude)) && Number.isFinite(Number(nodeToRender.longitude));
-                  return (
-                    <span style={{ fontSize: '0.55rem', opacity: 0.4, letterSpacing: 2, fontFamily: 'monospace', marginLeft: 8 }}>
-                      {hasOwnCoords ? '// EXACT_COORDS' : '// REGION_FALLBACK'} · {c.lat.toFixed(3)}, {c.lng.toFixed(3)}
-                    </span>
-                  );
-                })()}
-              </div>
-
-              <GoogleMapView
-                destinations={[nodeToRender]}
-                zoom={9}
-                height={380}
-                fitToMarkers={false}
-              />
-            </div>
-
-            {/* CALCULATED ROUTES — personalized travel intel */}
-            <div style={{ marginTop: '5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--hill-green)', marginBottom: '1.5rem' }}>
-                <Map size={20} />
-                <h3 style={{ fontSize: '0.8rem', letterSpacing: '3px', fontWeight: '900' }}>CALCULATED_ROUTES</h3>
-                <span style={{ fontSize: '0.55rem', opacity: 0.4, letterSpacing: 2, fontFamily: 'monospace', marginLeft: 8 }}>// YOUR_TRAVEL_PROFILE</span>
-              </div>
-
-              <TravelIntelPanel
-                authUser={authUser}
-                destination={nodeToRender}
-                bookings={myBookings}
-                bookingsLoading={bookingsLoading}
-                onNavigate={navigate}
-              />
             </div>
           </div>
-        </main>
-      </section>
 
-      {/* PROTOCOL MODAL */}
-      {activeProtocol && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }} onClick={() => setActiveProtocol(null)}>
-          <div style={{
-            background: 'var(--obsidian)', border: '1px solid var(--hill-green)',
-            padding: '3rem', maxWidth: '600px', width: '90%', borderRadius: '8px',
-            position: 'relative', maxHeight: '90vh', overflowY: 'auto'
-          }} onClick={e => e.stopPropagation()}>
-            <button 
-              onClick={() => setActiveProtocol(null)}
-              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.5rem' }}
-            >
-              &times;
-            </button>
-            <activeProtocol.icon size={40} style={{ color: 'var(--hill-green)', marginBottom: '1.5rem' }} />
-            <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', color: 'var(--hill-green)' }}>{activeProtocol.title}</h2>
-            <p style={{ fontSize: '1.1rem', lineHeight: '1.8', color: 'var(--himalayan-mist)' }}>
-              {activeProtocol.description}
-            </p>
+          {/* Description */}
+          <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Expedition Context</h3>
+            <p className="text-slate-700 text-base leading-relaxed font-medium">{dest.description}</p>
+          </div>
 
-            {['adventure', 'tradition', 'landscape'].includes(activeProtocol.id) && (
-              <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
-                <h3 style={{ fontSize: '1.2rem', color: 'var(--hill-green)', marginBottom: '1rem' }}>Top Rated Visuals</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-                  {mockImages.map(img => (
-                    <div key={img.id} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
-                      <img src={img.url} alt="Location" style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', padding: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>{img.author}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--hill-green)' }}>
-                          <Heart size={10} fill="var(--hill-green)" />
-                          <span style={{ fontSize: '0.7rem' }}>{img.likes}</span>
-                        </div>
-                      </div>
+          {/* Activities + Logistics grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-xs font-bold text-brand-blue uppercase tracking-widest mb-4">POSSIBLE_ACTIVITIES</h3>
+              <div className="flex flex-col gap-3">
+                {(dest.activities?.length > 0 ? dest.activities : [
+                  { title: 'Base Camp Expedition' },
+                  { title: 'Kala Patthar Summit' },
+                ]).map((act, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="w-6 h-6 rounded-lg bg-brand-blue/10 text-brand-blue text-xs font-bold flex items-center justify-center shrink-0">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-brand-slate">{act.title}</span>
+                      {act.baseCostNPR > 0 && (
+                        <span className="text-[10px] text-brand-green font-bold ml-2">NPR {act.baseCostNPR.toLocaleString('en-IN')}</span>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
-            {activeProtocol.id === 'tours' && (
-              <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '2rem' }}>
-                <h3 style={{ fontSize: '1.2rem', color: 'var(--hill-green)', marginBottom: '1rem' }}>Available Culture Guides</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {mockGuides.map(guide => (
-                    <div key={guide.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-xs font-bold text-brand-saffron uppercase tracking-widest mb-4">LOCAL_LOGISTICS</h3>
+              {dest.assignedHotels?.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {dest.assignedHotels.map(hotel => (
+                    <div key={hotel._id} className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100">
                       <div>
-                        <h4 style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--himalayan-mist)' }}>{guide.name}</h4>
-                        <p style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '0.4rem', color: 'var(--text-muted)' }}>Experience: {guide.experience} • Languages: {guide.language}</p>
+                        <Link to={`/profile/${hotel.userId?._id || hotel.userId || hotel._id}`} className="text-xs font-bold text-brand-slate hover:text-brand-blue transition-colors">
+                          {hotel.name} ↗
+                        </Link>
+                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{hotel.features?.slice(0, 2).join(' · ') || 'Premium lodging'}</p>
                       </div>
-                      <div style={{ background: 'var(--hill-green)', color: 'var(--obsidian)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                        ★ {guide.rating}
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-brand-green">NPR {(hotel.basePrice || 0).toLocaleString('en-IN')}</p>
+                        <p className="text-[9px] text-gray-400">per night</p>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-xs text-gray-400">No hotels assigned yet.</p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </>
-  );
-};
 
-/* ---------- TRAVEL INTEL PANEL ---------- */
+          {/* Experience protocols */}
+          <div>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">EXPERIENCE_PROTOCOLS</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {protocols.map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => setActiveProtocol(p.id)}
+                  className="p-5 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-brand-blue/30 hover:shadow-md transition-all cursor-pointer text-center flex flex-col gap-2 group"
+                >
+                  <span className="text-2xl block group-hover:scale-110 transition-transform">{p.icon}</span>
+                  <h4 className="text-xs font-bold text-brand-slate">{p.title}</h4>
+                  <span className="text-[10px] text-brand-blue font-bold">Inspect →</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-const tokenize = (s) =>
-  String(s || '')
-    .toLowerCase()
-    .split(/[\s,;/.|]+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 2);
-
-const TravelIntelPanel = ({ authUser, destination, bookings, bookingsLoading, onNavigate }) => {
-  // Logged-out fallback
-  if (!authUser) {
-    return (
-      <div
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px dashed rgba(255,255,255,0.1)',
-          borderRadius: 8,
-          padding: '2rem',
-          textAlign: 'center',
-          color: 'var(--text-muted, #A6A180)',
-        }}
-      >
-        <p style={{ fontSize: '0.9rem', marginBottom: 12, color: 'var(--himalayan-mist, #F4F2F3)' }}>
-          Sign in to see how <strong>{destination?.name || 'this trail'}</strong> fits your travel profile.
-        </p>
-        <button
-          onClick={() => onNavigate('/login')}
-          style={{
-            background: '#A2D729',
-            color: '#0D0A02',
-            border: 'none',
-            padding: '0.6rem 1.4rem',
-            borderRadius: 999,
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-          }}
-        >
-          Sign in
-        </button>
-      </div>
-    );
-  }
-
-  // ---- derive insights from real user data ----
-  const preferenceTokens = tokenize(authUser.preferences);
-  const tripHistory = Array.isArray(authUser.tripHistory) ? authUser.tripHistory : [];
-  const favIds = (authUser.profileData?.favoriteDestinations || []).map(String);
-  const isFav = destination?._id && favIds.includes(String(destination._id));
-
-  // Match destination against the user's preference tokens
-  const destText = `${destination?.name || ''} ${destination?.region || ''} ${destination?.terrainType || ''} ${destination?.description || ''}`.toLowerCase();
-  const matchedPrefs = preferenceTokens.filter((t) => destText.includes(t));
-  const matchScore = preferenceTokens.length
-    ? Math.round((matchedPrefs.length / preferenceTokens.length) * 100)
-    : null;
-
-  // Past trips to this region / terrain
-  const sameRegionTrips = tripHistory.filter((h) => {
-    const text = `${h.dest || ''} ${h.hotel || ''} ${h.comment || ''}`.toLowerCase();
-    return destination?.region && text.includes(String(destination.region).toLowerCase());
-  });
-  const himalayanCount = tripHistory.filter((h) => /himalaya|trek|summit|base camp|annapurna|everest|mustang|langtang/i.test(`${h.dest || ''} ${h.comment || ''}`)).length;
-
-  // Bookings: ones for this destination specifically + aggregate stats
-  const bookingsHere = bookings.filter((b) => String(b.destination?._id || b.destination) === String(destination?._id));
-  const totalBookings = bookings.length;
-  const totalSpend = bookings.reduce((sum, b) => sum + (b.pricing?.totalCost || 0), 0);
-
-  // Most-used add-ons across the user's bookings (lets us highlight likely-needed ones for this trip)
-  const addOnFreq = {};
-  bookings.forEach((b) => {
-    (b.pricing?.addOns || []).forEach((a) => { addOnFreq[a] = (addOnFreq[a] || 0) + 1; });
-  });
-  const topAddOns = Object.entries(addOnFreq).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
-
-  if (bookingsLoading) {
-    return (
-      <div style={{ padding: '2rem', fontSize: '0.85rem', opacity: 0.5 }}>
-        Loading your travel profile…
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        borderRadius: 10,
-        padding: '1.75rem',
-      }}
-    >
-      {/* HEADER CARD — match score + status badges */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '1.5rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
-        <div>
-          <p style={{ fontSize: '0.65rem', letterSpacing: 2, opacity: 0.55, textTransform: 'uppercase', marginBottom: 4 }}>
-            For @{authUser.username}
-          </p>
-          <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--himalayan-mist, #F4F2F3)' }}>
-            How {destination?.name || 'this destination'} fits your journey
-          </h4>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {isFav && (
-            <span style={pill('#E63946')}>
-              <Heart size={11} fill="#E63946" /> In your favourites
-            </span>
-          )}
-          {bookingsHere.length > 0 && (
-            <span style={pill('#A2D729')}>
-              <Compass size={11} /> {bookingsHere.length} booking{bookingsHere.length > 1 ? 's' : ''} here
-            </span>
-          )}
-          {matchScore !== null && (
-            <span style={pill(matchScore >= 60 ? '#A2D729' : matchScore >= 30 ? '#F4A261' : '#A6A180')}>
-              {matchScore}% preference match
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* GRID — 3 columns of insight */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
-        {/* Preferred hikes / tags */}
-        <IntelBlock title="Your preferred terrain" icon={Compass}>
-          {preferenceTokens.length === 0 ? (
-            <p style={emptyHint}>No preferences saved yet. Edit your profile to tag what you love.</p>
-          ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {preferenceTokens.map((t) => {
-                const hit = matchedPrefs.includes(t);
-                return (
-                  <span
-                    key={t}
-                    style={{
-                      padding: '3px 10px',
-                      borderRadius: 999,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      background: hit ? 'rgba(162,215,41,0.18)' : 'rgba(255,255,255,0.04)',
-                      color: hit ? '#A2D729' : '#A6A180',
-                      border: `1px solid ${hit ? '#A2D729' : 'rgba(255,255,255,0.08)'}`,
-                    }}
-                    title={hit ? `Matches "${destination?.name}"` : 'No match for this destination'}
+          {/* Provider overview */}
+          {dest.assignedGuides?.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3 className="text-xs font-bold text-brand-pink uppercase tracking-widest mb-4">PROVIDER_OVERVIEW</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {dest.assignedGuides.map(guide => (
+                  <div
+                    key={guide._id}
+                    onClick={() => navigate(`/profile/${guide._id}`)}
+                    className="p-4 bg-slate-50 hover:bg-slate-100/50 rounded-xl border border-slate-100 flex items-center justify-between cursor-pointer transition-colors group"
                   >
-                    {t}
-                  </span>
-                );
-              })}
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-brand-blue/10 text-brand-blue font-bold text-lg flex items-center justify-center border-2 border-brand-blue/20">
+                        {(guide.username || 'G').slice(0, 1).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-brand-slate group-hover:text-brand-pink">@{guide.username}</h4>
+                          <span className="px-1.5 py-0.5 bg-brand-green/10 text-brand-green text-[8px] font-bold rounded">VERIFIED</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 font-semibold mt-1">
+                          {guide.profileData?.ratePerDay ? `NPR ${guide.profileData.ratePerDay.toLocaleString('en-IN')} / day` : 'Certified local guide'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-brand-pink" />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </IntelBlock>
 
-        {/* Travel history snapshot */}
-        <IntelBlock title="Travel history" icon={Map}>
-          {tripHistory.length === 0 && totalBookings === 0 ? (
-            <p style={emptyHint}>
-              No trip history yet. Booking here will be your first Yaatri journey.
-            </p>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {totalBookings > 0 && (
-                <Stat label="Trips booked with Yaatri" value={`${totalBookings}`} />
-              )}
-              {totalSpend > 0 && (
-                <Stat label="Lifetime spend" value={`NPR ${totalSpend.toLocaleString('en-IN')}`} />
-              )}
-              {sameRegionTrips.length > 0 && (
-                <Stat label={`In ${destination?.region || 'this region'}`} value={`${sameRegionTrips.length} past trip${sameRegionTrips.length > 1 ? 's' : ''}`} />
-              )}
-              {himalayanCount > 0 && /himalaya/i.test(destination?.terrainType || '') && (
-                <Stat label="Himalayan treks completed" value={`${himalayanCount}`} />
-              )}
-              {tripHistory.length > 0 && (
-                <Stat label="Total entries logged" value={`${tripHistory.length}`} />
-              )}
-            </ul>
+          {/* Travelers say */}
+          {reviews.count > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-50 pb-4 mb-4">
+                <div>
+                  <h3 className="text-xs font-bold text-brand-blue uppercase tracking-widest">TRAVELERS_SAY</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Direct verified logs from the trail</p>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-brand-saffron/10 text-brand-saffron font-bold text-xs rounded-lg">
+                  <Star className="w-4 h-4 fill-brand-saffron text-brand-saffron" />
+                  <span>{reviews.averageRating} / 5.0 Rating</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reviews.reviews.slice(0, 4).map(r => (
+                  <div key={r._id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-brand-slate">@{r.author}</span>
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: Math.round(r.rating) }).map((_, i) => (
+                          <Star key={i} className="w-3 h-3 fill-brand-saffron text-brand-saffron" />
+                        ))}
+                      </div>
+                    </div>
+                    {r.comment && (
+                      <p className="text-xs text-gray-600 font-medium leading-relaxed italic">"{r.comment}"</p>
+                    )}
+                    <span className="text-[9px] text-gray-400 font-bold self-end uppercase">{r.tripSize}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-        </IntelBlock>
 
-        {/* Recommended add-ons based on past behaviour */}
-        <IntelBlock title="Likely add-ons for you" icon={Camera}>
-          {topAddOns.length === 0 ? (
-            <p style={emptyHint}>
-              We&apos;ll learn what you like after your first booking. Defaults: <strong>guide</strong>, <strong>transport</strong>.
-            </p>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {topAddOns.map((a) => (
-                <li key={a} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-                  <span style={{ color: 'var(--himalayan-mist, #F4F2F3)', textTransform: 'capitalize' }}>{a.replace(/-/g, ' ')}</span>
-                  <span style={{ color: '#A2D729', fontWeight: 800 }}>
-                    {addOnFreq[a]}× used
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </IntelBlock>
+          {/* TravelIntel panel */}
+          <div className="relative rounded-3xl overflow-hidden shadow-md" style={{ padding: 1, background: 'linear-gradient(to right, #2563EB, #DB2777, #F59E0B)' }}>
+            <div className="bg-white p-6 rounded-[23px]">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-brand-blue animate-pulse" />
+                  <h3 className="text-sm font-bold text-brand-slate uppercase tracking-wider">TravelIntel Personalized Dashboard</h3>
+                </div>
+                <span className="text-[9px] font-mono text-gray-400">LIVE_RECOMMENDATIONS</span>
+              </div>
+
+              {!authUser ? (
+                <div className="py-6 flex flex-col items-center text-center gap-3">
+                  <HelpCircle className="w-10 h-10 text-gray-300" />
+                  <div>
+                    <h4 className="font-bold text-xs text-brand-slate">Sign in to unlock personalized routing</h4>
+                    <p className="text-[11px] text-gray-400 max-w-xs mt-1">We analyze your fitness preference, previous trip altitude limits, and past add-ons to customize booking choices.</p>
+                  </div>
+                  <button onClick={() => navigate('/login')} className="px-4 py-2 bg-brand-blue text-white text-xs font-bold rounded-lg mt-2 cursor-pointer">
+                    Unlock TravelIntel →
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  <div className="md:col-span-8 flex flex-col gap-4">
+                    <p className="text-xs text-gray-600 font-medium">
+                      Welcome back, <strong className="text-brand-blue">@{authUser.username}</strong>! Based on your traveler profile, here is your customized route recommendation:
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <span className="px-2.5 py-1 bg-brand-blue/10 border border-brand-blue/20 text-[10px] font-bold text-brand-blue rounded-full">
+                        {dest.altitude ? `Altitude: ${dest.altitude}m` : 'Route Verified'}
+                      </span>
+                      <span className="px-2.5 py-1 bg-brand-pink/10 border border-brand-pink/20 text-[10px] font-bold text-brand-pink rounded-full">
+                        {dest.terrainType} Terrain
+                      </span>
+                      <span className="px-2.5 py-1 bg-brand-green/10 border border-brand-green/20 text-[10px] font-bold text-brand-green rounded-full">
+                        Escrow-backed booking available
+                      </span>
+                    </div>
+                    {myBookings.length > 0 && (
+                      <div className="mt-2">
+                        <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                          <History className="w-3.5 h-3.5 text-brand-saffron" />
+                          Your Yaatri Journey Stats
+                        </h4>
+                        <ul className="text-xs text-gray-500 font-medium space-y-1.5 mt-2 list-disc pl-4">
+                          <li>You have <strong className="text-brand-slate">{myBookings.length}</strong> trip{myBookings.length !== 1 ? 's' : ''} booked with Yaatri.</li>
+                          {myBookings.some(b => String(b.destination?._id) === id) && (
+                            <li>You have an <strong className="text-brand-blue">existing booking</strong> for this destination.</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <div className="md:col-span-4 bg-slate-900 rounded-2xl p-4 text-white flex flex-col justify-between min-h-[140px] border border-slate-800">
+                    <span className="text-[8px] font-mono text-gray-500">TERRAIN TOPOGRAPHY</span>
+                    <div className="flex flex-col gap-1 mt-2">
+                      <p className="text-xs font-bold">{dest.terrainType} Zone</p>
+                      <p className="text-[10px] text-brand-pink font-semibold">Nepal Grid Coordinates</p>
+                      {dest.latitude && dest.longitude && (
+                        <p className="font-mono text-[9px] text-gray-400">{dest.latitude.toFixed(3)}°N {dest.longitude.toFixed(3)}°E</p>
+                      )}
+                    </div>
+                    {dest.altitude && (
+                      <div className="text-right border-t border-slate-800 pt-2 mt-2">
+                        <p className="text-lg font-bold text-brand-green">{dest.altitude}m</p>
+                        <p className="text-[8px] text-gray-400">ACCLIMATIZATION REQUIRED</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Map */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Map className="w-5 h-5 text-brand-blue" />
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">LOCATION_ON_MAP</h3>
+              </div>
+              <span className="font-mono text-[9px] text-gray-400">
+                {dest.latitude && dest.longitude ? `${dest.latitude.toFixed(3)}, ${dest.longitude.toFixed(3)}` : 'REGION_FALLBACK'}
+              </span>
+            </div>
+            <GoogleMapView destinations={[dest]} zoom={9} height={340} fitToMarkers={false} />
+          </div>
+
+        </main>
       </div>
 
-      {/* RECENT TRIPS FROM HISTORY — show actual entries if any */}
-      {(sameRegionTrips.length > 0 || tripHistory.length > 0) && (
-        <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <p style={{ fontSize: '0.65rem', letterSpacing: 2, color: '#A2D729', fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>
-            Recent journeys
-          </p>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: 10,
-            }}
-          >
-            {(sameRegionTrips.length > 0 ? sameRegionTrips : tripHistory).slice(0, 4).map((h, i) => (
-              <div
-                key={h.id || i}
-                style={{
-                  background: 'rgba(0,0,0,0.25)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  borderRadius: 6,
-                  padding: '0.85rem 1rem',
-                }}
+      {/* Protocol modal */}
+      <AnimatePresence>
+        {activeProtocol && (() => {
+          const prot = protocols.find(p => p.id === activeProtocol);
+          if (!prot) return null;
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+              onClick={() => setActiveProtocol(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                className="bg-white rounded-3xl p-8 max-w-md w-full relative border border-slate-100 shadow-2xl"
+                onClick={e => e.stopPropagation()}
               >
-                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--himalayan-mist, #F4F2F3)' }}>
-                  {h.dest || 'Destination'}
-                </p>
-                <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
-                  {h.date || '—'} · {h.status || 'completed'}
-                  {h.rating != null && <> · ★ {h.rating}</>}
-                </p>
-                {h.comment && (
-                  <p style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 6, fontStyle: 'italic', lineHeight: 1.4 }}>
-                    &ldquo;{h.comment.length > 70 ? h.comment.slice(0, 67) + '…' : h.comment}&rdquo;
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                <button onClick={() => setActiveProtocol(null)} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+                <span className="text-4xl block mb-4">{prot.icon}</span>
+                <span className="text-[10px] font-bold text-brand-blue uppercase tracking-widest">EXPEDITION PROTOCOL</span>
+                <h3 className="text-xl font-bold text-brand-slate mt-1 mb-4">{prot.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed mb-6 font-medium">{prot.description}</p>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col gap-2 mb-6">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-slate">
+                    <ShieldCheck className="w-4 h-4 text-brand-green" />
+                    <span>Lalitpur HQ Certified Safe</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400">All local guides are audited and tracked via radio frequencies and digital logs during active stages.</p>
+                </div>
+                <button
+                  onClick={() => setActiveProtocol(null)}
+                  className="w-full py-3 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Confirm Understanding
+                </button>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
-};
-
-const pill = (color) => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '3px 12px',
-  borderRadius: 999,
-  background: 'rgba(255,255,255,0.04)',
-  border: `1px solid ${color}`,
-  color,
-  fontSize: '0.7rem',
-  fontWeight: 700,
-  letterSpacing: 0.5,
-  whiteSpace: 'nowrap',
-});
-
-const emptyHint = {
-  fontSize: '0.75rem',
-  opacity: 0.5,
-  lineHeight: 1.5,
-  margin: 0,
-};
-
-const IntelBlock = ({ title, icon: Icon, children }) => (
-  <div
-    style={{
-      background: 'rgba(0,0,0,0.2)',
-      border: '1px solid rgba(255,255,255,0.05)',
-      borderRadius: 8,
-      padding: '1rem 1.1rem',
-    }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-      {Icon && <Icon size={13} style={{ color: '#A2D729' }} />}
-      <p style={{ fontSize: '0.65rem', letterSpacing: 2, fontWeight: 800, color: '#A2D729', textTransform: 'uppercase' }}>
-        {title}
-      </p>
-    </div>
-    {children}
-  </div>
-);
-
-const Stat = ({ label, value }) => (
-  <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-    <span style={{ opacity: 0.7 }}>{label}</span>
-    <span style={{ color: '#A2D729', fontWeight: 800 }}>{value}</span>
-  </li>
-);
-
-export default DestinationDetail;
+}

@@ -1,575 +1,394 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useMotionValue, useAnimationFrame } from 'framer-motion';
-import { MapPin, Eye, Headset, Calendar, Award, Compass, CloudSun, Flag, Bookmark, Split, ArrowRight, Quote } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowRight, Compass, ShieldCheck, Heart, Sparkles, MapPin, Users, Flame, Star, Send } from 'lucide-react';
 import api from '../../api/axios';
 import { formatMetricNumber } from '../../utils/formatMetrics';
 
-const fadeIn = {
-  initial: { opacity: 0, y: 30 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
-};
+export default function Home() {
+  const navigate = useNavigate();
+  const sliderRef = useRef(null);
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const [destinations, setDestinations] = useState([]);
+  const [metrics, setMetrics] = useState({ locations: 0, guides: 0, users: 0, years: 1 });
 
-const Home = ({ onNavigate, onSelectNode }) => {
-  const [isPaused, setIsPaused] = React.useState(false);
-  const [marqueeTitle, setMarqueeTitle] = useState("SYNCING_ATMOSPHERE...");
-  const [topModules, setTopModules] = useState([]);
-  const [metrics, setMetrics] = useState({
-    locations: 0,
-    views: 0,
-    years: 0,
-    guides: 0,
-    users: 0
-  });
-  const trackRef = React.useRef(null);
-  
   useEffect(() => {
-    const fetchData = async () => {
-      // Fire all three independently — one failure must not wipe the others.
-      const [statsRes, destsRes, settingsRes] = await Promise.allSettled([
-        api.get('/stats/metrics'),
+    const load = async () => {
+      const [destsRes, statsRes] = await Promise.allSettled([
         api.get('/destinations'),
-        api.get('/settings'),
+        api.get('/stats/metrics'),
       ]);
-
+      if (destsRes.status === 'fulfilled') setDestinations(destsRes.value.data || []);
       if (statsRes.status === 'fulfilled') {
         const s = statsRes.value.data || {};
         setMetrics({
           locations: s.locations || 0,
-          views:     s.views     || 0,
-          years:     s.years     || 0,
           guides:    s.guides    || 0,
           users:     s.users     || 0,
+          years:     s.years     || 1,
         });
-      } else {
-        console.warn('[Home] metrics unavailable:', statsRes.reason?.message);
-      }
-
-      if (destsRes.status === 'fulfilled') {
-        setTopModules(destsRes.value.data || []);
-      } else {
-        console.warn('[Home] destinations unavailable:', destsRes.reason?.message);
-      }
-
-      if (settingsRes.status === 'fulfilled') {
-        setMarqueeTitle(settingsRes.value.data?.marqueeTitle || 'SYNCING_ATMOSPHERE...');
       }
     };
-    fetchData();
+    load();
   }, []);
 
-  // Ticker State in Pixels for seamless drag synchronization
-  const baseX = useMotionValue(0);
+  const doubled = [...destinations, ...destinations];
 
-  useAnimationFrame((t, delta) => {
-    if (!isPaused && trackRef.current) {
-      // moveBy is now positive for Left-to-Right flow
-      const moveBy = 1.5 * (delta / 16); 
-      
-      let newValue = baseX.get() + moveBy;
-
-      // Seamless Left-to-Right Wrapping: 
-      const halfWidth = trackRef.current.offsetWidth / 2;
-      // Safety: Only wrap if halfWidth is actually calculated to avoid division/modulo bugs
-      if (halfWidth > 0) {
-        if (newValue >= 0) newValue -= halfWidth;
-        if (newValue < -halfWidth) newValue += halfWidth;
-      }
-
-      baseX.set(newValue);
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    if (email.trim()) {
+      setSubscribed(true);
+      setEmail('');
+      setTimeout(() => setSubscribed(false), 5000);
     }
-  });
-
-  // Mirrors the modules: ...[Tours] -> [Adventure]... creates the loop you requested
-  const scrollItems = [...topModules, ...topModules];
+  };
 
   return (
-    <div className="home-container">
-      {/* SECTION 1: HERO */}
-      <section 
-        className="hero-section" 
-        style={{ 
-          minHeight: '100vh',      // Changed to 100vh for a true "full-screen" feel
-          width: '100%',           // Fixed typo: changed 10% to 100%
-          position: 'relative', 
-          top: 0,                  // Pins the section to the top of its parent
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          overflow: 'hidden' 
-        }}
+    <div className="w-full bg-slate-50 overflow-x-hidden pt-20">
+
+      {/* ── SECTION 1: HERO ── */}
+      {/* Inline styles for height + bg guarantee rendering regardless of Tailwind v4 JIT */}
+      <section
+        className="relative flex items-center justify-center overflow-hidden"
+        style={{ minHeight: '90vh', backgroundColor: '#0f172a', color: 'white' }}
       >
-        <div 
-          className="hero-bg"
-          style={{ 
-            backgroundImage: `url('/nepal-bg.jpg')`,
-            position: 'absolute',
-            top: 0, 
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            zIndex: -1 
-          }}
-        />
-        
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(13,10,2,0.55)' }} />
+        <div className="absolute inset-0 z-0">
+          {/* Local image — no external dependency, always loads */}
+          <img
+            src="/nepal-bg.jpg"
+            alt="Nepal Himalayas"
+            className="w-full h-full object-cover"
+            style={{ opacity: 0.55 }}
+          />
+          {/* Inline gradient overlays — avoids custom color token opacity-modifier issues */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #0f172a 0%, rgba(15,23,42,0.75) 50%, transparent 100%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(15,23,42,0.45), transparent)' }} />
+        </div>
 
-        <motion.div {...fadeIn} className="hero-content" style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 1.5rem', maxWidth: '900px' }}>
-          <h1
-            className="text-5xl md:text-6xl font-black tracking-tighter text-white"
-            style={{ marginBottom: '1.5rem', lineHeight: 1.05 }}
+        <div className="relative z-10 max-w-5xl mx-auto text-center px-6 py-20 w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="flex flex-col items-center gap-6"
           >
-            Go where the world calls you
-          </h1>
-          <p
-            className="max-w-2xl text-center text-sm md:text-base text-white/80 leading-relaxed"
-            style={{ margin: '0 auto 2rem' }}
-          >
-            From hidden valleys to high passes, Yaatri stitches together the destinations, guides, and journals that turn a trip into a story you keep telling.
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-primary-white" onClick={() => onNavigate('/destinations')}>Explore Destinations</button>
-            <button className="btn-secondary-outline" onClick={() => onNavigate('/contact')}>Contact Us</button>
-          </div>
-        </motion.div>
-      </section>
+            <span className="px-4 py-1.5 rounded-full bg-brand-blue/20 border border-brand-blue/30 text-xs font-bold uppercase tracking-widest text-brand-saffron flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-brand-saffron fill-brand-saffron" />
+              Your Portal to the Roof of the World
+            </span>
 
-      {/* SECTION 2: WEATHER-ADAPTIVE NODE ANALYSIS (REFACTORED SLIDER) */}
-      <section className="weather-analysis-slider" style={{ padding: '32px 0', overflow: 'hidden', background: 'var(--obsidian)' }}>
-        <div className="container" style={{ padding: '0.5rem 5%', marginBottom: '32px' }}>
-          <motion.div {...fadeIn} className="section-header">
-            <p className="hero-kicker" style={{ color: 'var(--hill-green)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CloudSun size={16} /> REAL-TIME ATMOSPHERIC SYNC
+            <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
+              Go where the{' '}
+              <span style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundImage: 'linear-gradient(to right, #2563EB, #60a5fa, #DB2777)', backgroundClip: 'text' }}>
+                world calls you
+              </span>
+            </h1>
+
+            <p className="max-w-2xl text-base sm:text-lg text-slate-300 font-medium leading-relaxed">
+              Explore epic mountain passes, ancient temples, subtropical safaris, and secluded alpine valleys.
+              Yaatri Hub connects travelers, certified Sherpa guides, and local boutique lodging seamlessly.
             </p>
-            <h2 className="hero-title text-4xl md:text-[3rem] font-bold text-himalayan-mist">{marqueeTitle}</h2>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center mt-4">
+              <button
+                onClick={() => navigate('/destinations')}
+                className="w-full sm:w-auto px-8 py-4 bg-brand-blue hover:bg-brand-blue/90 font-bold rounded-xl shadow-lg shadow-brand-blue/30 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                Explore Destinations
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => navigate('/explore')}
+                className="w-full sm:w-auto px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                ✦ Chat with AI Guide
+              </button>
+            </div>
           </motion.div>
         </div>
 
-        <div 
-          className="slider-wrapper" 
-          style={{ position: 'relative', width: '100%' }} // Expanded to 100% for better visibility, adjust as needed
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          <motion.div 
-            ref={trackRef}
-            className="slider-track"
-            drag="x"
-            onDragStart={() => setIsPaused(true)}
-            onDragEnd={() => setIsPaused(false)}
-            style={{ 
-              display: 'flex', 
-              width: 'max-content', // Let items define the width
-              cursor: 'grab',
-              x: baseX // Sync drag and animation to the same MotionValue
-            }}
-            whileTap={{ cursor: 'grabbing' }}
+        {/* Fade into page background — inline to guarantee rendering */}
+        <div className="absolute bottom-0 left-0 right-0" style={{ height: 64, background: 'linear-gradient(to top, #f8fafc, transparent)' }} />
+      </section>
+
+      {/* ── SECTION 2: DESTINATION SLIDER ── */}
+      <section className="py-20 w-full">
+        <div className="max-w-7xl mx-auto px-6">
+        <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 gap-4">
+          <div>
+            <span className="text-xs font-bold text-brand-pink uppercase tracking-widest block mb-2">HOT DESTINATIONS</span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-slate tracking-tight">
+              Awe-Inspiring Expeditions
+            </h2>
+          </div>
+          <button
+            onClick={() => navigate('/destinations')}
+            className="text-sm font-bold text-brand-blue flex items-center gap-1 group hover:underline cursor-pointer"
           >
-            {scrollItems.map((item, index) => (
-              <motion.div
-                key={`${item._id}-${index}`}
-                className="analysis-node w-[80%] md:w-[31%] mr-[5%] md:mr-[2.5%] shrink-0"
-                onTap={() => onSelectNode(item)}
-                style={{
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  borderRadius: '8px',
-                  padding: '24px',
-                  minHeight: '260px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  cursor: 'pointer'
-                }}
-              >
+            View All Terrain Rankings
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+
+        <div className="relative w-full">
+          <div
+            ref={sliderRef}
+            className="flex gap-6 overflow-x-auto py-4 px-2 no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing"
+          >
+            {(doubled.length > 0 ? doubled : Array(6).fill(null)).map((dest, idx) => (
+              dest ? (
                 <div
-                  style={{
-                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                    backgroundImage: `linear-gradient(rgba(13,10,2,0.55), rgba(13,10,2,0.85)), url(${item.imageURL})`,
-                    backgroundSize: 'cover', backgroundPosition: 'center', zIndex: -1
-                  }}
-                />
-
-                <div className="node-content">
-                  <div style={{ color: 'var(--hill-green)', marginBottom: '8px' }}>
-                    <p style={{ fontSize: '0.65rem', fontWeight: 'bold', letterSpacing: '3px' }}>{item.region}</p>
+                  key={`${dest._id}-${idx}`}
+                  onClick={() => navigate(`/destination/${dest._id}`)}
+                  className="min-w-[280px] sm:min-w-[340px] max-w-[340px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-md shadow-slate-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex-shrink-0"
+                >
+                  <div className="relative h-48 overflow-hidden bg-slate-100">
+                    <img
+                      src={dest.imageURL}
+                      alt={dest.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <span className="absolute top-4 left-4 px-3 py-1 bg-white/95 backdrop-blur-sm text-[10px] font-bold text-brand-pink rounded-full uppercase tracking-wider shadow-sm">
+                      {dest.region}
+                    </span>
+                    <div className="absolute top-4 right-4 px-2.5 py-1 bg-brand-saffron/90 backdrop-blur-sm text-[11px] font-extrabold text-white rounded-lg flex items-center gap-0.5 shadow-sm">
+                      <Star className="w-3.5 h-3.5 fill-white text-white" />
+                      <span>{dest.popularityScore}%</span>
+                    </div>
                   </div>
-                  <h3 style={{ fontSize: '1.4rem', fontWeight: '900', marginBottom: '8px', color: 'var(--himalayan-mist)', lineHeight: 1.2 }}>{item.name}</h3>
-                  <p style={{
-                    color: 'var(--terai-harvest)',
-                    lineHeight: '1.45',
-                    fontSize: '0.85rem',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>{item.description}</p>
-                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--hill-green)', fontWeight: 'bold' }}>
-                      {item.terrainType}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--terai-harvest)' }}>
-                      Popularity: {item.popularityScore}/100
-                    </span>
+
+                  <div className="p-5 flex flex-col gap-3">
+                    <div>
+                      <h3 className="font-extrabold text-lg text-brand-slate group-hover:text-brand-blue transition-colors line-clamp-1">
+                        {dest.name}
+                      </h3>
+                      <p className="text-xs font-semibold text-gray-400 mt-0.5 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-brand-blue" />
+                        {dest.terrainType}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-slate-50 pt-4 mt-1">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estimated Cost</p>
+                        <p className="text-base font-bold text-brand-green">
+                          NPR 2,500<span className="text-xs font-medium text-gray-500"> /day</span>
+                        </p>
+                      </div>
+                      <span className="px-3.5 py-2 rounded-lg bg-brand-blue/5 group-hover:bg-brand-blue group-hover:text-white text-xs font-bold text-brand-blue transition-colors flex items-center gap-1">
+                        Explore
+                        <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
                   </div>
                 </div>
-
-                <div className="node-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-                  <span style={{ fontSize: '0.55rem', opacity: 0.4, fontFamily: 'monospace' }}>[ NODE_STATUS: ACTIVE ]</span>
-                  <button
-                    className="btn-link"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: '1px solid rgba(255,255,255,0.1)',
-                      color: 'rgba(255,255,255,0.4)',
-                      cursor: 'pointer',
-                      fontSize: '0.65rem',
-                      fontWeight: 'bold'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onNavigate('/destinations');
-                    }}
-                  >
-                    EXPLORE_DESTINATION
-                  </button>
-                </div>
-              </motion.div>
+              ) : (
+                <div key={idx} className="min-w-[280px] sm:min-w-[340px] max-w-[340px] bg-white rounded-2xl border border-slate-100 flex-shrink-0 h-64 animate-pulse" />
+              )
             ))}
-          </motion.div>
+          </div>
+        </div>
         </div>
       </section>
 
-      {/* SECTION 3: JOURNEYS / THREE WAYS TO SEE THE WORLD (PILLARS) */}
-      <section className="py-24 px-[8%]" style={{ background: 'var(--obsidian, #0D0A02)' }}>
-        <motion.div {...fadeIn} className="max-w-6xl mx-auto">
-          <p
-            className="text-xs font-bold uppercase tracking-widest"
-            style={{ color: 'var(--hill-green, #059D72)', marginBottom: '1rem' }}
-          >
-            Journeys
-          </p>
-          <h2
-            className="text-4xl md:text-5xl font-black tracking-tighter text-white"
-            style={{ marginBottom: '1rem', lineHeight: 1.1, maxWidth: '720px' }}
-          >
-            Three ways to see the world
-          </h2>
-          <p
-            className="text-sm md:text-base text-white/70 leading-relaxed"
-            style={{ maxWidth: '560px', marginBottom: '3rem' }}
-          >
-            Whether you carve your own route, ride with a curated group, or strike out alone, Yaatri puts a real network of guides and lodges behind every plan.
-          </p>
+      {/* ── SECTION 3: THREE WAYS ── */}
+      <section className="bg-white py-24 px-6 border-y border-slate-100">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">EXPEDITION MODELS</span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-slate mt-2 tracking-tight">
+              Three ways to see the world
+            </h2>
+            <p className="text-gray-500 font-medium text-sm mt-3">
+              Whether you crave expert safety, group camaraderie, or solo discovery, we have tailored your Himalayan itinerary.
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                Icon: Flag,
-                title: 'Custom tours',
-                detail: 'Build a route around what you actually want to see — handpicked stops, your pace, your crew.',
+                Icon: Compass,
+                color: 'bg-brand-blue/10 text-brand-blue',
+                hover: 'hover:border-brand-blue/30',
+                title: 'Custom Sherpa Expeditions',
+                desc: 'Fully customized alpine trekking routes designed for your stamina, matching certified high-altitude Sherpa mountaineers.',
+                linkColor: 'text-brand-blue group-hover:text-brand-pink',
+                label: 'Discover Private Tours',
               },
               {
-                Icon: Bookmark,
-                title: 'Group packages',
-                detail: 'Join a curated party with vetted guides and locked-in lodging across the most-loved trails.',
+                Icon: Users,
+                color: 'bg-brand-saffron/10 text-brand-saffron',
+                hover: 'hover:border-brand-saffron/30',
+                title: 'Vibrant Group Clusters',
+                desc: 'Join organized group departures on popular tea-house treks. Save on overhead and build bonds with worldwide explorers.',
+                linkColor: 'text-brand-saffron group-hover:text-brand-blue',
+                label: 'Discover Group Departures',
               },
               {
-                Icon: Split,
-                title: 'Solo adventures',
-                detail: 'Go alone with a safety net — local check-ins, satellite-mapped routes, and on-call support.',
+                Icon: Flame,
+                color: 'bg-brand-pink/10 text-brand-pink',
+                hover: 'hover:border-brand-pink/30',
+                title: 'Solo Off-the-Grid Safaris',
+                desc: 'Self-paced exploration with remote digital support, checkpoint tracking, pre-booked eco-lodges, and satellite SOS.',
+                linkColor: 'text-brand-pink group-hover:text-brand-saffron',
+                label: 'Discover Solo Safaris',
               },
-            ].map(({ Icon, title, detail }) => (
+            ].map(({ Icon, color, hover, title, desc, linkColor, label }) => (
               <div
                 key={title}
-                style={{
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: '10px',
-                  padding: '2rem',
-                  transition: 'border-color 0.25s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hill-green, #059D72)')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')}
+                className={`p-8 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between ${hover}`}
               >
-                <Icon size={22} style={{ color: 'var(--hill-green, #059D72)', marginBottom: '1.25rem' }} />
-                <h3 className="text-xl font-bold text-white" style={{ marginBottom: '0.5rem' }}>{title}</h3>
-                <p className="text-sm text-white/65 leading-relaxed">{detail}</p>
+                <div>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${color}`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-brand-slate mb-3">{title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed mb-6">{desc}</p>
+                </div>
+                <button
+                  onClick={() => navigate('/destinations')}
+                  className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${linkColor}`}
+                >
+                  {label} →
+                </button>
               </div>
             ))}
           </div>
-
-          <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-            <button
-              onClick={() => onNavigate('/destinations')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--hill-green, #059D72)',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              Discover <ArrowRight size={16} />
-            </button>
-          </div>
-        </motion.div>
+        </div>
       </section>
 
-      {/* SECTION 4: NUMBERS — SPLIT EDITORIAL */}
-      <section className="py-24 px-[8%]" style={{ background: 'rgba(255,255,255,0.02)' }}>
-        <motion.div
-          {...fadeIn}
-          className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 items-center"
-          style={{ gap: '3rem' }}
-        >
-          <div>
-            <p
-              className="text-xs font-bold uppercase tracking-widest"
-              style={{ color: 'var(--hill-green, #059D72)', marginBottom: '1rem' }}
-            >
-              Numbers
-            </p>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-white" style={{ marginBottom: '2rem', lineHeight: 1.1 }}>
-              We've sent travelers everywhere
+      {/* ── SECTION 4: STATS ── */}
+      <section className="py-24 w-full">
+        <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">VERIFIED REACH</span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-slate tracking-tight leading-tight">
+              We've sent travelers to every corner of Nepal
             </h2>
+            <p className="text-gray-500 font-medium text-sm leading-relaxed">
+              With decades of collective high-altitude experience, our local vendor cooperative ensures every booking
+              directly pays guides, hotel stewards, and supports community funds.
+            </p>
             <button
-              onClick={() => onNavigate('/destinations')}
-              className="btn-primary-white"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              onClick={() => navigate('/destinations')}
+              className="px-6 py-3 text-white text-xs font-bold transition-all rounded-xl cursor-pointer inline-flex items-center gap-2 self-start hover:opacity-90" style={{ backgroundColor: '#0f172a' }}
             >
-              Explore <ArrowRight size={16} />
+              Explore Live Catalog
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div>
-            <p className="text-sm md:text-base text-white/75 leading-relaxed" style={{ marginBottom: '2rem' }}>
-              {metrics.years || 'Many'} years of moving people across continents — from first-time hikers chasing prayer-flag villages to seasoned mountaineers eyeing the highest passes on Earth.
-            </p>
-
-            <div className="grid grid-cols-3" style={{ gap: '1.5rem' }}>
-              {[
-                { Icon: MapPin, value: `${metrics.locations || 0}+`, label: 'Locations' },
-                { Icon: Award, value: `${metrics.guides || 0}+`, label: 'Guides' },
-                { Icon: Compass, value: `${formatMetricNumber(metrics.users) || 0}+`, label: 'Yaatris' },
-              ].map(({ Icon, value, label }) => (
-                <div key={label} className="stat-card" style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px' }}>
-                  <Icon size={18} style={{ color: 'var(--hill-green, #059D72)', marginBottom: '0.6rem' }} />
-                  <h4 className="text-2xl font-black tracking-tighter text-white">{value}</h4>
-                  <p className="text-[0.65rem] font-bold uppercase tracking-widest text-white/55">{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* SECTION 5: TESTIMONIALS — TRAVELERS SPEAK */}
-      <section className="py-24 px-[8%]" style={{ background: 'var(--obsidian, #0D0A02)' }}>
-        <motion.div {...fadeIn} className="max-w-6xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--hill-green, #059D72)', marginBottom: '1rem' }}>
-            Travelers speak
-          </p>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-white" style={{ marginBottom: '0.5rem', lineHeight: 1.1 }}>
-            What people say after they return
-          </h2>
-          <p className="text-sm text-white/60" style={{ marginBottom: '3rem' }}>
-            Unedited words from travelers who walked the trails.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              {
-                org: 'KHUMBU 2024',
-                quote: 'The guide network is the real product. They knew which tea house had the warmest stove on the worst night of the trek.',
-                name: 'Amelia Cho',
-                title: 'Photographer · Berlin',
-              },
-              {
-                org: 'MUSTANG 2023',
-                quote: 'Booked a custom 9-day loop. Two of the lodges they paired me with do not show up on any other platform.',
-                name: 'Ravi Bhattarai',
-                title: 'Software Engineer · Bangalore',
-              },
-              {
-                org: 'ANNAPURNA 2024',
-                quote: 'I went solo. The check-in system gave my family peace of mind without making the trip feel managed.',
-                name: 'Júlia Almeida',
-                title: 'Designer · Lisbon',
-              },
-            ].map((t) => (
-              <div
-                key={t.name}
-                style={{
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: '10px',
-                  padding: '1.75rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1.25rem',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="text-[0.65rem] font-bold tracking-widest text-white/55">{t.org}</span>
-                  <Quote size={16} style={{ color: 'var(--hill-green, #059D72)' }} />
-                </div>
-                <p className="text-sm text-white/80 italic leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: 'auto' }}>
-                  <div
-                    style={{
-                      width: 36, height: 36, borderRadius: '50%',
-                      background: 'var(--hill-green, #059D72)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'var(--obsidian, #0D0A02)', fontWeight: 900, fontSize: '0.85rem',
-                    }}
-                  >
-                    {t.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">{t.name}</p>
-                    <p className="text-[0.7rem] text-white/55">{t.title}</p>
-                  </div>
-                </div>
+              { value: `${metrics.locations || 12}+`, label: 'Nepal Territories', sub: 'From Terai lowlands to Khumbu valleys.', color: 'text-brand-blue' },
+              { value: `${metrics.guides || 45}+`, label: 'Certified Guides', sub: 'UIAGM experts, sherpas & historians.', color: 'text-brand-saffron' },
+              { value: `${formatMetricNumber(metrics.users) || '1,800'}+`, label: 'Happy Yaatris', sub: 'Seamless bookings, safe journeys.', color: 'text-brand-green' },
+            ].map(({ value, label, sub, color }) => (
+              <div key={label} className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm text-center lg:text-left flex flex-col gap-2">
+                <span className={`text-3xl sm:text-4xl font-extrabold block ${color}`}>{value}</span>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+                <p className="text-xs text-gray-500">{sub}</p>
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
+        </div>
       </section>
 
-      {/* SECTION 6: CTA — START PLANNING */}
-      <section className="py-24 px-[8%]" style={{ background: 'rgba(255,255,255,0.02)' }}>
-        <motion.div
-          {...fadeIn}
-          className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 items-center"
-          style={{
-            gap: '3rem',
-            background: 'rgba(13,10,2,0.6)',
-            border: '1px solid var(--hill-green, #059D72)',
-            borderRadius: '12px',
-            padding: '3rem',
-          }}
-        >
-          <div>
-            <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-white" style={{ marginBottom: '0.75rem', lineHeight: 1.1 }}>
-              Start planning your next trip
+      {/* ── SECTION 5: CTA BANNER ── full-width dark band */}
+      <section className="w-full overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12">
+          <div className="md:col-span-7 p-8 sm:p-12 flex flex-col justify-center gap-6 text-white">
+            <span className="px-3.5 py-1 rounded-full bg-brand-green/20 border border-brand-green/30 text-[10px] font-bold uppercase tracking-wider text-brand-green self-start">
+              Verified Partners Only
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              Start planning your custom Nepal adventure
             </h2>
-            <p className="text-sm md:text-base text-white/70 leading-relaxed" style={{ marginBottom: '1.75rem' }}>
-              Pick a destination, browse a guide's track record, lock in a lodge. Most of our travelers finalize their first plan in under fifteen minutes.
+            <p className="text-slate-300 font-medium text-sm leading-relaxed max-w-lg">
+              Book a fully compliant trip today. Explore Himalayan terrains, select premium accommodations, customize
+              Sherpa add-ons, and secure escrow-backed payments.
             </p>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <button className="btn-primary-white" onClick={() => onNavigate('/destinations')}>Begin</button>
+            <div className="flex items-center gap-6 mt-2">
               <button
-                onClick={() => onNavigate('/contact')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--hill-green, #059D72)',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '0.6rem 0',
-                }}
+                onClick={() => navigate('/destinations')}
+                className="px-6 py-3.5 bg-brand-blue hover:bg-brand-blue/90 font-bold text-xs rounded-xl shadow-md shadow-brand-blue/25 transition-all cursor-pointer"
               >
-                Learn more <ArrowRight size={14} />
+                Begin Trip Configurator
+              </button>
+              <button
+                onClick={() => navigate('/explore')}
+                className="text-xs font-bold text-white hover:text-brand-saffron transition-all flex items-center gap-1 cursor-pointer"
+              >
+                Learn more →
               </button>
             </div>
           </div>
 
-          <div
-            style={{
-              minHeight: '220px',
-              borderRadius: '10px',
-              backgroundImage: "linear-gradient(rgba(13,10,2,0.2), rgba(13,10,2,0.6)), url('/nepal-bg.jpg')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          />
-        </motion.div>
+          <div className="md:col-span-5 h-64 md:h-full min-h-[300px] relative">
+            <img
+              src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop"
+              alt="Himalayan Sherpa Trekking"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #0f172a, transparent)' }} />
+          </div>
+        </div>
       </section>
 
-      {/* SECTION 7: NEWSLETTER */}
-      <section className="py-24 px-[8%]" style={{ background: 'var(--obsidian, #0D0A02)' }}>
-        <motion.div
-          {...fadeIn}
-          className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 items-center"
-          style={{ gap: '3rem' }}
-        >
-          <div>
-            <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-white" style={{ marginBottom: '0.75rem', lineHeight: 1.1 }}>
-              Get travel stories and deals in your inbox
+      {/* ── SECTION 6: NEWSLETTER ── */}
+      <section className="py-24 px-6 bg-slate-100/50 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 items-center bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-sm">
+          <div className="md:col-span-7 flex flex-col gap-4">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-brand-slate tracking-tight">
+              Receive live mountain reports
             </h2>
-            <p className="text-sm md:text-base text-white/70 leading-relaxed" style={{ marginBottom: '1.5rem' }}>
-              One short email a month. Real journals from real travelers, plus the occasional off-season lodging discount.
+            <p className="text-gray-500 font-medium text-sm leading-relaxed max-w-md">
+              Get weekly updates on permit constraints, peak opening statuses, snowfall conditions, and direct discount
+              codes for boutique lodges.
             </p>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                alert('Thanks — we\'ll be in touch.');
-              }}
-              style={{
-                display: 'flex',
-                gap: '0.5rem',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '8px',
-                padding: '0.4rem',
-                maxWidth: '460px',
-              }}
-            >
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 mt-4 max-w-lg">
               <input
                 type="email"
-                placeholder="Your email address"
+                placeholder="Enter your email"
                 required
-                style={{
-                  flex: 1,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'white',
-                  fontSize: '0.9rem',
-                  padding: '0.6rem 0.75rem',
-                }}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 px-4 py-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/15 transition-all text-slate-800"
               />
               <button
                 type="submit"
-                className="btn-primary-white"
-                style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem' }}
+                className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-blue/10 transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
                 Subscribe
+                <Send className="w-3.5 h-3.5" />
               </button>
             </form>
+
+            {subscribed && (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-brand-green font-bold text-xs flex items-center gap-1.5 mt-2"
+              >
+                <ShieldCheck className="w-4 h-4" /> Thank you! You've subscribed to the Yaatri newsletter.
+              </motion.p>
+            )}
           </div>
 
-          <div
-            style={{
-              aspectRatio: '1 / 1',
-              borderRadius: '10px',
-              backgroundImage: "linear-gradient(rgba(13,10,2,0.25), rgba(13,10,2,0.65)), url('https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          />
-        </motion.div>
+          <div className="md:col-span-5 h-64 md:h-72 rounded-2xl overflow-hidden relative">
+            <img
+              src="https://images.unsplash.com/photo-1542856391-010fb87dcfed?q=80&w=800&auto=format&fit=crop"
+              alt="Phewa Lake Nepal"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
+        </div>
       </section>
-      </div>
-  );
-};
 
-export default Home;
+    </div>
+  );
+}

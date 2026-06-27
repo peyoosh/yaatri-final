@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, X, Send, Loader, MapPin, Maximize2, ExternalLink, Sparkles } from 'lucide-react';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { MessageCircle, X, Send, Loader, MapPin, Maximize2, ExternalLink } from 'lucide-react';
 
 const ROUTE_LABELS = {
   '/destinations': 'Browse Destinations',
@@ -14,7 +15,6 @@ const ROUTE_LABELS = {
   '/dashboard': 'My Dashboard',
   '/contact': 'Contact Us',
 };
-import { motion, AnimatePresence } from 'framer-motion';
 
 const AIChatbox = () => {
   const { user } = useContext(AuthContext);
@@ -24,9 +24,8 @@ const AIChatbox = () => {
     {
       id: 1,
       type: 'bot',
-      text: "Namaste! I'm your Yaatri guide. Ask me about treks (EBC, ABC, Mustang), the best seasons, what to pack, costs, or which destination fits your travel style. What's on your mind?",
-      timestamp: new Date(),
-      suggestedDestinations: []
+      text: "Namaste! I'm your Yaatri AI guide. Ask me about treks, best seasons, what to pack, or which destination fits your style.",
+      suggestedDestinations: [],
     }
   ]);
   const [userInput, setUserInput] = useState('');
@@ -34,218 +33,168 @@ const AIChatbox = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when chatbox opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (isOpen && inputRef.current) inputRef.current.focus();
   }, [isOpen]);
 
-  const handleSendMessage = async (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    
     if (!userInput.trim()) return;
 
-    // Add user message to chat
-    const userMessage = {
-      id: Date.now(),
-      type: 'user',
-      text: userInput,
-      timestamp: new Date(),
-      suggestedDestinations: []
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const userMsg = { id: Date.now(), type: 'user', text: userInput, suggestedDestinations: [] };
+    setMessages(prev => [...prev, userMsg]);
     setUserInput('');
     setIsLoading(true);
 
     try {
-      // Build a compact history payload for Gemini's startChat. We map the local
-      // chat model {type: 'user'|'bot'} → Gemini's {role: 'user'|'model'} and keep
-      // only the last ~12 messages so prompt size stays bounded.
-      const history = messages.slice(-12).map((m) => ({
+      const history = messages.slice(-12).map(m => ({
         role: m.type === 'user' ? 'user' : 'model',
         parts: [{ text: String(m.text || '').slice(0, 2000) }],
       }));
 
-      // 45s timeout (vs the default 15s) — Gemini occasionally takes 8–12s and
-      // Render's free tier cold-starts the backend after 15 min idle.
-      const response = await api.post('/ai/chat', { query: userInput, history }, { timeout: 45_000 });
-      const { reply, redirectTo, suggestedDestinations } = response.data || {};
+      const { data } = await api.post('/ai/chat', { query: userMsg.text, history }, { timeout: 45_000 });
+      const { reply, redirectTo, suggestedDestinations } = data || {};
 
-      const botMessage = {
+      setMessages(prev => [...prev, {
         id: Date.now() + 1,
         type: 'bot',
-        text: reply,
-        timestamp: new Date(),
+        text: reply || "Ask me about treks, seasons, or which destination fits your style.",
         suggestedDestinations: suggestedDestinations || [],
         redirectTo: redirectTo || null,
-      };
-
-      setMessages(prev => [...prev, botMessage]);
+      }]);
     } catch (error) {
       const status = error.response?.status;
       const serverMsg = error.response?.data?.reply;
-      const isNetwork = !error.response && (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED' || error.message === 'Network Error');
+      const isNetwork = !error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error');
 
       if (status === 429 && serverMsg) {
-        // Quota or rate-limit — server already has a friendly message
-        setMessages(prev => [...prev, { id: Date.now() + 1, type: 'bot', text: serverMsg, timestamp: new Date(), suggestedDestinations: [] }]);
+        setMessages(prev => [...prev, { id: Date.now() + 1, type: 'bot', text: serverMsg, suggestedDestinations: [] }]);
       } else if (isNetwork) {
-        const waitMsg = { id: Date.now() + 1, type: 'bot', text: "The guide is waking up from sleep — retrying in 15 seconds...", timestamp: new Date(), suggestedDestinations: [] };
+        const waitMsg = { id: Date.now() + 1, type: 'bot', text: "The guide is waking up — retrying in 15 seconds…", suggestedDestinations: [] };
         setMessages(prev => [...prev, waitMsg]);
         setIsLoading(true);
         await new Promise(r => setTimeout(r, 15000));
         try {
-          const history = messages.slice(-6).map(m => ({ role: m.type === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, 800) }] }));
-          const retry = await api.post('/ai/chat', { query: userMessage.text, history }, { timeout: 60_000 });
-          const { reply, redirectTo, suggestedDestinations } = retry.data || {};
-          setMessages(prev => [...prev.filter(m => m.id !== waitMsg.id), { id: Date.now() + 2, type: 'bot', text: reply, timestamp: new Date(), suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }]);
-          return;
+          const retryHistory = messages.slice(-6).map(m => ({ role: m.type === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, 800) }] }));
+          const { data } = await api.post('/ai/chat', { query: userMsg.text, history: retryHistory }, { timeout: 60_000 });
+          const { reply, redirectTo, suggestedDestinations } = data || {};
+          setMessages(prev => [...prev.filter(m => m.id !== waitMsg.id), { id: Date.now() + 2, type: 'bot', text: reply, suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }]);
         } catch {
-          setMessages(prev => prev.map(m => m.id === waitMsg.id ? { ...m, text: "Still waking up — please try again in a moment." } : m));
+          setMessages(prev => prev.map(m => m.id === waitMsg.id ? { ...m, text: "Still waking up — please try again." } : m));
         }
       } else {
         const text = error.code === 'ECONNABORTED' ? "That took too long. Try a shorter question." : "Something went wrong. Please try again.";
-        setMessages(prev => [...prev, { id: Date.now() + 1, type: 'bot', text, timestamp: new Date(), suggestedDestinations: [] }]);
+        setMessages(prev => [...prev, { id: Date.now() + 1, type: 'bot', text, suggestedDestinations: [] }]);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDestinationClick = (destinationId) => {
-    setIsOpen(false);
-    navigate(`/destination/${destinationId}`);
-  };
-
-  const clearChat = () => {
-    setMessages([
-      {
-        id: 1,
-        type: 'bot',
-        text: 'Welcome to Yaatri AI Guide! 🏔️ Tell me about your ideal travel experience. What kind of destination are you looking for? (e.g., high altitude, cultural, adventure, peaceful)',
-        timestamp: new Date(),
-        suggestedDestinations: []
-      }
-    ]);
-  };
-
   return (
     <>
-      {/* FLOATING CHATBOX WIDGET */}
+      {/* CHAT WINDOW */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            initial={{ opacity: 0, scale: 0.92, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="fixed bottom-24 left-6 w-96 max-w-[calc(100vw-2rem)] max-h-[600px] bg-gradient-to-br from-teal-steel to-obsidian border border-hill-green/30 rounded-2xl shadow-2xl shadow-hill-green/20 flex flex-col overflow-hidden z-40"
+            exit={{ opacity: 0, scale: 0.92, y: 16 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+            className="fixed bottom-24 left-6 w-96 max-w-[calc(100vw-2rem)] max-h-145 bg-white rounded-2xl shadow-2xl shadow-brand-blue/10 border border-slate-100 flex flex-col overflow-hidden z-40"
           >
-            {/* HEADER */}
-            <div className="bg-gradient-to-r from-hill-green to-[#047D57] p-4 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <MessageCircle size={20} className="text-white" />
-                <h3 className="text-white font-bold">Yaatri AI Guide</h3>
+            {/* Header */}
+            <div className="bg-brand-blue px-4 py-3 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white fill-white" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-sm leading-none">Yaatri AI Guide</h3>
+                  <p className="text-blue-200 text-[10px] font-medium mt-0.5">✦ Explore Engine</p>
+                </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    // Hand off the current conversation + draft input to the full-page Explore view.
                     navigate('/explore', { state: { messages, userInput } });
                   }}
-                  className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
-                  title="Open in full screen"
-                  aria-label="Open in full screen"
+                  className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
+                  title="Open full screen"
                 >
-                  <Maximize2 size={18} />
+                  <Maximize2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
-                  aria-label="Close"
+                  className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
                 >
-                  <X size={20} />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* MESSAGES AREA */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-obsidian/50 scrollbar-thin scrollbar-thumb-[#059D72]/50 scrollbar-track-transparent">
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 no-scrollbar">
+              {messages.map(msg => (
+                <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className="w-full">
-                    <div
-                      className={`max-w-xs px-4 py-3 rounded-xl ${
-                        msg.type === 'user'
-                          ? 'bg-hill-green text-white rounded-br-none ml-auto'
-                          : 'bg-teal-steel/60 text-[#E8E3D6] rounded-bl-none border border-hill-green/20'
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {msg.text}
-                      </p>
+                    <div className={`max-w-xs px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      msg.type === 'user'
+                        ? 'bg-brand-blue text-white rounded-br-sm ml-auto'
+                        : 'bg-white text-slate-800 rounded-bl-sm border border-slate-100 shadow-sm font-medium'
+                    }`}>
+                      {msg.text}
                     </div>
 
-                    {/* REDIRECT BUTTON — user-initiated, never auto-fires */}
-                    {msg.redirectTo && (
-                      <div className="mt-2 ml-0">
+                    {/* Redirect button */}
+                    {msg.redirectTo && ROUTE_LABELS[msg.redirectTo] && (
+                      <div className="mt-1.5">
                         <button
                           onClick={() => { setIsOpen(false); navigate(msg.redirectTo); }}
-                          className="flex items-center gap-1.5 text-xs bg-hill-green/20 hover:bg-hill-green/40 border border-hill-green/50 text-toxic-lime rounded-lg px-3 py-1.5 transition-all"
+                          className="flex items-center gap-1.5 text-[11px] bg-brand-blue/10 hover:bg-brand-blue/20 border border-brand-blue/20 text-brand-blue rounded-lg px-3 py-1.5 transition-all cursor-pointer font-semibold"
                         >
-                          <ExternalLink size={12} />
-                          {ROUTE_LABELS[msg.redirectTo] || msg.redirectTo}
+                          <ExternalLink className="w-3 h-3" />
+                          {ROUTE_LABELS[msg.redirectTo]}
                         </button>
                       </div>
                     )}
 
-                    {/* SUGGESTED DESTINATIONS CARDS */}
-                    {msg.suggestedDestinations && msg.suggestedDestinations.length > 0 && (
-                      <div className="mt-3 space-y-2 ml-0">
-                        {msg.suggestedDestinations.map((dest) => (
+                    {/* Suggested destination cards */}
+                    {msg.suggestedDestinations?.length > 0 && (
+                      <div className="mt-2.5 space-y-2">
+                        {msg.suggestedDestinations.map(dest => (
                           <motion.button
                             key={dest._id}
                             whileHover={{ scale: 1.02 }}
-                            onClick={() => handleDestinationClick(dest._id)}
-                            className="w-full text-left bg-hill-green/20 hover:bg-hill-green/40 border border-hill-green/50 rounded-lg p-3 transition-all cursor-pointer"
+                            onClick={() => { setIsOpen(false); navigate(`/destination/${dest._id}`); }}
+                            className="w-full text-left bg-white hover:bg-slate-50 border border-slate-100 rounded-xl p-3 transition-all cursor-pointer shadow-sm flex items-center gap-3 group"
                           >
-                            <div className="flex items-start gap-2">
-                              <MapPin size={14} className="text-toxic-lime flex-shrink-0 mt-1" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm text-white truncate">
-                                  {dest.name}
-                                </p>
-                                <p className="text-xs text-terai-harvest truncate">
-                                  {dest.region} • {dest.terrainType}
-                                </p>
-                              </div>
+                            <img src={dest.imageURL} alt={dest.name} className="w-10 h-10 rounded-lg object-cover shrink-0 bg-slate-100" />
+                            <div className="min-w-0">
+                              <p className="font-bold text-xs text-brand-slate group-hover:text-brand-blue truncate transition-colors">{dest.name}</p>
+                              <p className="text-[10px] text-gray-400 font-semibold flex items-center gap-0.5 mt-0.5">
+                                <MapPin className="w-2.5 h-2.5 text-brand-pink shrink-0" />
+                                <span className="truncate">{dest.region} · {dest.terrainType}</span>
+                              </p>
                             </div>
                           </motion.button>
                         ))}
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               ))}
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-teal-steel/60 border border-hill-green/20 text-[#E8E3D6] px-4 py-3 rounded-xl flex items-center gap-2">
-                    <Loader size={16} className="animate-spin text-hill-green" />
-                    <span className="text-sm">Thinking...</span>
+                  <div className="bg-white border border-slate-100 shadow-sm text-slate-500 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2">
+                    <Loader className="w-3.5 h-3.5 animate-spin text-brand-blue" />
+                    <span className="text-xs font-medium">Thinking…</span>
                   </div>
                 </div>
               )}
@@ -253,31 +202,31 @@ const AIChatbox = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* INPUT AREA */}
-            <div className="border-t border-hill-green/20 p-3 bg-teal-steel/40 space-y-2">
-              <form onSubmit={handleSendMessage} className="flex gap-2">
+            {/* Input */}
+            <div className="border-t border-slate-100 p-3 bg-white">
+              <form onSubmit={handleSend} className="flex gap-2">
                 <input
                   ref={inputRef}
                   type="text"
                   value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  placeholder="Ask about destinations..."
+                  onChange={e => setUserInput(e.target.value)}
+                  placeholder="Ask about destinations…"
                   disabled={isLoading}
-                  className="flex-1 bg-obsidian/60 border border-hill-green/30 rounded-lg px-3 py-2 text-sm text-white placeholder-white/40 focus:outline-none focus:border-hill-green transition-colors disabled:opacity-50"
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all disabled:opacity-50"
                 />
                 <button
                   type="submit"
                   disabled={isLoading || !userInput.trim()}
-                  className="bg-hill-green hover:bg-[#047D57] disabled:bg-gray-600 text-white rounded-lg p-2 transition-colors"
+                  className="bg-brand-blue hover:bg-brand-blue/90 disabled:bg-gray-200 text-white rounded-xl p-2.5 transition-colors cursor-pointer"
                 >
-                  <Send size={16} />
+                  <Send className="w-4 h-4" />
                 </button>
               </form>
               <button
-                onClick={clearChat}
-                className="w-full text-xs text-terai-harvest hover:text-hill-green transition-colors py-1"
+                onClick={() => setMessages([{ id: 1, type: 'bot', text: "Namaste! Ask me about Nepal treks, seasons, or which destination fits your style.", suggestedDestinations: [] }])}
+                className="w-full text-[10px] text-gray-400 hover:text-brand-blue transition-colors py-1.5 cursor-pointer"
               >
-                Clear Chat
+                Clear chat
               </button>
             </div>
           </motion.div>
@@ -287,16 +236,22 @@ const AIChatbox = () => {
       {/* FLOATING BUTTON */}
       <motion.button
         whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
+        whileTap={{ scale: 0.93 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 left-6 bg-gradient-to-br from-hill-green to-[#047D57] hover:from-toxic-lime hover:to-[#8BC34A] text-white rounded-full p-4 shadow-lg shadow-hill-green/30 hover:shadow-toxic-lime/30 transition-all z-40 border border-white/10"
+        className="fixed bottom-6 left-6 bg-brand-blue hover:bg-brand-blue/90 text-white rounded-2xl p-4 shadow-xl shadow-brand-blue/25 hover:shadow-brand-blue/40 transition-all z-40 border border-brand-blue/20"
         title={isOpen ? 'Close AI Guide' : 'Open AI Guide'}
       >
-        {isOpen ? (
-          <X size={24} />
-        ) : (
-          <MessageCircle size={24} />
-        )}
+        <AnimatePresence mode="wait">
+          {isOpen ? (
+            <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+              <X className="w-5 h-5" />
+            </motion.div>
+          ) : (
+            <motion.div key="msg" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+              <Sparkles className="w-5 h-5 fill-white" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.button>
     </>
   );

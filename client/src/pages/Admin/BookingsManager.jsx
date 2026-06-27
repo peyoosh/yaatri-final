@@ -255,7 +255,7 @@ const BookingsManager = () => {
                               <ShieldCheck size={11} /> APPROVE
                             </button>
                           )}
-                          {/* Any non-terminal state can be cancelled */}
+                          {/* Any non-terminal booking can be cancelled by admin */}
                           {!['completed', 'cancelled'].includes(b.status) && (
                             <button
                               onClick={() => changeStatus(b, 'cancelled')}
@@ -265,11 +265,10 @@ const BookingsManager = () => {
                                 background: 'rgba(255,107,107,0.08)', color: '#ff6b6b',
                                 border: '1px solid rgba(255,107,107,0.45)',
                                 padding: '0.3rem 0.7rem', borderRadius: 4, marginRight: 6,
-                                fontWeight: 700, fontSize: '0.7rem', cursor: acting ? 'wait' : 'pointer',
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                fontWeight: 800, fontSize: '0.7rem', cursor: acting ? 'wait' : 'pointer',
                               }}
                             >
-                              <X size={11} /> CANCEL
+                              CANCEL
                             </button>
                           )}
                           <button

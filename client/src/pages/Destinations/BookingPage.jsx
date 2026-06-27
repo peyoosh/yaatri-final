@@ -1,546 +1,455 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ShieldCheck, Compass, CheckCircle2, UserCheck, Timer, Users, Calendar,
+  Building, CreditCard, ChevronDown, ChevronUp, Check, ArrowRight, Star, Loader,
+} from 'lucide-react';
 import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
-import {
-  Users, Calendar, MapPin, Loader, Check, X, CreditCard, ChevronLeft, ShieldCheck, Sparkles,
-  Star, Building2, UserCheck, ExternalLink, ChevronDown, ChevronUp,
-} from 'lucide-react';
 
-// Two-tier tax structure per the Yaatri invoicing spec.
-const STATE_TAX_RATE = 0.04; // 4%
-const GST_RATE = 0.12;       // 12%
-const DEFAULT_BASE_RATE = 2500; // NPR per person per day
+const STATE_TAX = 0.04;
+const GST = 0.12;
+const DEFAULT_BASE = 2500;
 
-const ADDONS = [
-  { id: 'guide', label: 'Local Guide', rate: 1500, description: 'Verified Yaatri guide accompanies your route' },
-  { id: 'premium-lodging', label: 'Premium Lodging', rate: 2000, description: 'Upgraded heated rooms with private bathroom' },
-  { id: 'transport', label: 'Transport', rate: 800, description: 'Round-trip from Kathmandu / Pokhara' },
-  { id: 'meals', label: 'Full Board Meals', rate: 600, description: '3 meals/day, hot drinks unlimited' },
-];
+const fmtNPR = (n) => `NPR ${Number(n || 0).toLocaleString('en-IN')}`;
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' });
+};
 
-const formatNPR = (n) => `NPR ${Number(n || 0).toLocaleString('en-IN')}`;
-
-const BookingPage = () => {
+export default function BookingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
-  const [destination, setDestination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
-  const [confirmed, setConfirmed] = useState(null);
-
-  const [travelers, setTravelers] = useState(2);
-  const [durationDays, setDurationDays] = useState(5);
-  const [addOns, setAddOns] = useState([]);
-  const [assignedGuideId, setAssignedGuideId] = useState('');
-  const [assignedHotelId, setAssignedHotelId] = useState('');
-
+  const [dest, setDest] = useState(null);
   const [guides, setGuides] = useState([]);
   const [hotels, setHotels] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [travelers, setTravelers] = useState(2);
+  const [duration, setDuration] = useState(5);
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const endDate = useMemo(() => {
+    const d = new Date(startDate);
+    if (isNaN(d)) return '';
+    d.setDate(d.getDate() + duration);
+    return fmtDate(d.toISOString());
+  }, [startDate, duration]);
+
+  const [hasGuide, setHasGuide] = useState(false);
+  const [hasHotel, setHasHotel] = useState(false);
+  const [hasTransport, setHasTransport] = useState(false);
+  const [hasMeals, setHasMeals] = useState(false);
+  const [selectedGuideId, setSelectedGuideId] = useState('');
+  const [selectedHotelId, setSelectedHotelId] = useState('');
   const [showGuides, setShowGuides] = useState(false);
   const [showHotels, setShowHotels] = useState(false);
 
-  // Date picker — defaults to tomorrow so the user has a clear "starts on" expectation.
-  // `min` on the input enforces no past dates client-side (server re-validates).
-  const todayStr = (() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  })();
-  const tomorrowStr = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-  })();
-  const [startDate, setStartDate] = useState(tomorrowStr);
-
-  // Derived end date — purely display; the server recomputes from startDate + durationDays.
-  const endDateStr = (() => {
-    const d = new Date(startDate);
-    if (Number.isNaN(d.getTime())) return '';
-    d.setDate(d.getDate() + Number(durationDays || 0));
-    return d.toISOString().slice(0, 10);
-  })();
-  const fmtPretty = (iso) => {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    let cancelled = false;
-    Promise.all([
-      api.get(`/destinations/${id}`),
-      api.get('/guides'),
-      api.get('/hotels'),
-    ]).then(([destRes, guidesRes, hotelsRes]) => {
-      if (cancelled) return;
-      setDestination(destRes.data);
-      setGuides(Array.isArray(guidesRes.data) ? guidesRes.data : []);
-      setHotels(Array.isArray(hotelsRes.data) ? hotelsRes.data : []);
-    }).catch((err) => {
-      if (!cancelled) console.error('Failed to load booking data', err);
-    }).finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    if (!user) { navigate('/login'); return; }
+    Promise.all([api.get(`/destinations/${id}`), api.get('/guides'), api.get('/hotels')])
+      .then(([dr, gr, hr]) => {
+        setDest(dr.data);
+        setGuides(Array.isArray(gr.data) ? gr.data : []);
+        setHotels(Array.isArray(hr.data) ? hr.data : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [id, user, navigate]);
 
-  // Pricing matrix — recomputed on every change. Same formulae the server enforces.
-  const pricing = useMemo(() => {
-    const baseRate = DEFAULT_BASE_RATE;
-    const t = Math.max(1, Number(travelers) || 1);
-    const d = Math.max(1, Number(durationDays) || 1);
-    const subtotal = baseRate * t * d;
-    const selectedGuide = guides.find(g => g._id === assignedGuideId);
-    const selectedHotel = hotels.find(h => h._id === assignedHotelId);
-    const addOnPerPersonPerDay = addOns.reduce((sum, id) => {
-      if (id === 'guide') return sum + (selectedGuide?.dailyFee || 1500);
-      if (id === 'premium-lodging') return sum + (selectedHotel?.basePrice || 2000);
-      const a = ADDONS.find(x => x.id === id);
-      return sum + (a ? a.rate : 0);
-    }, 0);
-    const addOnTotal = addOnPerPersonPerDay * t * d;
-    const beforeTax = subtotal + addOnTotal;
-    const stateTax = Math.round(beforeTax * STATE_TAX_RATE);
-    const gst = Math.round(beforeTax * GST_RATE);
-    const totalCost = beforeTax + stateTax + gst;
-    return { baseRate, subtotal, addOnTotal, beforeTax, stateTax, gst, totalCost };
-  }, [travelers, durationDays, addOns, assignedGuideId, assignedHotelId, guides, hotels]);
+  const selectedGuide = guides.find(g => g._id === selectedGuideId);
+  const selectedHotel = hotels.find(h => h._id === selectedHotelId);
 
-  const toggleAddon = (id) => {
-    const isOn = addOns.includes(id);
-    setAddOns((prev) => isOn ? prev.filter(x => x !== id) : [...prev, id]);
-    if (!isOn) {
-      if (id === 'guide') setShowGuides(true);
-      if (id === 'premium-lodging') setShowHotels(true);
-    } else {
-      if (id === 'guide') { setAssignedGuideId(''); setShowGuides(false); }
-      if (id === 'premium-lodging') { setAssignedHotelId(''); setShowHotels(false); }
-    }
-  };
+  const pricing = useMemo(() => {
+    const base = DEFAULT_BASE * travelers * duration;
+    const gFee = hasGuide && selectedGuide ? (selectedGuide.dailyFee || 1500) * duration : 0;
+    const hFee = hasHotel && selectedHotel ? (selectedHotel.basePrice || 2000) * duration : 0;
+    const tFee = hasTransport ? 800 * travelers : 0;
+    const mFee = hasMeals ? 600 * travelers * duration : 0;
+    const before = base + gFee + hFee + tFee + mFee;
+    const st = Math.round(before * STATE_TAX);
+    const gst = Math.round(before * GST);
+    return { base, gFee, hFee, tFee, mFee, before, st, gst, total: before + st + gst };
+  }, [travelers, duration, hasGuide, hasHotel, hasTransport, hasMeals, selectedGuide, selectedHotel]);
+
+  const addOns = [
+    ...(hasGuide ? ['guide'] : []),
+    ...(hasHotel ? ['premium-lodging'] : []),
+    ...(hasTransport ? ['transport'] : []),
+    ...(hasMeals ? ['meals'] : []),
+  ];
 
   const handleConfirm = async () => {
-    setSubmitting(true);
-    setSubmitError(null);
+    setSubmitting(true); setSubmitError(null);
     try {
       const { data } = await api.post('/bookings', {
         destination: id,
-        travelers: Number(travelers),
-        durationDays: Number(durationDays),
+        travelers,
+        durationDays: duration,
         addOns,
-        baseRate: DEFAULT_BASE_RATE,
-        startDate, // server re-derives endDate from startDate + durationDays
-        // Only send the guide id when the guide add-on is active AND a specific guide was picked.
-        assignedGuideId: addOns.includes('guide') && assignedGuideId ? assignedGuideId : undefined,
-        assignedHotelId: addOns.includes('premium-lodging') && assignedHotelId ? assignedHotelId : undefined,
+        baseRate: DEFAULT_BASE,
+        startDate,
+        assignedGuideId: hasGuide && selectedGuideId ? selectedGuideId : undefined,
+        assignedHotelId: hasHotel && selectedHotelId ? selectedHotelId : undefined,
       });
-      setConfirmed(data);
+      setConfirmedBooking(data);
     } catch (err) {
       setSubmitError(err.response?.data?.message || err.message || 'Could not confirm booking.');
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-        <Loader className="animate-spin" /> &nbsp; Loading destination…
-      </div>
-    );
-  }
+  const handleMarkPaid = async () => {
+    if (!confirmedBooking) return;
+    setPaying(true);
+    try {
+      const { data } = await api.patch(`/bookings/${confirmedBooking._id}/confirm-payment`);
+      setConfirmedBooking(data);
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || 'Could not confirm payment.');
+    } finally { setPaying(false); }
+  };
 
-  if (!destination) {
-    return (
-      <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-        <p>Destination not found.</p>
-        <button onClick={() => navigate('/destinations')} className="btn-primary-white">Browse destinations</button>
+  if (loading) return (
+    <div className="w-full min-h-screen bg-slate-50 pt-28 flex items-center justify-center">
+      <div className="flex items-center gap-3 text-gray-400"><Loader className="w-5 h-5 animate-spin" /><span className="text-sm font-semibold">Loading destination…</span></div>
+    </div>
+  );
+
+  if (!dest) return (
+    <div className="w-full min-h-screen bg-slate-50 pt-28 flex items-center justify-center px-6">
+      <div className="text-center">
+        <p className="font-bold text-brand-slate mb-4">Destination not found.</p>
+        <button onClick={() => navigate('/destinations')} className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl cursor-pointer">Browse Destinations</button>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--obsidian, #0D0A02)', color: 'white' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 6%' }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{ background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 600 }}
-        >
-          <ChevronLeft size={14} /> Back
+    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6">
+      <div className="max-w-7xl mx-auto">
+
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-brand-blue transition-colors cursor-pointer mb-6 group">
+          <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+          Back
         </button>
 
-        <header style={{ marginBottom: '2rem' }}>
-          <p style={{ fontSize: '0.7rem', letterSpacing: 3, fontWeight: 700, color: 'var(--hill-green, #059D72)', textTransform: 'uppercase', marginBottom: 8 }}>
-            Reserve your trip
-          </p>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: 8 }}>{destination.name}</h1>
-          <p style={{ display: 'inline-flex', alignItems: 'center', gap: 8, opacity: 0.7, fontSize: '0.9rem' }}>
-            <MapPin size={14} /> {destination.region} · {destination.terrainType}
+        <header className="mb-8">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-blue mb-2">RESERVE YOUR TRIP</p>
+          <h1 className="text-3xl font-extrabold text-brand-slate tracking-tight">{dest.name}</h1>
+          <p className="text-sm text-gray-400 font-medium mt-1 flex items-center gap-1">
+            <Compass className="w-4 h-4 text-brand-blue" /> {dest.region} · {dest.terrainType}
           </p>
         </header>
 
-        {/* CONFIRMATION PANEL */}
-        {confirmed ? (
-          <ConfirmationCard booking={confirmed} onDashboard={() => navigate('/dashboard')} onAgain={() => setConfirmed(null)} />
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1.4fr) minmax(280px, 1fr)', gap: '2rem' }}>
-            {/* LEFT: configurator */}
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '2rem' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.5rem' }}>Configure your journey</h2>
+        <AnimatePresence mode="wait">
+          {!confirmedBooking ? (
+            <motion.div key="configurator" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+            >
+              {/* LEFT — Configurator */}
+              <div className="lg:col-span-7 flex flex-col gap-6">
+                <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-6">
+                  <div>
+                    <span className="text-[10px] font-bold text-brand-blue uppercase tracking-widest block">STEP-BY-STEP CHECKOUT</span>
+                    <h2 className="text-2xl font-extrabold text-brand-slate tracking-tight mt-1">Configure your journey</h2>
+                  </div>
 
-              {/* Travelers */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A6A180', marginBottom: 8 }}>
-                  <Users size={12} style={{ display: 'inline', marginRight: 6 }} /> Travelers
-                </label>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: '4px 4px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setTravelers(v => Math.max(1, Number(v) - 1))}
-                    style={{ background: 'none', border: 'none', color: 'white', width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem' }}
-                  >−</button>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 800, minWidth: 28, textAlign: 'center' }}>{travelers}</span>
-                  <button
-                    type="button"
-                    onClick={() => setTravelers(v => Math.min(30, Number(v) + 1))}
-                    style={{ background: 'none', border: 'none', color: 'white', width: 32, height: 32, cursor: 'pointer', fontSize: '1.1rem' }}
-                  >+</button>
-                </div>
-              </div>
+                  {/* Travelers + Date */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2 border-t border-slate-50">
+                    <div>
+                      <label className="text-xs font-bold text-brand-slate block mb-2 flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-brand-blue" /> Number of Travelers
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setTravelers(v => Math.max(1, v - 1))} className="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold transition-colors cursor-pointer">−</button>
+                        <span className="w-12 text-center text-sm font-extrabold text-brand-slate">{travelers}</span>
+                        <button onClick={() => setTravelers(v => Math.min(30, v + 1))} className="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold transition-colors cursor-pointer">+</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-brand-slate block mb-2 flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-brand-blue" /> Trek Start Date
+                      </label>
+                      <input
+                        type="date"
+                        min={new Date().toISOString().slice(0, 10)}
+                        value={startDate}
+                        onChange={e => setStartDate(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-slate-800 focus:outline-none focus:border-brand-blue font-semibold text-sm"
+                        style={{ colorScheme: 'light' }}
+                      />
+                    </div>
+                  </div>
 
-              {/* Start date — calendar picker. Min = today so past dates are blocked at the browser. */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A6A180', marginBottom: 8 }}>
-                  <Calendar size={12} style={{ display: 'inline', marginRight: 6 }} /> Start date
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  min={todayStr}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  style={{
-                    background: 'rgba(0,0,0,0.25)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'white',
-                    padding: '0.6rem 0.85rem',
-                    borderRadius: 6,
-                    fontSize: '0.9rem',
-                    outline: 'none',
-                    colorScheme: 'dark',
-                  }}
-                />
-                <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 6 }}>
-                  Trip arrives <strong style={{ color: '#A2D729' }}>{fmtPretty(startDate)}</strong> · returns <strong>{fmtPretty(endDateStr)}</strong> (auto-completes after this date)
-                </p>
-              </div>
-
-              {/* Duration */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A6A180', marginBottom: 8 }}>
-                  <Calendar size={12} style={{ display: 'inline', marginRight: 6 }} /> Duration
-                </label>
-                <select
-                  value={durationDays}
-                  onChange={(e) => setDurationDays(Number(e.target.value))}
-                  style={{
-                    background: 'rgba(0,0,0,0.25)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'white',
-                    padding: '0.6rem 0.85rem',
-                    borderRadius: 6,
-                    fontSize: '0.9rem',
-                    outline: 'none',
-                  }}
-                >
-                  {[3, 5, 7, 10, 14, 21].map(d => <option key={d} value={d}>{d} days</option>)}
-                </select>
-              </div>
-
-              {/* Add-ons */}
-              <div style={{ marginBottom: '0.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 2, color: '#A6A180', marginBottom: 8 }}>
-                  Optional add-ons
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-                  {ADDONS.map(a => {
-                    const active = addOns.includes(a.id);
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => toggleAddon(a.id)}
-                        style={{
-                          background: active ? 'rgba(162,215,41,0.12)' : 'rgba(0,0,0,0.25)',
-                          border: `1px solid ${active ? '#A2D729' : 'rgba(255,255,255,0.08)'}`,
-                          color: active ? '#A2D729' : '#A6A180',
-                          padding: '0.7rem 0.85rem',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          fontSize: '0.82rem',
-                          fontWeight: 600,
-                        }}
+                  {/* Duration + Date summary */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                      <label className="text-xs font-bold text-brand-slate block mb-2 flex items-center gap-1.5">
+                        <Timer className="w-4 h-4 text-brand-blue" /> Expedition Duration
+                      </label>
+                      <select value={duration} onChange={e => setDuration(Number(e.target.value))}
+                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-slate-800 focus:outline-none focus:border-brand-blue font-semibold text-sm bg-white cursor-pointer"
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                          <span>{a.label}</span>
-                          <span style={{ fontSize: '0.7rem', opacity: 0.65 }}>+{formatNPR(a.rate)}/day</span>
+                        {[3, 5, 7, 10, 12, 14, 21].map(d => (
+                          <option key={d} value={d}>{d} Days</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col justify-center">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Calculated Window</p>
+                      <p className="text-xs font-semibold text-brand-slate mt-1">
+                        Arrives {startDate ? new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        <br />Returns <strong className="text-brand-blue">{endDate}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Add-ons */}
+                  <div className="pt-6 border-t border-slate-100">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Add-ons & Enhancements</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { key: 'guide', label: 'Local Guide', sub: 'From NPR 1,500/day', Icon: UserCheck, active: hasGuide, toggle: () => { setHasGuide(v => !v); if (hasGuide) { setSelectedGuideId(''); setShowGuides(false); } else setShowGuides(true); }, activeColor: 'border-brand-blue bg-brand-blue/5 ring-1 ring-brand-blue/30', iconColor: 'text-brand-blue' },
+                        { key: 'hotel', label: 'Premium Lodging', sub: 'From NPR 2,000/night', Icon: Building, active: hasHotel, toggle: () => { setHasHotel(v => !v); if (hasHotel) { setSelectedHotelId(''); setShowHotels(false); } else setShowHotels(true); }, activeColor: 'border-brand-saffron bg-brand-saffron/5 ring-1 ring-brand-saffron/30', iconColor: 'text-brand-saffron' },
+                        { key: 'transport', label: 'Direct Transport', sub: 'NPR 800 flat/guest', Icon: Compass, active: hasTransport, toggle: () => setHasTransport(v => !v), activeColor: 'border-brand-pink bg-brand-pink/5 ring-1 ring-brand-pink/30', iconColor: 'text-brand-pink' },
+                        { key: 'meals', label: 'Full Board Meals', sub: 'NPR 600/day', Icon: ShieldCheck, active: hasMeals, toggle: () => setHasMeals(v => !v), activeColor: 'border-brand-green bg-brand-green/5 ring-1 ring-brand-green/30', iconColor: 'text-brand-green' },
+                      ].map(({ key, label, sub, Icon, active, toggle, activeColor, iconColor }) => (
+                        <button key={key} onClick={toggle}
+                          className={`p-4 rounded-xl border text-left flex flex-col justify-between h-28 cursor-pointer transition-all ${active ? activeColor : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                        >
+                          <Icon className={`w-6 h-6 ${active ? iconColor : 'text-gray-400'}`} />
+                          <div>
+                            <h4 className="text-xs font-bold text-brand-slate">{label}</h4>
+                            <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{sub}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Guide picker */}
+                  <AnimatePresence>
+                    {hasGuide && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-t border-slate-100 pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] font-bold text-brand-blue uppercase tracking-wider">Select Your Sherpa Guide</span>
+                          <button onClick={() => setShowGuides(v => !v)} className="text-gray-400 cursor-pointer">
+                            {showGuides ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
                         </div>
-                        <p style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 400, lineHeight: 1.4 }}>{a.description}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* GUIDE PICKER */}
-              {addOns.includes('guide') && (
-                <div style={{ marginTop: '1.25rem', background: 'rgba(162,215,41,0.05)', border: '1px solid rgba(162,215,41,0.25)', borderRadius: 8, overflow: 'hidden' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowGuides(v => !v)}
-                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.1rem', background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}
-                  >
-                    <span><UserCheck size={13} style={{ display: 'inline', marginRight: 6 }} />
-                      {assignedGuideId ? `Guide: ${guides.find(g => g._id === assignedGuideId)?.guideName || 'Selected'}` : 'Choose a guide'}
-                    </span>
-                    {showGuides ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                  {showGuides && (
-                    <div style={{ padding: '0 1rem 1rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {guides.length === 0 ? (
-                        <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>No guides available yet. We'll assign one closer to your trip.</p>
-                      ) : guides.map(g => {
-                        const picked = assignedGuideId === g._id;
-                        return (
-                          <div key={g._id} style={{ background: picked ? 'rgba(162,215,41,0.12)' : 'rgba(0,0,0,0.3)', border: `1px solid ${picked ? '#A2D729' : 'rgba(255,255,255,0.08)'}`, borderRadius: 8, padding: '0.75rem 0.9rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <button type="button" onClick={() => setAssignedGuideId(picked ? '' : g._id)} style={{ flex: 1, background: 'none', border: 'none', color: 'white', textAlign: 'left', cursor: 'pointer', padding: 0 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                  <p style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 2 }}>
-                                    {picked && <span style={{ color: '#A2D729', marginRight: 6 }}>✓</span>}
-                                    {g.guideName}
-                                    {g.isVerified && <span style={{ marginLeft: 6, fontSize: '0.65rem', background: 'rgba(162,215,41,0.2)', color: '#A2D729', padding: '1px 6px', borderRadius: 99, fontWeight: 700 }}>VERIFIED</span>}
-                                  </p>
-                                  <p style={{ fontSize: '0.72rem', opacity: 0.6, marginBottom: 2 }}>{g.bio || 'Professional local guide'}</p>
-                                  {g.expertise?.length > 0 && <p style={{ fontSize: '0.68rem', color: '#A2D729', opacity: 0.8 }}>{g.expertise.slice(0, 3).join(' · ')}</p>}
-                                  <p style={{ fontSize: '0.68rem', opacity: 0.5, marginTop: 2 }}>{g.completedTours || 0} tours completed · {g.rating > 0 ? `${g.rating}★` : 'New'}</p>
+                        {showGuides && (
+                          <div className="flex flex-col gap-3">
+                            {guides.length === 0 ? (
+                              <p className="text-xs text-gray-400">No guides available yet. We'll assign one closer to your trip.</p>
+                            ) : guides.map(g => {
+                              const picked = selectedGuideId === g._id;
+                              return (
+                                <div key={g._id} onClick={() => setSelectedGuideId(picked ? '' : g._id)}
+                                  className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${picked ? 'border-brand-blue bg-brand-blue/5' : 'border-slate-200 bg-slate-50 hover:bg-slate-100/50'}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-brand-blue/10 text-brand-blue font-bold flex items-center justify-center text-sm border-2 border-brand-blue/20">
+                                      {(g.guideName || g.username || 'G').slice(0, 1).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <h4 className="text-xs font-bold text-brand-slate">{g.guideName || g.username}</h4>
+                                        {g.isVerified && <span className="px-1 py-0.5 bg-brand-green/10 text-brand-green text-[7px] font-bold rounded">VERIFIED</span>}
+                                        {picked && <Check className="w-3 h-3 text-brand-blue" />}
+                                      </div>
+                                      {g.expertise?.length > 0 && <p className="text-[9px] text-gray-400 line-clamp-1">{g.expertise.join(' · ')}</p>}
+                                      <p className="text-[9px] text-gray-400">{g.completedTours || 0} tours completed {g.rating > 0 ? `· ${g.rating}★` : ''}</p>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-extrabold text-brand-slate shrink-0">
+                                    {fmtNPR(g.dailyFee || 1500)}/day
+                                  </span>
                                 </div>
-                                <span style={{ fontSize: '0.8rem', color: '#A2D729', fontWeight: 800, whiteSpace: 'nowrap', marginLeft: 12 }}>{formatNPR(g.dailyFee)}/day</span>
-                              </div>
-                            </button>
-                            {g.userId?._id && (
-                              <a href={`/profile/${g.userId._id}`} target="_blank" rel="noreferrer" title="View profile" style={{ color: '#A6A180', flexShrink: 0 }}>
-                                <ExternalLink size={14} />
-                              </a>
-                            )}
+                              );
+                            })}
+                            {!selectedGuideId && <p className="text-[10px] text-gray-400 italic">No guide selected — we'll pair you with whoever is free.</p>}
                           </div>
-                        );
-                      })}
-                      {!assignedGuideId && <p style={{ fontSize: '0.7rem', opacity: 0.45, marginTop: 2 }}>No guide selected — we'll pair you with whoever is free.</p>}
-                    </div>
-                  )}
-                </div>
-              )}
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-              {/* HOTEL PICKER */}
-              {addOns.includes('premium-lodging') && (
-                <div style={{ marginTop: '1.25rem', background: 'rgba(162,215,41,0.05)', border: '1px solid rgba(162,215,41,0.25)', borderRadius: 8, overflow: 'hidden' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowHotels(v => !v)}
-                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.1rem', background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem', letterSpacing: 2, textTransform: 'uppercase' }}
-                  >
-                    <span><Building2 size={13} style={{ display: 'inline', marginRight: 6 }} />
-                      {assignedHotelId ? `Hotel: ${hotels.find(h => h._id === assignedHotelId)?.name || 'Selected'}` : 'Choose a hotel'}
-                    </span>
-                    {showHotels ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                  {showHotels && (
-                    <div style={{ padding: '0 1rem 1rem', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {hotels.length === 0 ? (
-                        <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>No hotels registered yet. We'll arrange accommodation.</p>
-                      ) : hotels.map(h => {
-                        const picked = assignedHotelId === h._id;
-                        const available = (h.totalRooms || 0) - (h.bookedRooms || 0);
-                        return (
-                          <div key={h._id} style={{ background: picked ? 'rgba(162,215,41,0.12)' : 'rgba(0,0,0,0.3)', border: `1px solid ${picked ? '#A2D729' : 'rgba(255,255,255,0.08)'}`, borderRadius: 8, padding: '0.75rem 0.9rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <button type="button" onClick={() => setAssignedHotelId(picked ? '' : h._id)} style={{ flex: 1, background: 'none', border: 'none', color: 'white', textAlign: 'left', cursor: 'pointer', padding: 0 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                  <p style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 2 }}>
-                                    {picked && <span style={{ color: '#A2D729', marginRight: 6 }}>✓</span>}
-                                    {h.name}
-                                    <span style={{ marginLeft: 8, fontSize: '0.65rem', background: available > 0 ? 'rgba(162,215,41,0.2)' : 'rgba(231,76,60,0.2)', color: available > 0 ? '#A2D729' : '#e74c3c', padding: '1px 6px', borderRadius: 99, fontWeight: 700 }}>{available > 0 ? `${available} rooms free` : 'Full'}</span>
-                                  </p>
-                                  {h.features?.length > 0 && <p style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: 2 }}>{h.features.slice(0, 3).join(' · ')}</p>}
-                                  <p style={{ fontSize: '0.68rem', opacity: 0.5 }}>Managed by {h.username || h.userId?.username || 'Yaatri Partner'}</p>
+                  {/* Hotel picker */}
+                  <AnimatePresence>
+                    {hasHotel && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-t border-slate-100 pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] font-bold text-brand-saffron uppercase tracking-wider">Select Premium Accommodation</span>
+                          <button onClick={() => setShowHotels(v => !v)} className="text-gray-400 cursor-pointer">
+                            {showHotels ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        {showHotels && (
+                          <div className="flex flex-col gap-3">
+                            {hotels.length === 0 ? (
+                              <p className="text-xs text-gray-400">No hotels registered yet. We'll arrange accommodation.</p>
+                            ) : hotels.map(h => {
+                              const picked = selectedHotelId === h._id;
+                              const avail = (h.totalRooms || 0) - (h.bookedRooms || 0);
+                              return (
+                                <div key={h._id} onClick={() => setSelectedHotelId(picked ? '' : h._id)}
+                                  className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${picked ? 'border-brand-saffron bg-brand-saffron/5' : 'border-slate-200 bg-slate-50 hover:bg-slate-100/50'}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-brand-saffron/10 text-brand-saffron flex items-center justify-center">
+                                      <Building className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <h4 className="text-xs font-bold text-brand-slate">{h.name}</h4>
+                                        {picked && <Check className="w-3 h-3 text-brand-saffron" />}
+                                        <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${avail > 0 ? 'bg-brand-saffron/10 text-brand-saffron' : 'bg-red-100 text-red-500'}`}>
+                                          {avail > 0 ? `${avail} rooms` : 'Full'}
+                                        </span>
+                                      </div>
+                                      <p className="text-[9px] text-gray-400">{h.features?.slice(0, 2).join(' · ') || 'Premium lodging'}</p>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-extrabold text-brand-slate shrink-0">
+                                    {fmtNPR(h.basePrice || 2000)}/night
+                                  </span>
                                 </div>
-                                <span style={{ fontSize: '0.8rem', color: '#A2D729', fontWeight: 800, whiteSpace: 'nowrap', marginLeft: 12 }}>{formatNPR(h.basePrice)}/night</span>
-                              </div>
-                            </button>
-                            {h.userId?._id && (
-                              <a href={`/profile/${h.userId._id}`} target="_blank" rel="noreferrer" title="View profile" style={{ color: '#A6A180', flexShrink: 0 }}>
-                                <ExternalLink size={14} />
-                              </a>
-                            )}
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                      {!assignedHotelId && <p style={{ fontSize: '0.7rem', opacity: 0.45, marginTop: 2 }}>No hotel selected — we'll arrange accommodation for you.</p>}
-                    </div>
-                  )}
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              )}
-            </div>
-
-            {/* RIGHT: live total */}
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '2rem', height: 'fit-content', position: 'sticky', top: 100 }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', color: '#A2D729', marginBottom: '1.5rem' }}>
-                <CreditCard size={14} style={{ display: 'inline', marginRight: 6 }} /> Cost Breakdown
-              </h2>
-
-              {/* Date summary at top of breakdown so the user always sees what they're committing to. */}
-              <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: '0.75rem 0.9rem', marginBottom: '1rem', border: '1px solid rgba(162,215,41,0.18)' }}>
-                <p style={{ fontSize: '0.65rem', letterSpacing: 2, color: '#A2D729', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Travel window</p>
-                <p style={{ fontSize: '0.85rem', fontWeight: 700, lineHeight: 1.4 }}>
-                  {fmtPretty(startDate)}
-                </p>
-                <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>
-                  → returns {fmtPretty(endDateStr)} · {durationDays} day{durationDays > 1 ? 's' : ''}
-                </p>
               </div>
 
-              <Row label={`Base × ${travelers} traveler${travelers > 1 ? 's' : ''} × ${durationDays} days`} value={formatNPR(pricing.subtotal)} />
-              {addOns.length > 0 && <Row label={`Add-ons × ${travelers} × ${durationDays}`} value={formatNPR(pricing.addOnTotal)} />}
-              <Row label="State Tax (4%)" value={formatNPR(pricing.stateTax)} muted />
-              <Row label="GST / Local VAT (12%)" value={formatNPR(pricing.gst)} muted />
+              {/* RIGHT — Sticky cost breakdown */}
+              <div className="lg:col-span-5">
+                <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm sticky top-28 flex flex-col gap-6">
+                  <div>
+                    <h2 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest">COST BREAKDOWN</h2>
+                    <div className="p-3.5 bg-brand-green/5 rounded-xl border border-brand-green/10 flex flex-col gap-1.5 mt-3">
+                      <p className="text-[10px] font-bold text-brand-green uppercase tracking-wider flex items-center gap-1">
+                        <Compass className="w-3.5 h-3.5" /> Checked Travel Window
+                      </p>
+                      <p className="text-xs font-semibold text-brand-slate leading-none">
+                        {startDate ? new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : 'Choose Start'} → {endDate}
+                      </p>
+                    </div>
+                  </div>
 
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '1.25rem 0', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: '0.75rem', letterSpacing: 2, opacity: 0.7, textTransform: 'uppercase' }}>Total</span>
-                <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#A2D729', letterSpacing: '-0.01em' }}>{formatNPR(pricing.totalCost)}</span>
+                  <div className="flex flex-col gap-3 font-semibold text-xs text-slate-500 border-b border-slate-50 pb-4">
+                    <div className="flex justify-between"><span>Base rate ({travelers}p × {duration}d):</span><span className="text-brand-slate">{fmtNPR(pricing.base)}</span></div>
+                    {pricing.gFee > 0 && <div className="flex justify-between"><span className="text-brand-blue">Local Guide:</span><span className="text-brand-slate">{fmtNPR(pricing.gFee)}</span></div>}
+                    {pricing.hFee > 0 && <div className="flex justify-between"><span className="text-brand-saffron">Premium Lodging:</span><span className="text-brand-slate">{fmtNPR(pricing.hFee)}</span></div>}
+                    {pricing.tFee > 0 && <div className="flex justify-between"><span className="text-brand-pink">Direct Transport:</span><span className="text-brand-slate">{fmtNPR(pricing.tFee)}</span></div>}
+                    {pricing.mFee > 0 && <div className="flex justify-between"><span className="text-brand-green">Meals (full board):</span><span className="text-brand-slate">{fmtNPR(pricing.mFee)}</span></div>}
+                    <div className="flex justify-between border-t border-slate-50 pt-3"><span>Himalayan State Tax (4%):</span><span className="text-brand-slate">{fmtNPR(pricing.st)}</span></div>
+                    <div className="flex justify-between"><span>Nepal Tourism GST (12%):</span><span className="text-brand-slate">{fmtNPR(pricing.gst)}</span></div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aggregate total</p>
+                      <p className="text-3xl font-black text-brand-green leading-none mt-1">{fmtNPR(pricing.total)}</p>
+                    </div>
+                    <span className="px-2.5 py-1.5 bg-brand-green/10 text-brand-green rounded-lg text-[10px] font-bold uppercase">NPR</span>
+                  </div>
+
+                  <button
+                    onClick={handleConfirm}
+                    disabled={submitting}
+                    className="w-full py-4 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-blue/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    {submitting ? <><Loader className="w-4 h-4 animate-spin" /> Confirming…</> : <>Confirm Booking <ArrowRight className="w-4 h-4" /></>}
+                  </button>
+
+                  {submitError && <p className="text-xs text-red-500 text-center">{submitError}</p>}
+
+                  <p className="text-center font-mono text-[9px] text-gray-400">Payment processed via secure escrow cooperative.</p>
+
+                  <div className="border-t border-slate-100 pt-4 flex items-center justify-around text-[10px] font-bold text-gray-400">
+                    <div className="flex items-center gap-1"><ShieldCheck className="w-4 h-4 text-brand-green" /><span>Secure Booking</span></div>
+                    <div className="flex items-center gap-1"><Check className="w-4 h-4 text-brand-blue" /><span>Verified Partners</span></div>
+                  </div>
+                </div>
               </div>
+            </motion.div>
+          ) : (
+            /* CONFIRMATION */
+            <motion.div key="confirmation" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-xl mx-auto text-center">
+              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-2xl flex flex-col items-center gap-6">
+                {(confirmedBooking.status === 'pending_payment' || confirmedBooking.status === 'pending') ? (
+                  <>
+                    <div className="w-14 h-14 rounded-full bg-brand-saffron/10 text-brand-saffron flex items-center justify-center animate-pulse">
+                      <CreditCard className="w-7 h-7" />
+                    </div>
+                    <div className="text-center flex flex-col gap-2">
+                      <span className="px-3 py-1 bg-brand-saffron/10 text-brand-saffron text-[9px] font-bold rounded-full uppercase tracking-widest self-center">PENDING PAYMENT WIRE</span>
+                      <h2 className="text-2xl font-extrabold text-brand-slate tracking-tight">Booking Placed — Awaiting Payment</h2>
+                      <p className="text-xs text-gray-500 font-medium max-w-sm">Please initiate a bank wire transfer of the booking total, then click confirm below.</p>
+                    </div>
+                    <div className="w-full bg-slate-900 text-slate-300 p-5 rounded-2xl font-mono text-[11px] text-left border border-slate-800 flex flex-col gap-2 shadow-inner">
+                      <div className="flex justify-between border-b border-slate-800 pb-1.5 text-white font-semibold"><span>YAATRI ESCROW CO-OP CORP</span></div>
+                      <div>BANK: Global IME Bank Limited, Lalitpur</div>
+                      <div>A/C: 43-2009-8800-43</div>
+                      <div>REF: {String(confirmedBooking._id).slice(-8).toUpperCase()}</div>
+                      <div className="flex justify-between border-t border-slate-800 pt-1.5 mt-1 text-brand-green font-bold">
+                        <span>WIRE VALUE:</span><span>{fmtNPR(confirmedBooking.pricing?.totalCost)}</span>
+                      </div>
+                    </div>
+                    {submitError && <p className="text-xs text-red-500">{submitError}</p>}
+                    <button
+                      onClick={handleMarkPaid}
+                      disabled={paying}
+                      className="w-full py-3.5 bg-brand-saffron hover:bg-brand-saffron/95 text-white font-extrabold text-xs rounded-xl shadow-md shadow-brand-saffron/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    >
+                      {paying ? <><Loader className="w-4 h-4 animate-spin" /> Confirming…</> : <><CheckCircle2 className="w-4 h-4" /> I have paid — Confirm</>}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center">
+                      <CheckCircle2 className="w-8 h-8" />
+                    </div>
+                    <div className="text-center flex flex-col gap-2">
+                      <span className="px-3 py-1 bg-brand-green/10 text-brand-green text-[9px] font-bold rounded-full uppercase tracking-widest self-center">ESCROW_FUNDS_HELD</span>
+                      <h2 className="text-2xl font-extrabold text-brand-slate tracking-tight">Payment received · awaiting admin approval</h2>
+                      <p className="text-xs text-gray-500 font-medium max-w-md">Your payment is safely locked in Yaatri's escrow. An invoice has been emailed to you.</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl w-full text-left flex justify-between items-center text-xs font-semibold">
+                      <span className="text-gray-500">Booking REF:</span>
+                      <strong className="font-mono text-brand-slate">{String(confirmedBooking._id).slice(-8).toUpperCase()}</strong>
+                    </div>
+                  </>
+                )}
 
-              <button
-                onClick={handleConfirm}
-                disabled={submitting}
-                className="btn-primary-white"
-                style={{ width: '100%', padding: '0.85rem', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-              >
-                {submitting ? <><Loader size={14} className="animate-spin" /> Confirming…</> : <><ShieldCheck size={14} /> Confirm Booking</>}
-              </button>
+                <div className="grid grid-cols-2 gap-3 w-full border-t border-slate-100 pt-6 mt-2">
+                  <button onClick={() => navigate('/dashboard')} className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer">
+                    View in dashboard
+                  </button>
+                  <button onClick={() => navigate('/destinations')} className="py-3 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-blue/15 cursor-pointer">
+                    Book another
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-              {submitError && (
-                <p style={{ color: '#E63946', fontSize: '0.8rem', marginTop: 12 }}>{submitError}</p>
-              )}
-
-              <p style={{ marginTop: 12, fontSize: '0.7rem', opacity: 0.5, lineHeight: 1.5 }}>
-                Confirming saves a pending booking to your Yaatri account. Payment is collected on arrival.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
-};
-
-const Row = ({ label, value, muted }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', fontSize: '0.85rem', opacity: muted ? 0.65 : 1 }}>
-    <span>{label}</span>
-    <span style={{ fontWeight: 700 }}>{value}</span>
-  </div>
-);
-
-const ConfirmationCard = ({ booking, onDashboard, onAgain }) => {
-  const [b, setB] = useState(booking);
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState(null);
-  const stage = b.status;
-  const isAwaitingPayment = stage === 'pending_payment' || stage === 'pending';
-  const isInEscrow = stage === 'escrow_held';
-
-  const markAsPaid = async () => {
-    setPaying(true);
-    setPayError(null);
-    try {
-      const { data } = await api.patch(`/bookings/${b._id}/confirm-payment`);
-      setB(data);
-    } catch (err) {
-      setPayError(err?.response?.data?.message || 'Could not confirm payment. Try again.');
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  const total = fmtPayTotal(b.pricing);
-
-  return (
-    <div style={{ background: 'rgba(162,215,41,0.06)', border: '1px solid #A2D729', borderRadius: 12, padding: '2.5rem', maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ width: 56, height: 56, margin: '0 auto 1rem', borderRadius: '50%', background: isAwaitingPayment ? '#F4A261' : '#A2D729', color: '#0D0A02', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Check size={28} />
-      </div>
-
-      {isAwaitingPayment && (
-        <>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>Booking placed — awaiting payment</h2>
-          <p style={{ opacity: 0.75, marginBottom: '0.75rem' }}>
-            Your seat for <strong>{b.destination?.name}</strong> is held. Pay <strong style={{ color: '#A2D729' }}>{total}</strong> by bank transfer to the Yaatri account, then click below to notify us.
-          </p>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.85rem 1.1rem', borderRadius: 6, fontSize: '0.78rem', maxWidth: 460, margin: '0 auto 1rem', textAlign: 'left' }}>
-            <p style={{ opacity: 0.6, marginBottom: 4 }}>Bank transfer details</p>
-            <p style={{ fontFamily: 'monospace' }}>YAATRI HUB · NIC ASIA BANK · 1234 5678 9012 3456</p>
-            <p style={{ fontFamily: 'monospace', opacity: 0.7 }}>Ref: {String(b._id).slice(-8).toUpperCase()}</p>
-          </div>
-          {payError && <p style={{ color: '#ff6b6b', fontSize: '0.8rem', marginBottom: 12 }}>{payError}</p>}
-          <button
-            onClick={markAsPaid}
-            disabled={paying}
-            className="btn-primary-white"
-            style={{ marginBottom: 12, opacity: paying ? 0.6 : 1, cursor: paying ? 'wait' : 'pointer' }}
-          >
-            {paying ? 'Confirming…' : 'I have paid — confirm'}
-          </button>
-        </>
-      )}
-
-      {isInEscrow && (
-        <>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>Payment received · awaiting admin approval</h2>
-          <p style={{ opacity: 0.75, marginBottom: '1rem' }}>
-            Thanks. We've logged your payment of <strong style={{ color: '#A2D729' }}>{total}</strong> for <strong>{b.destination?.name}</strong>. An admin will verify and approve the booking within a few hours. You'll get an email when it's approved.
-          </p>
-        </>
-      )}
-
-      {!isAwaitingPayment && !isInEscrow && (
-        <>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>Booking confirmed</h2>
-          <p style={{ opacity: 0.7, marginBottom: '0.5rem' }}>Your trip to {b.destination?.name} is on the books. Total: <strong style={{ color: '#A2D729' }}>{total}</strong></p>
-        </>
-      )}
-
-      <p style={{ opacity: 0.55, fontSize: '0.8rem', marginBottom: '1.5rem' }}>
-        A detailed invoice has been emailed to your registered address. Check your inbox (and spam folder) in a minute or two.
-      </p>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <button onClick={onDashboard} className="btn-primary-white">View in dashboard</button>
-        <button onClick={onAgain} style={{ background: 'none', border: '1px solid #A2D729', color: '#A2D729', padding: '0.7rem 1.2rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 }}>
-          <Sparkles size={14} style={{ display: 'inline', marginRight: 6 }} /> Book another
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const fmtPayTotal = (pricing) => {
-  const v = Number(pricing?.grossTotal || pricing?.totalCost || 0);
-  return `NPR ${v.toLocaleString('en-IN')}`;
-};
-
-export default BookingPage;
+}

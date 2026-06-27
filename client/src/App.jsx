@@ -6,6 +6,7 @@ const ScrollToTop = () => {
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 };
+
 import Home from './pages/Home/Home';
 import Blog from './pages/Blog/Blog';
 import DestinationDetail from './pages/Destinations/DestinationDetail';
@@ -31,7 +32,6 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: loggedInUser, logout } = useContext(AuthContext);
-  const [selectedNode, setSelectedNode] = useState(null);
   const [selectedBlogNode, setSelectedBlogNode] = useState(null);
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
 
@@ -41,11 +41,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (isBlogModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
+    document.body.style.overflow = isBlogModalOpen ? 'hidden' : 'auto';
   }, [isBlogModalOpen]);
 
   const openBlogModal = (post) => {
@@ -53,32 +49,25 @@ const App = () => {
     setIsBlogModalOpen(true);
   };
 
-  const handleNodeSelection = (node) => {
-    setSelectedNode(node);
-    navigate('/destination-detail');
-  };
-
-  // Detect if we are in a management/dashboard view to hide site-wide nav/footer
-  const isManagementView = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
-  // The chat bubble shows EVERYWHERE except: /admin/* (ops surface, no customer chat) and /explore
-  // (the full-page AI chat lives there already, two surfaces would be redundant).
+  // Admin gets its own full-screen layout (hides global chrome)
   const isAdminView = location.pathname.startsWith('/admin');
+  // Explore page manages its own full-height layout — hide footer + bubble there
   const isAIPage = location.pathname === '/explore';
-  const showChatBubble = !isAdminView && !isAIPage;
 
   return (
-    <div className={`${isManagementView ? "management-shell" : "app-shell"} font-global`}>
+    <div className={isAdminView ? 'management-shell' : 'app-shell'}>
       <ScrollToTop />
-      {!isManagementView && (
+
+      {/* Global Navbar — hidden only on /admin/* (admin has its own chrome) */}
+      {!isAdminView && (
         <Navbar loggedInUser={loggedInUser} handleLogout={handleLogout} />
       )}
 
-      <main className={isManagementView ? "management-main" : "main-content animate-alive"}>
+      <main className={isAdminView ? 'management-main' : 'main-content animate-alive'}>
         <Routes>
-          <Route path="/" element={<Home onNavigate={navigate} onSelectNode={handleNodeSelection} />} />
-          <Route path="/destinations" element={<Destinations onSelectNode={handleNodeSelection} />} />
-          <Route path="/destination-detail" element={<DestinationDetail node={selectedNode} onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
-          <Route path="/destination/:id" element={<DestinationDetail onBack={() => navigate('/destinations')} onSeeBlog={openBlogModal} />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/destinations" element={<Destinations />} />
+          <Route path="/destination/:id" element={<DestinationDetail onSeeBlog={openBlogModal} />} />
           <Route path="/destinations/book/:id" element={
             <ProtectedRoute user={loggedInUser}>
               <BookingPage />
@@ -98,29 +87,29 @@ const App = () => {
               <UserDashboard user={loggedInUser} />
             </ProtectedRoute>
           } />
-          {/* ADMIN ROUTING: Wildcard delegates all sub-routes to the AdminDashboard router */}
           <Route path="/admin/*" element={
             <ProtectedRoute user={loggedInUser} allowedRoles={['admin', 'support']}>
               <AdminDashboard />
             </ProtectedRoute>
-        } />
-      </Routes>
-    </main>
+          } />
+        </Routes>
+      </main>
 
-      {/* BlogModal + Footer only on the non-management public chrome */}
-      {!isManagementView && (
+      {/* BlogModal + Footer on all public (non-admin, non-explore) pages */}
+      {!isAdminView && (
         <>
           <BlogModal
             isOpen={isBlogModalOpen}
             onClose={() => setIsBlogModalOpen(false)}
             post={selectedBlogNode}
           />
-          <Footer />
+          {/* Footer hidden on /explore — that page fills the full viewport */}
+          {!isAIPage && <Footer />}
         </>
       )}
 
-      {/* AIChatbox rides above the management shell too — only /admin and /explore opt out. */}
-      {showChatBubble && <AIChatbox />}
+      {/* Floating AI chat bubble — everywhere except /admin and /explore */}
+      {!isAdminView && !isAIPage && <AIChatbox />}
     </div>
   );
 };

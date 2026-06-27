@@ -1,113 +1,148 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X, Heart, MapPin, Calendar } from 'lucide-react';
 
 const BlogModal = ({ isOpen, onClose, post }) => {
   const [imageZoomed, setImageZoomed] = React.useState(false);
   if (!post) return null;
 
-  // Pick the best available image: base64/url on `image`, or first of legacy `images[]`.
   const heroImage = post.image || (Array.isArray(post.images) && post.images[0]) || null;
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 2000,
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          padding: '2rem'
-        }} onClick={onClose}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 sm:p-6"
+          onClick={onClose}
+        >
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 20, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.97 }}
+            transition={{ duration: 0.2 }}
             onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: 'var(--obsidian)',
-              border: '1px solid var(--hill-green)',
-              borderRadius: '8px',
-              width: '100%', maxWidth: '800px', maxHeight: '85vh',
-              overflowY: 'auto', padding: '2.5rem', position: 'relative'
-            }}
+            className="bg-white rounded-3xl w-full max-w-2xl max-h-[88vh] overflow-y-auto relative border border-slate-100 shadow-2xl"
           >
+            {/* Close button */}
             <button
               onClick={onClose}
-              style={{
-                position: 'absolute', top: '1.5rem', right: '1.5rem',
-                background: 'rgba(0,0,0,0.6)', border: 'none', color: 'white',
-                cursor: 'pointer', fontSize: '1.5rem', fontWeight: 'bold',
-                width: '36px', height: '36px', borderRadius: '50%', zIndex: 2
-              }}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
             >
-              &times;
+              <X className="w-4 h-4" />
             </button>
 
+            {/* Hero image */}
             {heroImage && (
               <div
+                className="relative w-full aspect-video overflow-hidden rounded-t-3xl cursor-zoom-in bg-slate-100"
                 onClick={() => setImageZoomed(true)}
-                style={{
-                  width: '100%', marginBottom: '2rem', cursor: 'zoom-in',
-                  borderRadius: '6px', overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.05)'
-                }}
                 title="Click to enlarge"
               >
                 <img
                   src={heroImage}
-                  alt={post.title || 'Blog image'}
-                  style={{ width: '100%', maxHeight: '480px', objectFit: 'cover', display: 'block' }}
+                  alt={post.title || 'Journal image'}
+                  className="w-full h-full object-cover"
                 />
               </div>
             )}
 
-            <h2 style={{ color: 'var(--hill-green)', fontSize: '2rem', marginBottom: '0.5rem' }}>
-              {post.title}
-            </h2>
-            <div style={{ fontSize: '0.85rem', opacity: 0.6, marginBottom: '2rem', display: 'flex', gap: '1rem', fontFamily: 'monospace', flexWrap: 'wrap' }}>
-              <span>AUTHOR: <Link to={post.authorId?._id ? `/profile/${post.authorId._id}` : '#'} onClick={(e) => { e.stopPropagation(); onClose(); }} style={{ color: '#A2D729', textDecoration: 'underline' }}>@{post.authorId?.username || 'UNKNOWN'}</Link></span>
-              <span>DATE: {new Date(post.timestamp).toLocaleDateString()}</span>
-              <span>STATUS: [{post.status?.toUpperCase() || 'PUBLISHED'}]</span>
-              {post.locationId?.region && <span>REGION: {post.locationId.region}</span>}
-            </div>
+            {/* Content */}
+            <div className="p-6 sm:p-8">
+              {/* Meta row */}
+              <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
+                <span className="flex items-center gap-1">
+                  <Link
+                    to={post.authorId?._id ? `/profile/${post.authorId._id}` : '#'}
+                    onClick={e => { e.stopPropagation(); onClose(); }}
+                    className="text-brand-blue hover:underline"
+                  >
+                    @{post.authorId?.username || 'UNKNOWN'}
+                  </Link>
+                </span>
+                {post.timestamp && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(post.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </span>
+                )}
+                {post.locationId?.region && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-brand-pink" />
+                    {post.locationId.region}
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                  post.status === 'published'
+                    ? 'bg-brand-green/10 text-brand-green border border-brand-green/20'
+                    : 'bg-brand-saffron/10 text-brand-saffron border border-brand-saffron/20'
+                }`}>
+                  {(post.status || 'published').toUpperCase()}
+                </span>
+              </div>
 
-            <div style={{ lineHeight: '1.8', whiteSpace: 'pre-wrap', opacity: 0.9 }}>
-              {post.content}
+              {/* Title */}
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-brand-slate mb-4 leading-tight">
+                {post.title}
+              </h2>
+
+              {/* Like count */}
+              {post.likeCount > 0 && (
+                <div className="flex items-center gap-1.5 text-brand-pink text-xs font-bold mb-5">
+                  <Heart className="w-4 h-4 fill-brand-pink" />
+                  {post.likeCount} likes
+                </div>
+              )}
+
+              {/* Body */}
+              <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-medium">
+                {post.content || <span className="text-gray-400 italic">No caption provided.</span>}
+              </div>
+
+              {/* Tags */}
+              {(post.taggedHotels?.length > 0 || post.taggedGuides?.length > 0) && (
+                <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-slate-100">
+                  {(post.taggedHotels || []).map((h, i) => (
+                    <span key={i} className="px-2.5 py-1 bg-brand-green/10 text-brand-green text-[10px] font-bold rounded-full">
+                      🏠 {h.name || h}
+                    </span>
+                  ))}
+                  {(post.taggedGuides || []).map((g, i) => (
+                    <span key={i} className="px-2.5 py-1 bg-brand-blue/10 text-brand-blue text-[10px] font-bold rounded-full">
+                      👤 {g.guideName || g}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
 
-          {/* Image lightbox — pops the image out full-screen when clicked */}
-          {imageZoomed && heroImage && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={(e) => { e.stopPropagation(); setImageZoomed(false); }}
-              style={{
-                position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-                background: 'rgba(0,0,0,0.95)', zIndex: 3000,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'zoom-out', padding: '2rem'
-              }}
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); setImageZoomed(false); }}
-                style={{
-                  position: 'absolute', top: '1.5rem', right: '1.5rem',
-                  background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
-                  cursor: 'pointer', fontSize: '1.75rem', width: '44px', height: '44px',
-                  borderRadius: '50%'
-                }}
-              >&times;</button>
-              <motion.img
-                src={heroImage}
-                alt={post.title || 'Blog image'}
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                style={{ maxWidth: '95%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '4px' }}
-              />
-            </motion.div>
-          )}
+          {/* Full-screen image lightbox */}
+          <AnimatePresence>
+            {imageZoomed && heroImage && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={e => { e.stopPropagation(); setImageZoomed(false); }}
+                className="fixed inset-0 bg-black/95 z-[3000] flex items-center justify-center cursor-zoom-out p-6"
+              >
+                <button
+                  onClick={e => { e.stopPropagation(); setImageZoomed(false); }}
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <motion.img
+                  src={heroImage}
+                  alt={post.title || 'Journal image'}
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="max-w-full max-h-[90vh] object-contain rounded-xl"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </AnimatePresence>

@@ -25,10 +25,10 @@ const normalizeRole = (r) => {
 };
 
 const roleBadgeMap = {
-  user: { label: 'Yaatri Explorer', color: '#A2D729' },
-  guide: { label: 'Verified Local Guide', color: '#059D72' },
-  hotel: { label: 'Hotel Partner', color: '#F4A261' },
-  admin: { label: 'System Administrator', color: '#E63946' },
+  user:  { label: 'Yaatri Explorer',        color: '#2563EB' },
+  guide: { label: 'Verified Local Guide',    color: '#10B981' },
+  hotel: { label: 'Hotel Partner',           color: '#F59E0B' },
+  admin: { label: 'System Administrator',    color: '#DB2777' },
 };
 
 const Profile = () => {
@@ -130,17 +130,17 @@ const Profile = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-white">Loading profile…</div>;
-  if (!profileUser) return <div className="p-8 text-white">User not found.</div>;
+  if (loading) return <div className="p-8 pt-28 text-gray-400 text-sm">Loading profile…</div>;
+  if (!profileUser) return <div className="p-8 pt-28 text-gray-400 text-sm">User not found.</div>;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--obsidian, #0D0A02)', color: '#fff' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 6%' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '5rem 6% 2rem' }}>
 
         {/* BACK */}
         <button
           onClick={() => navigate(-1)}
-          style={{ background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 600 }}
+          style={{ background: 'none', border: 'none', color: '#2563EB', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 600 }}
         >
           <ArrowLeft size={14} /> Back
         </button>
@@ -152,11 +152,12 @@ const Profile = () => {
             gridTemplateColumns: '180px 1fr auto',
             gap: '2rem',
             alignItems: 'center',
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 12,
+            background: 'white',
+            border: '1px solid #e2e8f0',
+            borderRadius: 16,
             padding: '2rem',
             marginBottom: '2rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           }}
         >
           {/* Arched avatar mask */}
@@ -170,8 +171,8 @@ const Profile = () => {
                 borderBottomLeftRadius: 14,
                 borderBottomRightRadius: 14,
                 overflow: 'hidden',
-                background: 'linear-gradient(135deg, rgba(5,157,114,0.25), rgba(162,215,41,0.1))',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'linear-gradient(135deg, rgba(37,99,235,0.12), rgba(16,185,129,0.08))',
+                border: '1px solid #e2e8f0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -218,10 +219,10 @@ const Profile = () => {
 
           {/* Identity column */}
           <div>
-            <p style={{ fontSize: '0.7rem', letterSpacing: 3, fontWeight: 700, color: '#A6A180', textTransform: 'uppercase', marginBottom: 6 }}>
+            <p style={{ fontSize: '0.7rem', letterSpacing: 3, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
               @{profileUser.username}
             </p>
-            <h1 style={{ fontSize: '2.25rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: 12 }}>
+            <h1 style={{ fontSize: '2.25rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: 12, color: '#0f172a' }}>
               {profileUser.username}
             </h1>
             <span
@@ -229,7 +230,7 @@ const Profile = () => {
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '4px 12px',
                 borderRadius: 999,
-                background: 'rgba(255,255,255,0.04)',
+                background: '#f8fafc',
                 border: `1px solid ${badge.color}`,
                 color: badge.color,
                 fontSize: '0.7rem', fontWeight: 700, letterSpacing: 2,
@@ -249,9 +250,9 @@ const Profile = () => {
                 style={{
                   display: 'block', marginTop: '1rem',
                   width: '100%', maxWidth: 560,
-                  background: 'rgba(0,0,0,0.25)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#fff',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
                   padding: '0.6rem 0.85rem',
                   borderRadius: 6,
                   fontSize: '0.9rem',
@@ -261,7 +262,7 @@ const Profile = () => {
                 }}
               />
             ) : (
-              <p style={{ marginTop: 12, opacity: 0.75, fontSize: '0.95rem', maxWidth: 560, lineHeight: 1.55 }}>
+              <p style={{ marginTop: 12, fontSize: '0.95rem', maxWidth: 560, lineHeight: 1.55, color: '#475569' }}>
                 {profileUser.bio || 'No bio yet.'}
               </p>
             )}
@@ -276,9 +277,9 @@ const Profile = () => {
                     onClick={handleSave}
                     disabled={saving}
                     style={{
-                      background: '#A2D729', color: '#0D0A02',
+                      background: '#2563EB', color: 'white',
                       border: 'none', padding: '0.65rem 1.1rem',
-                      borderRadius: 6, cursor: saving ? 'wait' : 'pointer',
+                      borderRadius: 10, cursor: saving ? 'wait' : 'pointer',
                       fontWeight: 700, fontSize: '0.85rem',
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       opacity: saving ? 0.6 : 1,
@@ -289,8 +290,8 @@ const Profile = () => {
                   <button
                     onClick={() => { setEditing(false); setSaveError(null); }}
                     style={{
-                      background: 'none', color: '#A6A180', border: '1px solid rgba(255,255,255,0.1)',
-                      padding: '0.6rem 1rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem',
+                      background: 'none', color: '#94a3b8', border: '1px solid #e2e8f0',
+                      padding: '0.6rem 1rem', borderRadius: 10, cursor: 'pointer', fontSize: '0.8rem',
                     }}
                   >Cancel</button>
                 </>
@@ -298,9 +299,9 @@ const Profile = () => {
                 <button
                   onClick={() => setEditing(true)}
                   style={{
-                    background: 'none', color: '#A2D729',
-                    border: '1px solid #A2D729', padding: '0.65rem 1.1rem',
-                    borderRadius: 6, cursor: 'pointer',
+                    background: 'none', color: '#2563EB',
+                    border: '1px solid #2563EB', padding: '0.65rem 1.1rem',
+                    borderRadius: 10, cursor: 'pointer',
                     fontWeight: 700, fontSize: '0.85rem',
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                   }}
@@ -316,7 +317,7 @@ const Profile = () => {
         </header>
 
         {/* DUAL-PANEL LAYOUT */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }} className="profile-grid">
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', color: '#0f172a' }} className="profile-grid">
           {/* LEFT PANEL — role-adaptive */}
           <main style={{ minHeight: 400 }}>
             {role === 'user' && (
@@ -365,13 +366,14 @@ const Profile = () => {
 
 /* ----------  SHARED UI HELPERS  ---------- */
 
-const Card = ({ title, icon: Icon, children, accent = '#059D72' }) => (
+const Card = ({ title, icon: Icon, children, accent = '#2563EB' }) => (
   <section style={{
-    background: 'rgba(255,255,255,0.02)',
-    border: '1px solid rgba(255,255,255,0.06)',
-    borderRadius: 10,
+    background: 'white',
+    border: '1px solid #e2e8f0',
+    borderRadius: 16,
     padding: '1.5rem',
     marginBottom: '1.25rem',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
       {Icon && <Icon size={16} style={{ color: accent }} />}
@@ -385,7 +387,7 @@ const Card = ({ title, icon: Icon, children, accent = '#059D72' }) => (
 
 const TextInput = ({ label, value, onChange, type = 'text', placeholder }) => (
   <label style={{ display: 'block', marginBottom: '0.85rem' }}>
-    <span style={{ fontSize: '0.7rem', opacity: 0.6, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+    <span style={{ fontSize: '0.7rem', color: '#94a3b8', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4, fontWeight: 600 }}>
       {label}
     </span>
     <input
@@ -395,11 +397,11 @@ const TextInput = ({ label, value, onChange, type = 'text', placeholder }) => (
       onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
       style={{
         width: '100%',
-        background: 'rgba(0,0,0,0.25)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        color: '#fff',
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
+        color: '#0f172a',
         padding: '0.6rem 0.85rem',
-        borderRadius: 6,
+        borderRadius: 8,
         fontSize: '0.9rem',
         outline: 'none',
       }}
@@ -412,11 +414,11 @@ const ChipList = ({ items, onRemove, onAdd, addLabel = 'Add', editing }) => {
   return (
     <div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: editing ? '0.75rem' : 0 }}>
-        {(items || []).length === 0 && <span style={{ opacity: 0.4, fontSize: '0.8rem' }}>None yet.</span>}
+        {(items || []).length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>None yet.</span>}
         {(items || []).map((tag, i) => (
           <span key={`${tag}-${i}`} style={{
-            background: 'rgba(5,157,114,0.15)',
-            color: '#A2D729',
+            background: 'rgba(37,99,235,0.08)',
+            color: '#2563EB',
             padding: '3px 10px',
             borderRadius: 999,
             fontSize: '0.75rem',
@@ -430,7 +432,7 @@ const ChipList = ({ items, onRemove, onAdd, addLabel = 'Add', editing }) => {
               <button
                 type="button"
                 onClick={() => onRemove(i)}
-                style={{ background: 'none', border: 'none', color: '#A2D729', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', color: '#2563EB', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
               >×</button>
             )}
           </span>
@@ -447,11 +449,11 @@ const ChipList = ({ items, onRemove, onAdd, addLabel = 'Add', editing }) => {
             }}
             style={{
               flex: 1,
-              background: 'rgba(0,0,0,0.25)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#fff',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              color: '#0f172a',
               padding: '0.5rem 0.75rem',
-              borderRadius: 6,
+              borderRadius: 8,
               fontSize: '0.85rem',
               outline: 'none',
             }}
@@ -460,7 +462,7 @@ const ChipList = ({ items, onRemove, onAdd, addLabel = 'Add', editing }) => {
             type="button"
             onClick={() => { if (next.trim()) { onAdd(next.trim()); setNext(''); } }}
             style={{
-              background: '#A2D729', color: '#0D0A02',
+              background: '#2563EB', color: 'white',
               border: 'none', padding: '0.5rem 0.9rem',
               borderRadius: 6, cursor: 'pointer',
               fontWeight: 700, fontSize: '0.8rem',
@@ -495,7 +497,7 @@ const UserPanel = ({ user }) => {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
             {blogs.map(b => (
-              <div key={b._id} style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div key={b._id} style={{ background: '#f8fafc', borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 {b.image && <img src={b.image} alt={b.title} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover' }} />}
                 <div style={{ padding: '0.6rem 0.75rem' }}>
                   <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: 4 }}>{b.title}</p>
@@ -515,7 +517,7 @@ const UserPanel = ({ user }) => {
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {user.profileData.favoriteDestinations.map((d, i) => (
-              <li key={i} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '0.9rem' }}>
+              <li key={i} style={{ padding: '0.5rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem' }}>
                 {d.name || d}
               </li>
             ))}
@@ -548,7 +550,7 @@ const UserSidebar = ({ user }) => {
         : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {upcoming.slice(0, 4).map(b => (
-              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid #f1f5f9' }}>
                 <p style={{ fontSize: '0.85rem', fontWeight: 700 }}>{b.destination?.name || 'Destination'}</p>
                 <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{b.startDate ? new Date(b.startDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '—'} · {b.travelers}p · {b.status}</p>
               </li>
@@ -560,7 +562,7 @@ const UserSidebar = ({ user }) => {
         <Card title="Past trips" icon={Award} accent="#F4A261">
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {past.slice(0, 4).map(b => (
-              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid #f1f5f9' }}>
                 <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>{b.destination?.name || 'Destination'}</p>
                 <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{b.durationDays}d · {b.status} · NPR {Number(b.pricing?.totalCost||0).toLocaleString('en-IN')}</p>
               </li>
@@ -584,7 +586,7 @@ const GuidePanel = ({ user, guideRecord, editing, draft, setDraft }) => {
   return (
     <>
       <Card title="Guide Profile" icon={Award}>
-        {bio && <p style={{ fontSize: '0.9rem', opacity: 0.8, lineHeight: 1.6, marginBottom: '1rem' }}>{bio}</p>}
+        {bio && <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.6, marginBottom: '1rem' }}>{bio}</p>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
           {editing ? (
             <>
@@ -598,15 +600,15 @@ const GuidePanel = ({ user, guideRecord, editing, draft, setDraft }) => {
             </>
           )}
           <Stat label="Tours completed" value={guideRecord?.completedTours ?? '—'} icon={Compass} />
-          <Stat label="Rating" value={guideRecord?.rating > 0 ? `${guideRecord.rating} ★` : 'New'} accent="#A2D729" />
-          <Stat label="Verified" value={(guideRecord?.isVerified || user.profileData?.isVerified) ? 'Yes ✓' : 'Pending'} accent={(guideRecord?.isVerified || user.profileData?.isVerified) ? '#A2D729' : '#F4A261'} />
+          <Stat label="Rating" value={guideRecord?.rating > 0 ? `${guideRecord.rating} ★` : 'New'} accent="#F59E0B" />
+          <Stat label="Verified" value={(guideRecord?.isVerified || user.profileData?.isVerified) ? 'Yes ✓' : 'Pending'} accent={(guideRecord?.isVerified || user.profileData?.isVerified) ? '#10B981' : '#F59E0B'} />
           <Stat label="Member since" value={new Date(user.joinDate || Date.now()).getFullYear()} />
         </div>
         {expertise.length > 0 && (
           <div style={{ marginTop: '1rem' }}>
-            <p style={{ fontSize: '0.65rem', opacity: 0.55, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Expertise</p>
+            <p style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Expertise</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {expertise.map((e, i) => <span key={i} style={{ background: 'rgba(5,157,114,0.15)', color: '#A2D729', padding: '3px 10px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600 }}>{e}</span>)}
+              {expertise.map((e, i) => <span key={i} style={{ background: 'rgba(37,99,235,0.1)', color: '#2563EB', padding: '3px 10px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600 }}>{e}</span>)}
             </div>
           </div>
         )}
@@ -663,7 +665,7 @@ const GuideSidebar = ({ user }) => {
   return (
     <>
       <Card title="Earnings (estimated)" icon={Banknote} accent="#A2D729">
-        <p style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#A2D729' }}>
+        <p style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#10B981' }}>
           NPR {Number(totalEarnings).toLocaleString('en-IN')}
         </p>
         <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
@@ -679,7 +681,7 @@ const GuideSidebar = ({ user }) => {
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {upcoming.slice(0, 5).map((b) => (
-              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid #f1f5f9' }}>
                 <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>
                   {b.destination?.name || 'Destination'} · {b.travelers}p × {b.durationDays}d
                 </p>
@@ -698,7 +700,7 @@ const GuideSidebar = ({ user }) => {
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {past.slice(0, 4).map((b) => (
-              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid #f1f5f9' }}>
                 <p style={{ fontSize: '0.78rem' }}>{b.destination?.name || 'Destination'} · @{b.user?.username || 'traveler'}</p>
                 <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>{b.status} · NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}</p>
               </li>
@@ -742,7 +744,7 @@ const HotelPanel = ({ user, hotelRecord, editing, draft, setDraft }) => {
             <Stat label="Hotel Name" value={hotelRecord?.name || user.profileData?.hotelName || '—'} />
             <Stat label="Base Rate / night" value={hotelRecord?.basePrice ? `NPR ${Number(hotelRecord.basePrice).toLocaleString()}` : user.profileData?.baseRoomRate ? `NPR ${Number(user.profileData.baseRoomRate).toLocaleString()}` : '—'} icon={Banknote} />
             <Stat label="Total rooms" value={hotelRecord?.totalRooms ?? '—'} />
-            <Stat label="Available" value={hotelRecord ? `${(hotelRecord.totalRooms||0) - (hotelRecord.bookedRooms||0)} free` : '—'} accent={hotelRecord && (hotelRecord.totalRooms - hotelRecord.bookedRooms) > 0 ? '#A2D729' : '#ff6b6b'} />
+            <Stat label="Available" value={hotelRecord ? `${(hotelRecord.totalRooms||0) - (hotelRecord.bookedRooms||0)} free` : '—'} accent={hotelRecord && (hotelRecord.totalRooms - hotelRecord.bookedRooms) > 0 ? '#10B981' : '#ef4444'} />
           </div>
         )}
       </Card>
@@ -758,9 +760,9 @@ const HotelPanel = ({ user, hotelRecord, editing, draft, setDraft }) => {
                 onClick={() => toggleAmenity(a)}
                 disabled={!editing}
                 style={{
-                  background: active ? 'rgba(162,215,41,0.15)' : 'rgba(0,0,0,0.25)',
-                  border: `1px solid ${active ? '#A2D729' : 'rgba(255,255,255,0.08)'}`,
-                  color: active ? '#A2D729' : '#A6A180',
+                  background: active ? 'rgba(37,99,235,0.1)' : '#f8fafc',
+                  border: `1px solid ${active ? '#2563EB' : '#e2e8f0'}`,
+                  color: active ? '#2563EB' : '#94a3b8',
                   padding: '0.55rem 0.75rem',
                   borderRadius: 6,
                   cursor: editing ? 'pointer' : 'default',
@@ -773,8 +775,8 @@ const HotelPanel = ({ user, hotelRecord, editing, draft, setDraft }) => {
                 <span style={{
                   width: 14, height: 14,
                   borderRadius: 3,
-                  border: `1px solid ${active ? '#A2D729' : 'rgba(255,255,255,0.2)'}`,
-                  background: active ? '#A2D729' : 'transparent',
+                  border: `1px solid ${active ? '#2563EB' : '#e2e8f0'}`,
+                  background: active ? '#2563EB' : 'transparent',
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   color: '#0D0A02', fontSize: 10, fontWeight: 900,
                 }}>{active ? '✓' : ''}</span>
@@ -833,14 +835,14 @@ const HotelSidebar = ({ user }) => {
   return (
     <>
       <Card title="Revenue (live)" icon={Banknote} accent="#A2D729">
-        <p style={{ fontSize: '2.1rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#A2D729' }}>
+        <p style={{ fontSize: '2.1rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#10B981' }}>
           NPR {Number(totalRevenue).toLocaleString('en-IN')}
         </p>
         <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: 4 }}>
           {totalBookings} booking{totalBookings === 1 ? '' : 's'} across {assignedDestinations.length} destination{assignedDestinations.length === 1 ? '' : 's'} · net of cancellations
         </p>
         {lastSync && (
-          <p style={{ fontSize: '0.6rem', opacity: 0.4, marginTop: 6, fontFamily: 'monospace' }}>
+          <p style={{ fontSize: '0.6rem', color: '#94a3b8', marginTop: 6, fontFamily: 'monospace' }}>
             ● synced {lastSync.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
           </p>
         )}
@@ -856,12 +858,12 @@ const HotelSidebar = ({ user }) => {
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {upcoming.slice(0, 5).map((b) => (
-              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <li key={b._id} style={{ padding: '0.55rem 0', borderBottom: '1px solid #f1f5f9' }}>
                 <p style={{ fontSize: '0.8rem', fontWeight: 700 }}>{b.destination?.name || 'Destination'}</p>
                 <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>
                   @{b.user?.username || 'guest'} · {b.travelers}p × {b.durationDays}d · {b.startDate ? new Date(b.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'date TBD'}
                 </p>
-                <p style={{ fontSize: '0.7rem', color: '#A2D729', fontWeight: 700, marginTop: 2 }}>
+                <p style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700, marginTop: 2 }}>
                   NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')} · {b.status}
                 </p>
               </li>
@@ -876,7 +878,7 @@ const HotelSidebar = ({ user }) => {
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {past.slice(0, 4).map((b) => (
-              <li key={b._id} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <li key={b._id} style={{ padding: '0.5rem 0', borderBottom: '1px solid #f1f5f9' }}>
                 <p style={{ fontSize: '0.78rem' }}>{b.destination?.name || 'Destination'} · @{b.user?.username || 'guest'}</p>
                 <p style={{ fontSize: '0.7rem', opacity: 0.55 }}>
                   {b.status} · NPR {Number(b.pricing?.totalCost || 0).toLocaleString('en-IN')}
@@ -909,27 +911,27 @@ const ReviewsCard = ({ reviews }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <div style={{ display: 'flex', gap: 2 }}>
               {[1, 2, 3, 4, 5].map((n) => (
-                <span key={n} style={{ color: n <= Math.round(avg || 0) ? '#A2D729' : 'rgba(255,255,255,0.18)', fontSize: '1rem' }}>★</span>
+                <span key={n} style={{ color: n <= Math.round(avg || 0) ? '#F59E0B' : '#e2e8f0', fontSize: '1rem' }}>★</span>
               ))}
             </div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#A2D729' }}>{avg}</span>
-            <span style={{ fontSize: '0.7rem', opacity: 0.55 }}>({count} review{count === 1 ? '' : 's'})</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#F59E0B' }}>{avg}</span>
+            <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>({count} review{count === 1 ? '' : 's'})</span>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {list.slice(0, 5).map((r) => (
-              <li key={r._id} style={{ padding: '0.6rem 0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 6, borderLeft: '3px solid #A2D729' }}>
+              <li key={r._id} style={{ padding: '0.6rem 0.75rem', background: '#f8fafc', borderRadius: 8, borderLeft: '3px solid #2563EB' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: '0.75rem', color: '#A2D729' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#F59E0B' }}>
                     {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
                   </span>
-                  <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{r.destination}</span>
+                  <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{r.destination}</span>
                 </div>
                 {r.comment && (
                   <p style={{ fontSize: '0.78rem', fontStyle: 'italic', opacity: 0.85, lineHeight: 1.45, marginBottom: 4 }}>
                     &ldquo;{r.comment}&rdquo;
                   </p>
                 )}
-                <p style={{ fontSize: '0.65rem', opacity: 0.5 }}>— @{r.author}</p>
+                <p style={{ fontSize: '0.65rem', color: '#94a3b8' }}>— @{r.author}</p>
               </li>
             ))}
           </ul>
@@ -956,10 +958,10 @@ const AdminSidebar = () => (
 
 /* ----------  STAT TILE  ---------- */
 
-const Stat = ({ label, value, icon: Icon, accent = '#A2D729' }) => (
-  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: '0.85rem 1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-    <p style={{ fontSize: '0.65rem', opacity: 0.55, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>{label}</p>
-    <p style={{ fontSize: '1.15rem', fontWeight: 800, color: accent, display: 'flex', alignItems: 'center', gap: 6 }}>
+const Stat = ({ label, value, icon: Icon, accent = '#2563EB' }) => (
+  <div style={{ background: '#f8fafc', borderRadius: 8, padding: '0.85rem 1rem', border: '1px solid #e2e8f0' }}>
+    <p style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4, fontWeight: 600 }}>{label}</p>
+    <p style={{ fontSize: '1.1rem', fontWeight: 800, color: accent, display: 'flex', alignItems: 'center', gap: 6 }}>
       {Icon && <Icon size={14} />} {value}
     </p>
   </div>
