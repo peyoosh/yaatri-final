@@ -107,6 +107,16 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/yaatri";
 const MAX_RETRY = 5;
 const BASE_DELAY_MS = 1500;
 
+const scheduleBookingSweep = () => {
+  const bookingRouter = require('./routes/bookingRoutes');
+  if (typeof bookingRouter.sweepCompletedBookings !== 'function') return;
+  const tick = () => bookingRouter.sweepCompletedBookings().catch(() => {});
+  setTimeout(tick, 3_000);
+  setInterval(tick, 10 * 60 * 1000);
+};
+
+let _sweepScheduled = false;
+
 const connectMongo = async (attempt = 1) => {
   try {
     await mongoose.connect(MONGO_URI, {
@@ -114,13 +124,18 @@ const connectMongo = async (attempt = 1) => {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
-      family: 4, // IPv4 — avoids the IPv6 hang some Windows hosts hit
+      family: 4,
     });
     console.log(`YAATRI_DATABASE: CONNECTED TO [${mongoose.connection.name.toUpperCase()}]`);
+    // Schedule the booking sweep only once, after first confirmed connection.
+    if (!_sweepScheduled) {
+      _sweepScheduled = true;
+      scheduleBookingSweep();
+    }
   } catch (err) {
     console.error(`DATABASE_CONNECTION_ERROR (attempt ${attempt}/${MAX_RETRY}):`, err.message);
     if (attempt < MAX_RETRY) {
-      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1); // 1.5s, 3s, 6s, 12s, 24s
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
       console.warn(`  retrying in ${delay}ms…`);
       setTimeout(() => connectMongo(attempt + 1), delay);
     } else {
@@ -207,16 +222,7 @@ app.use('/api/ai', require('./routes/aiRoute'));
 const bookingRouter = require('./routes/bookingRoutes');
 app.use('/api/bookings', bookingRouter);
 
-// Auto-complete bookings whose end-date has passed.
-// Runs once on boot (after the first successful DB connection) and every 10 min.
-const scheduleBookingSweep = () => {
-  if (typeof bookingRouter.sweepCompletedBookings !== 'function') return;
-  const tick = () => bookingRouter.sweepCompletedBookings().catch(() => {});
-  // First sweep after a short delay so Mongo has time to settle on cold starts.
-  setTimeout(tick, 5_000);
-  setInterval(tick, 10 * 60 * 1000); // every 10 minutes
-};
-scheduleBookingSweep();
+// scheduleBookingSweep is called inside connectMongo after confirmed connection.
 
 // Support queries (user → admin contact desk)
 app.use('/api/queries', require('./routes/queryRoutes'));

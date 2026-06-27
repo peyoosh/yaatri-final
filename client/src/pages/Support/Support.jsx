@@ -19,6 +19,7 @@ export default function Support() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [ticketId, setTicketId] = useState(null);
+  const lastSubmitRef = React.useRef(0);
 
   useEffect(() => {
     if (user?.email && !form.email) setForm(f => ({ ...f, email: user.email }));
@@ -26,6 +27,12 @@ export default function Support() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const now = Date.now();
+    if (now - lastSubmitRef.current < 30_000) {
+      setSubmitError('Please wait 30 seconds before submitting again.');
+      return;
+    }
+    lastSubmitRef.current = now;
     setSubmitting(true);
     setSubmitError(null);
     try {

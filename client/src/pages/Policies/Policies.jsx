@@ -21,7 +21,7 @@ export default function Policies() {
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-brand-slate mb-3">The Yaatri Contract</h1>
           <p className="text-sm text-gray-500 leading-relaxed max-w-2xl">
             We keep our policies short, plain, and binding. When you book or list a service on Yaatri,
-            you agree to the terms below. Last updated: <strong className="text-brand-slate">May 2026</strong>.
+            you agree to the terms below. Last updated: <strong className="text-brand-slate">{new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}</strong>.
           </p>
         </div>
 

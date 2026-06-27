@@ -15,8 +15,21 @@ const GST_RATE = 0.12;        // 12% — local VAT
 // Marketplace economics per the three-tier vendor spec.
 const PLATFORM_COMMISSION_RATE = 0.15;  // 15% of grossTotal stays with the platform
 const VENDOR_SHARE_RATE = 0.85;          // 85% of grossTotal fanned out to active vendors
-const CANCELLATION_FORFEIT_RATE = 0.20;  // 20% of grossTotal retained on cancellation
-const CANCELLATION_REFUND_RATE = 0.80;   // 80% refunded to traveller
+// Tiered cancellation policy — refund % depends on how far before the trip start.
+// >7 days  → 80% back (20% forfeit)
+// 2–7 days → 50% back (50% forfeit)
+// <48 hrs  → 0% back  (100% forfeit — no-show tier)
+// Before payment confirmed → 100% back (nothing charged yet)
+const getCancellationRefundRate = (booking) => {
+  if (booking.status === 'pending_payment') return 1.00; // nothing captured yet
+  const start = booking.startDate ? new Date(booking.startDate) : null;
+  if (!start || Number.isNaN(start.getTime())) return 0.80; // default if no date
+  const hoursUntil = (start.getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hoursUntil < 0)   return 0.00; // trip already started
+  if (hoursUntil < 48)  return 0.00;
+  if (hoursUntil < 168) return 0.50; // < 7 days
+  return 0.80;
+};
 
 // Credit a vendor user's ledger by `amount` (in NPR). `direction = +1` to credit,
 // `-1` to reverse on cancellation. Updates totalEarned + pendingPayout atomically.
@@ -401,7 +414,8 @@ router.patch('/:id/cancel', protect, async (req, res) => {
 
     // Marketplace policy: 20% structural forfeit, 80% refundable to the traveller.
     const gross = Number(booking.pricing?.grossTotal || booking.pricing?.totalCost || 0);
-    const eligibleAmount = Math.round(gross * CANCELLATION_REFUND_RATE);
+    const refundRate = getCancellationRefundRate(booking);
+    const eligibleAmount = Math.round(gross * refundRate);
     const forfeitedAmount = gross - eligibleAmount;
 
     booking.status = 'cancelled';
@@ -563,7 +577,7 @@ router.patch('/:id/status', validateAdmin, async (req, res) => {
     const { status } = req.body || {};
     // Accept canonical + legacy values. Status guard is lenient on purpose so admin
     // can recover from any state; the lifecycle "happy path" is just a suggestion.
-    if (!['pending_payment', 'escrow_held', 'approved', 'completed', 'cancelled', 'pending', 'confirmed'].includes(status)) {
+    if (!['pending_payment', 'escrow_held', 'approved', 'in_progress', 'completed', 'cancelled', 'expired', 'pending', 'confirmed'].includes(status)) {
       return res.status(400).json({ message: 'invalid status' });
     }
     const updated = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true });

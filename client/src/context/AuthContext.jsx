@@ -32,7 +32,6 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       return data.user;
     } catch (err) {
-      console.error('DEBUG LOGIN ERROR:', err.response?.data || err.message, err);
       throw err;
     }
   };

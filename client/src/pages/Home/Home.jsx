@@ -193,7 +193,7 @@ export default function Home() {
       </section>
 
       {/* ── SECTION 3: THREE WAYS ── */}
-      <section className="bg-white py-24 px-6 border-y border-slate-100">
+      <section className="bg-white py-24 border-y border-slate-100">
         <div className="w-full px-6 lg:px-12 xl:px-20">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">EXPEDITION MODELS</span>
@@ -332,6 +332,7 @@ export default function Home() {
               src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=800&auto=format&fit=crop"
               alt="Himalayan Sherpa Trekking"
               className="absolute inset-0 w-full h-full object-cover"
+              onError={e => { e.currentTarget.src = '/nepal-bg.jpg'; }}
             />
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #0f172a, transparent)' }} />
           </div>
@@ -339,8 +340,9 @@ export default function Home() {
       </section>
 
       {/* ── SECTION 6: NEWSLETTER ── */}
-      <section className="py-24 px-6 bg-slate-100/50 border-t border-slate-100">
-        <div className="w-full px-6 lg:px-12 xl:px-20 grid grid-cols-1 md:grid-cols-12 gap-12 items-center bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-sm">
+      <section className="py-24 bg-slate-100/50 border-t border-slate-100">
+        <div className="w-full px-6 lg:px-12 xl:px-20">
+        <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-12 items-center bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-sm">
           <div className="md:col-span-7 flex flex-col gap-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-brand-slate tracking-tight">
               Receive live mountain reports
@@ -384,8 +386,10 @@ export default function Home() {
               src="https://images.unsplash.com/photo-1542856391-010fb87dcfed?q=80&w=800&auto=format&fit=crop"
               alt="Phewa Lake Nepal"
               className="absolute inset-0 w-full h-full object-cover"
+              onError={e => { e.currentTarget.src = '/nepal-bg.jpg'; }}
             />
           </div>
+        </div>
         </div>
       </section>
 

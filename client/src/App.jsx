@@ -92,6 +92,19 @@ const App = () => {
               <AdminDashboard />
             </ProtectedRoute>
           } />
+          <Route path="*" element={
+            <div className="w-full min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-6 px-6 pt-20">
+              <p className="text-8xl font-black text-slate-100 select-none">404</p>
+              <h1 className="text-2xl font-extrabold text-brand-slate tracking-tight">Page not found</h1>
+              <p className="text-sm text-gray-400 max-w-sm text-center">The trail you're looking for doesn't exist or has moved.</p>
+              <button
+                onClick={() => window.history.back()}
+                className="px-6 py-3 bg-brand-blue text-white text-sm font-bold rounded-xl hover:bg-brand-blue/90 transition-all cursor-pointer"
+              >
+                Go back
+              </button>
+            </div>
+          } />
         </Routes>
       </main>
 

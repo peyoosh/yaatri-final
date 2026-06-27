@@ -16,15 +16,17 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'sho
 
 function StatusBadge({ status }) {
   const map = {
-    pending_payment: { bg: 'bg-brand-saffron/10 text-brand-saffron', Icon: Clock, label: 'PENDING PAYMENT' },
-    pending:         { bg: 'bg-brand-saffron/10 text-brand-saffron', Icon: Clock, label: 'PENDING' },
-    escrow_held:     { bg: 'bg-brand-green/10 text-brand-green',    Icon: Landmark, label: 'FUNDS IN ESCROW' },
-    approved:        { bg: 'bg-brand-blue/10 text-brand-blue',      Icon: UserCheck, label: 'APPROVED' },
-    confirmed:       { bg: 'bg-brand-blue/10 text-brand-blue',      Icon: UserCheck, label: 'CONFIRMED' },
-    completed:       { bg: 'bg-gray-100 text-gray-500',             Icon: CheckCircle2, label: 'COMPLETED' },
-    cancelled:       { bg: 'bg-red-100 text-red-500',               Icon: AlertTriangle, label: 'CANCELLED' },
+    pending_payment: { bg: 'bg-brand-saffron/10 text-brand-saffron', Icon: Clock,         label: 'PENDING PAYMENT' },
+    pending:         { bg: 'bg-brand-saffron/10 text-brand-saffron', Icon: Clock,         label: 'PENDING' },
+    escrow_held:     { bg: 'bg-brand-green/10 text-brand-green',     Icon: Landmark,      label: 'FUNDS IN ESCROW' },
+    approved:        { bg: 'bg-brand-blue/10 text-brand-blue',       Icon: UserCheck,     label: 'APPROVED' },
+    confirmed:       { bg: 'bg-brand-blue/10 text-brand-blue',       Icon: UserCheck,     label: 'CONFIRMED' },
+    in_progress:     { bg: 'bg-purple-100 text-purple-600',          Icon: TrendingUp,    label: 'IN PROGRESS' },
+    completed:       { bg: 'bg-gray-100 text-gray-500',              Icon: CheckCircle2,  label: 'COMPLETED' },
+    expired:         { bg: 'bg-orange-100 text-orange-500',          Icon: AlertTriangle, label: 'EXPIRED' },
+    cancelled:       { bg: 'bg-red-100 text-red-500',                Icon: AlertTriangle, label: 'CANCELLED' },
   };
-  const cfg = map[status] || map.pending;
+  const cfg = map[status] || map.pending_payment;
   const Icon = cfg.Icon;
   return (
     <span className={`px-2.5 py-1 ${cfg.bg} font-bold text-[10px] rounded uppercase flex items-center gap-1 whitespace-nowrap`}>
@@ -572,7 +574,7 @@ export default function UserDashboard({ user: userProp }) {
             </h1>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase border border-slate-100 bg-white text-brand-blue capitalize">
+            <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase border border-slate-100 bg-white text-brand-blue">
               Role: {user.role}
             </span>
             <button onClick={() => setFeedbackOpen(true)}

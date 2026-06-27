@@ -11,19 +11,18 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const { login } = useContext(AuthContext);
 
-  const getMode = () => {
-    if (location.pathname === '/register') return 'register';
-    if (location.pathname === '/login') return 'login';
-    return searchParams.get('mode') === 'signup' ? 'register' : 'login';
+  const resolveMode = (pathname, params) => {
+    if (pathname === '/register') return 'register';
+    if (pathname === '/login') return 'login';
+    return params.get('mode') === 'signup' ? 'register' : 'login';
   };
 
-  const [mode, setMode] = useState(getMode());
+  const [mode, setMode] = useState(() => resolveMode(location.pathname, searchParams));
   const [formData, setFormData] = useState({ username: '', email: '', phoneNumber: '', password: '' });
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const m = getMode();
-    setMode(m);
+    setMode(resolveMode(location.pathname, searchParams));
     setFormData({ username: '', email: '', phoneNumber: '', password: '' });
     setError('');
   }, [location.pathname, searchParams]);
