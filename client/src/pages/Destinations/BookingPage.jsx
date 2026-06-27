@@ -136,8 +136,8 @@ export default function BookingPage() {
   );
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6 lg:px-12 xl:px-20">
+      <div className="w-full">
 
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-brand-blue transition-colors cursor-pointer mb-6 group">
           <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />

@@ -155,8 +155,8 @@ export default function Blog({ onSeeBlog }) {
   const trendingTags = ['#EverestBaseCamp', '#AnnapurnaCrossing', '#MustangSecrets', '#WildChitwan', '#LakesideVibes'];
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6 lg:px-12 xl:px-20">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
 
         {/* ── SIDEBAR ── */}
         <aside className="lg:col-span-3 flex flex-col gap-6">

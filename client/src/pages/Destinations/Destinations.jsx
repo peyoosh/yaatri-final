@@ -60,8 +60,8 @@ export default function Destinations() {
   const resetFilters = () => { setSearchQuery(''); setSelectedDifficulty('All'); setSelectedTerrain('All'); };
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="w-full min-h-screen bg-slate-50 pt-28 pb-20 px-6 lg:px-12 xl:px-20">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
 
         {/* ── SIDEBAR ── */}
         <aside className="lg:col-span-3 flex flex-col gap-8 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-fit sticky top-28">

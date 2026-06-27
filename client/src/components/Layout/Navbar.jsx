@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, LogOut, Menu, X, User as UserIcon, ShieldAlert } from 'lucide-react';
@@ -8,19 +8,19 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
       setIsScrolled(currentY > 20);
-      setIsVisible(!(currentY > lastScrollY && currentY > 100));
-      setLastScrollY(currentY);
+      setIsVisible(currentY <= 20 || currentY < lastScrollY.current || currentY <= 100);
+      lastScrollY.current = currentY;
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   // Close mobile menu on route change
   useEffect(() => { setIsMobileMenuOpen(false); }, [location.pathname]);
@@ -56,7 +56,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
             : 'bg-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
+        <div className="w-full h-full px-6 lg:px-12 xl:px-20 flex items-center justify-between">
 
           {/* Logo */}
           <div

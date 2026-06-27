@@ -558,8 +558,8 @@ export default function UserDashboard({ user: userProp }) {
   );
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 pt-24 pb-20 px-6">
-      <div className="max-w-7xl mx-auto flex flex-col gap-8">
+    <div className="w-full min-h-screen bg-slate-50 pt-24 pb-20 px-6 lg:px-12 xl:px-20">
+      <div className="w-full flex flex-col gap-8">
 
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">

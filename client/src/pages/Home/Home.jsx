@@ -114,7 +114,7 @@ export default function Home() {
 
       {/* ── SECTION 2: DESTINATION SLIDER ── */}
       <section className="py-20 w-full">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="w-full px-6 lg:px-12 xl:px-20">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 gap-4">
           <div>
             <span className="text-xs font-bold text-brand-pink uppercase tracking-widest block mb-2">HOT DESTINATIONS</span>
@@ -194,7 +194,7 @@ export default function Home() {
 
       {/* ── SECTION 3: THREE WAYS ── */}
       <section className="bg-white py-24 px-6 border-y border-slate-100">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full px-6 lg:px-12 xl:px-20">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">EXPEDITION MODELS</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-slate mt-2 tracking-tight">
@@ -260,7 +260,7 @@ export default function Home() {
 
       {/* ── SECTION 4: STATS ── */}
       <section className="py-24 w-full">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="w-full px-6 lg:px-12 xl:px-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 flex flex-col gap-6">
             <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">VERIFIED REACH</span>
@@ -299,7 +299,7 @@ export default function Home() {
 
       {/* ── SECTION 5: CTA BANNER ── full-width dark band */}
       <section className="w-full overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12">
+        <div className="w-full px-6 lg:px-12 xl:px-20 grid grid-cols-1 md:grid-cols-12">
           <div className="md:col-span-7 p-8 sm:p-12 flex flex-col justify-center gap-6 text-white">
             <span className="px-3.5 py-1 rounded-full bg-brand-green/20 border border-brand-green/30 text-[10px] font-bold uppercase tracking-wider text-brand-green self-start">
               Verified Partners Only
@@ -340,7 +340,7 @@ export default function Home() {
 
       {/* ── SECTION 6: NEWSLETTER ── */}
       <section className="py-24 px-6 bg-slate-100/50 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 items-center bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-sm">
+        <div className="w-full px-6 lg:px-12 xl:px-20 grid grid-cols-1 md:grid-cols-12 gap-12 items-center bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-sm">
           <div className="md:col-span-7 flex flex-col gap-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-brand-slate tracking-tight">
               Receive live mountain reports

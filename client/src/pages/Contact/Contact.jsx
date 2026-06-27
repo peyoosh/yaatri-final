@@ -37,7 +37,7 @@ export default function Contact() {
 
       {/* HERO */}
       <section className="text-white px-6 py-20" style={{ backgroundColor: '#0f172a' }}>
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
           <span className="text-xs font-bold text-brand-green uppercase tracking-widest block mb-4">About Yaatri</span>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-5 leading-tight max-w-3xl">
             One who travels.
@@ -54,8 +54,8 @@ export default function Contact() {
       </section>
 
       {/* CONTACT INFO CARDS */}
-      <section className="py-16 px-6 w-full">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-16 px-6 lg:px-12 xl:px-20 w-full">
+        <div className="w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {[
             { Icon: MapPin,  label: 'Visit',            lines: ['Yaatri Core Systems', 'Lalitpur, Bagmati', 'Nepal — 44700'] },
