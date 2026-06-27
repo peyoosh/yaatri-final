@@ -7,17 +7,10 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const lastScrollY = useRef(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      setIsScrolled(currentY > 20);
-      setIsVisible(currentY <= 20 || currentY < lastScrollY.current || currentY <= 100);
-      lastScrollY.current = currentY;
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -46,10 +39,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
 
   return (
     <>
-      <motion.nav
-        initial={{ y: 0 }}
-        animate={{ y: isVisible ? 0 : -100 }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
+      <nav
         className={`fixed top-0 left-0 right-0 z-40 h-20 transition-all duration-300 ${
           isScrolled
             ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-100'
@@ -199,7 +189,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* Mobile drawer */}
       <AnimatePresence>
