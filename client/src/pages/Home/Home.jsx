@@ -75,19 +75,19 @@ export default function Home() {
           >
             <span className="px-4 py-1.5 rounded-full bg-brand-blue/20 border border-brand-blue/30 text-xs font-bold uppercase tracking-widest text-brand-saffron flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-brand-saffron fill-brand-saffron" />
-              Your Portal to the Roof of the World
+              Nepal's first verified, escrow-backed trek marketplace
             </span>
 
             <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
-              Go where the{' '}
+              Trek Nepal{' '}
               <span style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundImage: 'linear-gradient(to right, #2563EB, #60a5fa, #DB2777)', backgroundClip: 'text' }}>
-                world calls you
+                without the risk.
               </span>
             </h1>
 
             <p className="max-w-2xl text-base sm:text-lg text-slate-300 font-medium leading-relaxed">
-              Explore epic mountain passes, ancient temples, subtropical safaris, and secluded alpine valleys.
-              Yaatri Hub connects travelers, certified Sherpa guides, and local boutique lodging seamlessly.
+              Every guide on Yaatri is verified in person. Every hotel has been stayed in by a real traveler.
+              Your payment sits in escrow until you're back safely — no deposits that disappear, no surprises at altitude.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center mt-4">
@@ -117,9 +117,9 @@ export default function Home() {
         <div className="w-full px-6 lg:px-12 xl:px-20">
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 gap-4">
           <div>
-            <span className="text-xs font-bold text-brand-pink uppercase tracking-widest block mb-2">HOT DESTINATIONS</span>
+            <span className="text-xs font-bold text-brand-pink uppercase tracking-widest block mb-2">VERIFIED DESTINATIONS</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-slate tracking-tight">
-              Awe-Inspiring Expeditions
+              Where will you go?
             </h2>
           </div>
           <button
@@ -196,12 +196,12 @@ export default function Home() {
       <section className="bg-white py-24 border-y border-slate-100">
         <div className="w-full px-6 lg:px-12 xl:px-20">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">EXPEDITION MODELS</span>
+            <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">HOW YOU WANT TO TREK</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-slate mt-2 tracking-tight">
-              Three ways to see the world
+              Three honest ways to do it
             </h2>
             <p className="text-gray-500 font-medium text-sm mt-3">
-              Whether you crave expert safety, group camaraderie, or solo discovery, we have tailored your Himalayan itinerary.
+              No package names. No upsells. Just three real approaches — pick what matches your fitness, your timeline, and how much hand-holding you actually want.
             </p>
           </div>
 
@@ -211,28 +211,28 @@ export default function Home() {
                 Icon: Compass,
                 color: 'bg-brand-blue/10 text-brand-blue',
                 hover: 'hover:border-brand-blue/30',
-                title: 'Custom Sherpa Expeditions',
-                desc: 'Fully customized alpine trekking routes designed for your stamina, matching certified high-altitude Sherpa mountaineers.',
+                title: 'Private Guided Trek',
+                desc: 'You, a verified Sherpa guide, and no fixed itinerary. Set your own pace, choose your altitude ceiling, take the side trails most tourists miss. Guide fees, tea house bookings, and permit advice all included — starting at NPR 3,500/person/day.',
                 linkColor: 'text-brand-blue group-hover:text-brand-pink',
-                label: 'Discover Private Tours',
+                label: 'Browse verified guides →',
               },
               {
                 Icon: Users,
                 color: 'bg-brand-saffron/10 text-brand-saffron',
                 hover: 'hover:border-brand-saffron/30',
-                title: 'Vibrant Group Clusters',
-                desc: 'Join organized group departures on popular tea-house treks. Save on overhead and build bonds with worldwide explorers.',
+                title: 'Tea House Group Trek',
+                desc: 'Join 4–10 people on EBC, Annapurna Circuit, or Langtang on fixed departure dates. Tea houses pre-booked so you never scramble for a bed. The most affordable way to do a classic Nepal route without going it alone.',
                 linkColor: 'text-brand-saffron group-hover:text-brand-blue',
-                label: 'Discover Group Departures',
+                label: 'See group departures →',
               },
               {
                 Icon: Flame,
                 color: 'bg-brand-pink/10 text-brand-pink',
                 hover: 'hover:border-brand-pink/30',
-                title: 'Solo Off-the-Grid Safaris',
-                desc: 'Self-paced exploration with remote digital support, checkpoint tracking, pre-booked eco-lodges, and satellite SOS.',
+                title: 'Self-Guided with Backup',
+                desc: 'For experienced trekkers who want independence without abandoning safety. We handle permits, pre-book your lodges, and give you a check-in system that alerts your contact if you go quiet. No guide, no babysitting — but we know where you are.',
                 linkColor: 'text-brand-pink group-hover:text-brand-saffron',
-                label: 'Discover Solo Safaris',
+                label: 'Plan your own route →',
               },
             ].map(({ Icon, color, hover, title, desc, linkColor, label }) => (
               <div
@@ -263,13 +263,12 @@ export default function Home() {
         <div className="w-full px-6 lg:px-12 xl:px-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 flex flex-col gap-6">
-            <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">VERIFIED REACH</span>
+            <span className="text-xs font-extrabold text-brand-blue uppercase tracking-widest">WHY YAATRI EXISTS</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-brand-slate tracking-tight leading-tight">
-              We've sent travelers to every corner of Nepal
+              The Himalayan trekking industry has a trust problem. We're fixing it.
             </h2>
             <p className="text-gray-500 font-medium text-sm leading-relaxed">
-              With decades of collective high-altitude experience, our local vendor cooperative ensures every booking
-              directly pays guides, hotel stewards, and supports community funds.
+              Guides who don't show up. Hotels that take deposits and go silent. Prices quoted in dollars that double by arrival day. Yaatri puts your payment in escrow, verifies every guide in person, and only releases funds when your trip is confirmed done.
             </p>
             <button
               onClick={() => navigate('/destinations')}
@@ -282,9 +281,9 @@ export default function Home() {
 
           <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { value: `${metrics.locations || 12}+`, label: 'Nepal Territories', sub: 'From Terai lowlands to Khumbu valleys.', color: 'text-brand-blue' },
-              { value: `${metrics.guides || 45}+`, label: 'Certified Guides', sub: 'UIAGM experts, sherpas & historians.', color: 'text-brand-saffron' },
-              { value: `${formatMetricNumber(metrics.users) || '1,800'}+`, label: 'Happy Yaatris', sub: 'Seamless bookings, safe journeys.', color: 'text-brand-green' },
+              { value: `${metrics.locations || 12}+`, label: 'Verified Destinations', sub: 'Himalayan, Hill, and Terai — every terrain type covered.', color: 'text-brand-blue' },
+              { value: `${metrics.guides || 45}+`, label: 'In-Person Vetted Guides', sub: 'Each one interviewed, reference-checked, and trail-tested.', color: 'text-brand-saffron' },
+              { value: `${formatMetricNumber(metrics.users) || '1,800'}+`, label: 'Travelers Protected', sub: 'Every booking covered by our escrow guarantee.', color: 'text-brand-green' },
             ].map(({ value, label, sub, color }) => (
               <div key={label} className="p-8 bg-white rounded-2xl border border-slate-100 shadow-sm text-center lg:text-left flex flex-col gap-2">
                 <span className={`text-3xl sm:text-4xl font-extrabold block ${color}`}>{value}</span>
@@ -302,21 +301,20 @@ export default function Home() {
         <div className="w-full px-6 lg:px-12 xl:px-20 grid grid-cols-1 md:grid-cols-12">
           <div className="md:col-span-7 p-8 sm:p-12 flex flex-col justify-center gap-6 text-white">
             <span className="px-3.5 py-1 rounded-full bg-brand-green/20 border border-brand-green/30 text-[10px] font-bold uppercase tracking-wider text-brand-green self-start">
-              Verified Partners Only
+              No upfront risk
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-              Start planning your custom Nepal adventure
+              Ready to actually plan this trip?
             </h2>
             <p className="text-slate-300 font-medium text-sm leading-relaxed max-w-lg">
-              Book a fully compliant trip today. Explore Himalayan terrains, select premium accommodations, customize
-              Sherpa add-ons, and secure escrow-backed payments.
+              Browse real guides with real reviews. Compare routes by altitude, terrain, and difficulty. Lock in your dates and pay securely — your money doesn't move until you confirm the trip is done exactly as promised.
             </p>
             <div className="flex items-center gap-6 mt-2">
               <button
                 onClick={() => navigate('/destinations')}
                 className="px-6 py-3.5 bg-brand-blue hover:bg-brand-blue/90 font-bold text-xs rounded-xl shadow-md shadow-brand-blue/25 transition-all cursor-pointer"
               >
-                Begin Trip Configurator
+                Browse destinations
               </button>
               <button
                 onClick={() => navigate('/explore')}
@@ -345,11 +343,10 @@ export default function Home() {
         <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-12 items-center bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-sm">
           <div className="md:col-span-7 flex flex-col gap-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-brand-slate tracking-tight">
-              Receive live mountain reports
+              The Nepal trip brief — straight from the trails
             </h2>
             <p className="text-gray-500 font-medium text-sm leading-relaxed max-w-md">
-              Get weekly updates on permit constraints, peak opening statuses, snowfall conditions, and direct discount
-              codes for boutique lodges.
+              Weekly: permit rule changes, which passes are open, when snow hits the high routes, first-hand lodge reports from guides who walked that week. No tourism board spin — just what's actually happening up there.
             </p>
 
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 mt-4 max-w-lg">

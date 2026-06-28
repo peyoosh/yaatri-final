@@ -8,7 +8,7 @@ import { AuthContext } from '../../context/AuthContext';
 const STARTER = {
   id: 1,
   type: 'bot',
-  text: "Namaste! I'm your Yaatri AI guide. Ask me anything about trekking in Nepal — seasons, permits, what to pack, costs — or tell me what kind of trip you're after and I'll point you somewhere good.",
+  text: "Namaste. I know Nepal well — the permit maze, the altitude thresholds, which months are worth the crowds and which aren't, what guides actually cost vs what agencies quote. Tell me your fitness level, how many days you have, and your rough budget, and I'll give you a realistic plan — no fluff, no upsell.",
   suggestedDestinations: [],
 };
 
@@ -83,10 +83,10 @@ export default function Explore() {
   };
 
   const prompts = [
-    '🏔️ What gear do I need for Everest Base Camp?',
-    '🎒 Tell me about Upper Mustang difficulty.',
-    '🌧️ When is the monsoon season in Nepal?',
-    '💰 How much does an EBC trek cost?',
+    '🧭 I have 12 days and moderate fitness — what trek?',
+    '📋 What permits do I actually need for EBC?',
+    '📅 Is October worth the crowds, or is there a better month?',
+    '🧗 Can I do Annapurna Circuit without a guide?',
   ];
 
   const ROUTE_LABELS = {

@@ -208,9 +208,9 @@ export default function Blog({ onSeeBlog }) {
 
           {/* Discover blurb */}
           <div className="text-white p-5 rounded-2xl border border-slate-800" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-            <h4 className="text-xs font-extrabold text-brand-saffron uppercase">Yaatri Co-op Journals</h4>
+            <h4 className="text-xs font-extrabold text-brand-saffron uppercase">From the trail, not the brochure</h4>
             <p className="text-slate-400 text-[11px] leading-relaxed mt-2 font-medium">
-              Share details about road blockage, altitude thresholds, and tea house availability directly in the feed.
+              These journals are written by people who just came back. Tea house conditions, actual altitude difficulty, which passes were open, what they wish they'd known. Post yours and help the next person plan honestly.
             </p>
           </div>
 
@@ -222,8 +222,8 @@ export default function Blog({ onSeeBlog }) {
           {/* Header */}
           <div className="bg-white px-6 py-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-black text-brand-slate tracking-tight">Traveler Journals</h1>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">Real hiker logs & photography</p>
+              <h1 className="text-2xl font-black text-brand-slate tracking-tight">Trail Journals</h1>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">First-hand reports from people who just came back</p>
             </div>
             {user ? (
               <button
@@ -251,8 +251,8 @@ export default function Blog({ onSeeBlog }) {
               <div className="bg-white rounded-2xl p-16 border border-slate-100 shadow-sm text-center flex flex-col items-center gap-4">
                 <Camera className="w-12 h-12 text-gray-300 animate-bounce" />
                 <div>
-                  <h3 className="font-bold text-brand-slate text-base">No journals posted yet</h3>
-                  <p className="text-gray-400 text-xs mt-1">Be the first explorer to post an image of your trek!</p>
+                  <h3 className="font-bold text-brand-slate text-base">No journals yet</h3>
+                  <p className="text-gray-400 text-xs mt-1">Be the first to post. Someone planning their trip needs your honest experience more than any guidebook.</p>
                 </div>
               </div>
             ) : posts.map(post => {

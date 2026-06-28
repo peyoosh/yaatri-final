@@ -141,14 +141,13 @@ export default function Contact() {
                 <Globe2 className="w-6 h-6 text-brand-blue" />
               </div>
               <h2 className="text-2xl font-black tracking-tight text-brand-slate mb-4 leading-tight">
-                Built around real people, not listings
+                We read every message personally
               </h2>
               <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                Every guide on Yaatri is verified in person. Every hotel is on the platform because a traveler vouched for it.
-                We don't sell ad placements, and the search ranking can't be paid for.
+                There's no ticket queue being auto-routed to a call centre. When you write to us, it goes to a person in Lalitpur who has either walked that trail or knows the guide you're asking about.
               </p>
               <p className="text-sm text-gray-600 leading-relaxed">
-                If something on the platform doesn't match reality, tell us — we keep a public log of corrections and act on them within the same week.
+                If a guide let you down, a hotel wasn't what we promised, or a booking went sideways — tell us the full story. We will investigate, update the listing, and if it's our fault, make it right. That's not a policy. It's the only way we keep our word worth anything.
               </p>
             </div>
 

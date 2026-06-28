@@ -69,13 +69,13 @@ export default function Destinations() {
           {/* Search */}
           <div>
             <label className="text-[10px] font-bold text-brand-pink uppercase tracking-widest block mb-3">
-              Search Catalog
+              Find your trek
             </label>
             <div className="relative border-b border-gray-200 pb-2 focus-within:border-brand-blue transition-colors flex items-center gap-2">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input
                 type="text"
-                placeholder="Search region, terrain..."
+                placeholder="Region, terrain, or name..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full bg-transparent border-none text-sm font-semibold text-brand-slate focus:outline-none placeholder-gray-400"
@@ -121,7 +121,7 @@ export default function Destinations() {
 
           {/* Recommended quick-links */}
           <div>
-            <label className="text-[10px] font-bold text-brand-saffron uppercase tracking-widest block mb-4">Recommended Nodes</label>
+            <label className="text-[10px] font-bold text-brand-saffron uppercase tracking-widest block mb-4">Popular right now</label>
             <div className="flex flex-col gap-3">
               {destinations.slice(0, 4).map(d => (
                 <div
@@ -137,7 +137,7 @@ export default function Destinations() {
           </div>
 
           <div className="border-t border-slate-50 pt-4 mt-2">
-            <p className="font-mono text-[9px] text-gray-400">STATUS: SECURE_CATALOG // VERIFIED</p>
+            <p className="text-[10px] text-gray-400 leading-relaxed">Every destination has been physically scouted. Guides assigned to each route are background-checked.</p>
           </div>
         </aside>
 
@@ -147,9 +147,9 @@ export default function Destinations() {
           {/* Header row */}
           <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl border border-slate-100 shadow-sm">
             <div>
-              <h1 className="text-xl font-extrabold text-brand-slate tracking-tight">Terrain Rankings</h1>
+              <h1 className="text-xl font-extrabold text-brand-slate tracking-tight">Verified Destinations</h1>
               <p className="text-xs text-gray-400 font-medium mt-0.5">
-                {loading ? 'Loading...' : `Showing ${filtered.length} catalog nodes`}
+                {loading ? 'Loading destinations…' : `${filtered.length} destination${filtered.length !== 1 ? 's' : ''} match your filters`}
               </p>
             </div>
             <div className="flex items-center gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
