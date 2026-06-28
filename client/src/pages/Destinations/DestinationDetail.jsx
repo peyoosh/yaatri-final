@@ -336,13 +336,13 @@ export default function DestinationDetail({ onSeeBlog }) {
 
           {/* TravelIntel panel */}
           <div className="relative rounded-3xl overflow-hidden shadow-md" style={{ padding: 1, background: 'linear-gradient(to right, #2563EB, #DB2777, #F59E0B)' }}>
-            <div className="bg-white p-6 rounded-[23px]">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-brand-blue animate-pulse" />
-                  <h3 className="text-sm font-bold text-brand-slate uppercase tracking-wider">TravelIntel Personalized Dashboard</h3>
+            <div className="bg-white p-6 rounded-[23px] overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 gap-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="w-5 h-5 text-brand-blue animate-pulse shrink-0" />
+                  <h3 className="text-sm font-bold text-brand-slate uppercase tracking-wider truncate">TravelIntel Personalized Dashboard</h3>
                 </div>
-                <span className="text-[9px] font-mono text-gray-400">LIVE_RECOMMENDATIONS</span>
+                <span className="text-[9px] font-mono text-gray-400 shrink-0 hidden sm:block">LIVE_RECOMMENDATIONS</span>
               </div>
 
               {!authUser ? (
@@ -357,8 +357,8 @@ export default function DestinationDetail({ onSeeBlog }) {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  <div className="md:col-span-8 flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 flex flex-col gap-4">
                     <p className="text-xs text-gray-600 font-medium">
                       Welcome back, <strong className="text-brand-blue">@{authUser.username}</strong>! Based on your traveler profile, here is your customized route recommendation:
                     </p>
@@ -388,7 +388,7 @@ export default function DestinationDetail({ onSeeBlog }) {
                       </div>
                     )}
                   </div>
-                  <div className="md:col-span-4 bg-slate-900 rounded-2xl p-4 text-white flex flex-col justify-between min-h-[140px] border border-slate-800">
+                  <div className="md:col-span-1 bg-slate-900 rounded-2xl p-4 text-white flex flex-col justify-between min-h-[140px] border border-slate-800">
                     <span className="text-[8px] font-mono text-gray-500">TERRAIN TOPOGRAPHY</span>
                     <div className="flex flex-col gap-1 mt-2">
                       <p className="text-xs font-bold">{dest.terrainType} Zone</p>
