@@ -58,12 +58,17 @@ const BookingSchema = new mongoose.Schema(
       processedAt: { type: Date, default: null },
     },
 
-    // Traveler review of the trip — written once via POST /:id/review after the
-    // booking reaches 'approved' or 'completed'. Surfaced on:
-    //   - Destination detail page ("Travelers say")
-    //   - Guide profile (reviews of trips they guided)
-    //   - Hotel profile (reviews of trips on destinations linked to their hotel)
     review: {
+      rating:  { type: Number, min: 1, max: 5 },
+      comment: { type: String, default: '', maxlength: 1000 },
+      submittedAt: { type: Date },
+    },
+    guideReview: {
+      rating:  { type: Number, min: 1, max: 5 },
+      comment: { type: String, default: '', maxlength: 1000 },
+      submittedAt: { type: Date },
+    },
+    hotelReview: {
       rating:  { type: Number, min: 1, max: 5 },
       comment: { type: String, default: '', maxlength: 1000 },
       submittedAt: { type: Date },

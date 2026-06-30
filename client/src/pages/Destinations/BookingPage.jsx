@@ -388,43 +388,68 @@ export default function BookingPage() {
               </div>
             </motion.div>
           ) : (
-            /* CONFIRMATION */
-            <motion.div key="confirmation" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-xl mx-auto text-center">
-              <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-2xl flex flex-col items-center gap-6">
+            <motion.div key="confirmation" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="w-full flex justify-center"
+            >
+              <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-2xl flex flex-col gap-6 p-8" style={{ maxWidth: '52rem' }}>
                 {(confirmedBooking.status === 'pending_payment' || confirmedBooking.status === 'pending') ? (
                   <>
-                    <div className="w-14 h-14 rounded-full bg-brand-saffron/10 text-brand-saffron flex items-center justify-center animate-pulse">
-                      <CreditCard className="w-7 h-7" />
-                    </div>
-                    <div className="text-center flex flex-col gap-2">
-                      <span className="px-3 py-1 bg-brand-saffron/10 text-brand-saffron text-[9px] font-bold rounded-full uppercase tracking-widest self-center">PENDING PAYMENT WIRE</span>
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <div className="w-14 h-14 rounded-full bg-brand-saffron/10 text-brand-saffron flex items-center justify-center animate-pulse">
+                        <CreditCard className="w-7 h-7" />
+                      </div>
+                      <span className="px-3 py-1 bg-brand-saffron/10 text-brand-saffron text-[9px] font-bold rounded-full uppercase tracking-widest">PENDING PAYMENT</span>
                       <h2 className="text-2xl font-extrabold text-brand-slate tracking-tight">Booking Placed — Awaiting Payment</h2>
-                      <p className="text-xs text-gray-500 font-medium max-w-sm">Please initiate a bank wire transfer of the booking total, then click confirm below.</p>
+                      <p className="text-xs text-gray-500 font-medium max-w-md">
+                        Wire the exact amount to the escrow account below, OR scan the eSewa QR on your phone. Then click confirm.
+                      </p>
                     </div>
-                    <div className="w-full bg-slate-900 text-slate-300 p-5 rounded-2xl font-mono text-[11px] text-left border border-slate-800 flex flex-col gap-2 shadow-inner">
-                      <div className="flex justify-between border-b border-slate-800 pb-1.5 text-white font-semibold"><span>YAATRI ESCROW CO-OP CORP</span></div>
-                      <div>BANK: Global IME Bank Limited, Lalitpur</div>
-                      <div>A/C: 43-2009-8800-43</div>
-                      <div>REF: {String(confirmedBooking._id).slice(-8).toUpperCase()}</div>
-                      <div className="flex justify-between border-t border-slate-800 pt-1.5 mt-1 text-brand-green font-bold">
-                        <span>WIRE VALUE:</span><span>{fmtNPR(confirmedBooking.pricing?.totalCost)}</span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div className="bg-slate-900 text-slate-300 p-5 rounded-2xl font-mono text-[11px] text-left border border-slate-800 flex flex-col gap-2 shadow-inner">
+                        <div className="flex justify-between border-b border-slate-800 pb-1.5 text-white font-semibold"><span>YAATRI ESCROW CO-OP CORP</span></div>
+                        <div>BANK: Global IME Bank Limited, Lalitpur</div>
+                        <div>A/C: 43-2009-8800-43</div>
+                        <div>REF: {String(confirmedBooking._id).slice(-8).toUpperCase()}</div>
+                        <div className="flex justify-between border-t border-slate-800 pt-1.5 mt-1 text-brand-green font-bold">
+                          <span>WIRE VALUE:</span><span>{fmtNPR(confirmedBooking.pricing?.totalCost)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center gap-3 p-5 bg-white rounded-2xl border border-slate-200">
+                        <img
+                          src="/esewa-qr.png"
+                          alt="eSewa QR"
+                          className="w-36 h-36 object-contain"
+                          onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                        />
+                        <div className="hidden w-36 h-36 items-center justify-center rounded-xl bg-slate-50 border border-dashed border-slate-300 text-[10px] text-gray-400 text-center font-medium p-3">
+                          Place esewa-qr.png in client/public/
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-brand-green font-bold text-sm">e</span>
+                          <span className="text-xs font-bold text-slate-700">Sewa</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 text-center">Scan with eSewa app to pay {fmtNPR(confirmedBooking.pricing?.totalCost)}</p>
                       </div>
                     </div>
-                    {submitError && <p className="text-xs text-red-500">{submitError}</p>}
+
+                    {submitError && <p className="text-xs text-red-500 text-center">{submitError}</p>}
+
                     <button
                       onClick={handleMarkPaid}
                       disabled={paying}
-                      className="w-full py-3.5 bg-brand-saffron hover:bg-brand-saffron/95 text-white font-extrabold text-xs rounded-xl shadow-md shadow-brand-saffron/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                      className="w-full py-3.5 bg-brand-saffron hover:bg-brand-saffron/95 text-white font-extrabold text-sm rounded-xl shadow-md shadow-brand-saffron/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
                     >
                       {paying ? <><Loader className="w-4 h-4 animate-spin" /> Confirming…</> : <><CheckCircle2 className="w-4 h-4" /> I have paid — Confirm</>}
                     </button>
                   </>
                 ) : (
-                  <>
+                  <div className="flex flex-col items-center gap-5 text-center">
                     <div className="w-16 h-16 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center">
                       <CheckCircle2 className="w-8 h-8" />
                     </div>
-                    <div className="text-center flex flex-col gap-2">
+                    <div className="flex flex-col gap-2">
                       <span className="px-3 py-1 bg-brand-green/10 text-brand-green text-[9px] font-bold rounded-full uppercase tracking-widest self-center">ESCROW_FUNDS_HELD</span>
                       <h2 className="text-2xl font-extrabold text-brand-slate tracking-tight">Payment received · awaiting admin approval</h2>
                       <p className="text-xs text-gray-500 font-medium max-w-md">Your payment is safely locked in Yaatri's escrow. An invoice has been emailed to you.</p>
@@ -433,10 +458,10 @@ export default function BookingPage() {
                       <span className="text-gray-500">Booking REF:</span>
                       <strong className="font-mono text-brand-slate">{String(confirmedBooking._id).slice(-8).toUpperCase()}</strong>
                     </div>
-                  </>
+                  </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 w-full border-t border-slate-100 pt-6 mt-2">
+                <div className="grid grid-cols-2 gap-3 w-full border-t border-slate-100 pt-4">
                   <button onClick={() => navigate('/dashboard')} className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer">
                     View in dashboard
                   </button>

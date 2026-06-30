@@ -572,6 +572,52 @@ router.post('/:id/review', protect, async (req, res) => {
   }
 });
 
+// POST /api/bookings/:id/guide-review — owner-only, submitted once per booking.
+router.post('/:id/guide-review', protect, async (req, res) => {
+  try {
+    const { rating, comment } = req.body || {};
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (String(booking.user) !== String(req.user._id))
+      return res.status(403).json({ message: 'Only the traveler who booked this trip can review it.' });
+    if (!['approved', 'completed', 'confirmed'].includes(booking.status))
+      return res.status(400).json({ message: 'Reviews are only accepted after a trip is approved or completed.' });
+    if (!booking.assignedGuide)
+      return res.status(400).json({ message: 'No guide was assigned to this booking.' });
+    if (booking.guideReview?.rating)
+      return res.status(400).json({ message: 'Guide already reviewed for this booking.' });
+    const r = Number(rating);
+    if (!Number.isFinite(r) || r < 1 || r > 5)
+      return res.status(400).json({ message: 'rating must be between 1 and 5.' });
+    booking.guideReview = { rating: r, comment: String(comment || '').slice(0, 1000).trim(), submittedAt: new Date() };
+    await booking.save();
+    res.status(201).json(booking);
+  } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+// POST /api/bookings/:id/hotel-review — owner-only, submitted once per booking.
+router.post('/:id/hotel-review', protect, async (req, res) => {
+  try {
+    const { rating, comment } = req.body || {};
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (String(booking.user) !== String(req.user._id))
+      return res.status(403).json({ message: 'Only the traveler who booked this trip can review it.' });
+    if (!['approved', 'completed', 'confirmed'].includes(booking.status))
+      return res.status(400).json({ message: 'Reviews are only accepted after a trip is approved or completed.' });
+    if (!booking.assignedHotel)
+      return res.status(400).json({ message: 'No hotel was assigned to this booking.' });
+    if (booking.hotelReview?.rating)
+      return res.status(400).json({ message: 'Hotel already reviewed for this booking.' });
+    const r = Number(rating);
+    if (!Number.isFinite(r) || r < 1 || r > 5)
+      return res.status(400).json({ message: 'rating must be between 1 and 5.' });
+    booking.hotelReview = { rating: r, comment: String(comment || '').slice(0, 1000).trim(), submittedAt: new Date() };
+    await booking.save();
+    res.status(201).json(booking);
+  } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
 // PATCH /api/bookings/:id/status  — admin moves a booking through the lifecycle.
 // Validates the transition: certain hops aren't allowed (e.g. completed → pending).
 router.patch('/:id/status', validateAdmin, async (req, res) => {
