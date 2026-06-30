@@ -114,7 +114,7 @@ function ReviewModal({ booking, onClose, onReviewed }) {
   const allDone = tabs.every(t => done[t.id]);
 
   return (
-    <div onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+    <div onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-60 flex items-center justify-center p-6">
       <div onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl p-6 w-full border border-slate-100 shadow-2xl flex flex-col gap-5" style={{ maxWidth: '32rem' }}>
 
@@ -716,7 +716,7 @@ function FeedbackModal({ user, onClose }) {
   };
 
   return (
-    <div onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+    <div onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-60 flex items-center justify-center p-6">
       <div onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl p-6 max-w-md w-full border border-slate-100 shadow-2xl flex flex-col gap-4">
         <div className="flex justify-between items-start">

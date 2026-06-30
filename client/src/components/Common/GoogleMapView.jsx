@@ -152,7 +152,7 @@ const GoogleMapView = ({
   }
 
   return (
-    <div style={{ position: 'relative', ...style }}>
+    <div style={{ position: 'relative', zIndex: 0, isolation: 'isolate', ...style }}>
       <div
         ref={containerRef}
         style={{
