@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { GoogleGenAI } = require('@google/genai');
 const Destination = require('../models/Destination');
 
-if (!process.env.GEMINI_API_KEY) {
-  console.warn('[ai] GEMINI_API_KEY is not set.');
-}
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const OLLAMA_URL   = process.env.OLLAMA_URL   || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 
-// ── Destination cache — refresh every 5 min, avoid DB hit on every message ──
+console.log(`[ai] using Ollama @ ${OLLAMA_URL} — model: ${OLLAMA_MODEL}`);
+
+// ── Destination cache — refresh every 5 min ───────────────────────────────
 let _destCache = { docs: [], expiresAt: 0 };
 const getDestinations = async () => {
   if (Date.now() < _destCache.expiresAt) return _destCache.docs;
@@ -51,39 +50,37 @@ ${destList}
 redirectTo: ONLY set when user explicitly says "take me to", "go to", "open [page]". Informational questions always get null.
 Allowed: /destinations /blog /support /login /register /dashboard /contact /explore (never redirect to /explore)
 
-Output ONLY valid JSON (no markdown):
+IMPORTANT: Output ONLY valid JSON, no markdown, no explanation, no code fences. Exactly this shape:
 {"reply":"...","redirectTo":null,"suggestedDestinations":["_id1"]}
-suggestedDestinations: 0-3 _ids from the live list above.`;
+suggestedDestinations: 0-3 _ids from the live list above, or empty array.`;
 };
 
-const sanitizeHistory = (raw) => {
-  if (!Array.isArray(raw)) return [];
-  const cleaned = raw
-    .filter(m => m && (m.role === 'user' || m.role === 'model') && Array.isArray(m.parts))
-    .slice(-6) // last 3 turns only — keeps tokens low
-    .map(m => ({
-      role: m.role,
-      parts: m.parts.filter(p => typeof p.text === 'string').map(p => ({ text: p.text.slice(0, 800) })),
-    }))
-    .filter(m => m.parts.length > 0);
-
-  while (cleaned.length > 0 && cleaned[0].role !== 'user') cleaned.shift();
-
-  const alternating = [];
-  for (const entry of cleaned) {
-    if (!alternating.length || alternating[alternating.length - 1].role !== entry.role) {
-      alternating.push(entry);
-    } else {
-      alternating[alternating.length - 1] = entry;
+// Convert Gemini-style history → Ollama messages array
+const buildMessages = (systemPrompt, history, query) => {
+  const messages = [{ role: 'system', content: systemPrompt }];
+  if (Array.isArray(history)) {
+    for (const m of history) {
+      if (!m || !Array.isArray(m.parts)) continue;
+      const role = m.role === 'model' ? 'assistant' : 'user';
+      const content = m.parts.map(p => p.text || '').join('').slice(0, 800);
+      if (content) messages.push({ role, content });
     }
   }
-  return alternating;
+  messages.push({ role: 'user', content: String(query).slice(0, 2000) });
+  return messages;
+};
+
+// Extract the first valid JSON object from a string — handles accidental markdown wrappers
+const extractJSON = (text) => {
+  const start = text.indexOf('{');
+  const end   = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch { return null; }
 };
 
 router.post('/chat', async (req, res) => {
   const { query, history } = req.body || {};
 
-  // Rate limit
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || 'unknown';
   if (isRateLimited(clientIp)) {
     return res.status(429).json({
@@ -99,29 +96,33 @@ router.post('/chat', async (req, res) => {
 
   try {
     const destinations = await getDestinations();
-    const chatHistory = sanitizeHistory(history);
+    const messages = buildMessages(buildSystemPrompt(destinations), history, query);
 
-    const chat = ai.chats.create({
-      model: 'gemini-2.0-flash',
-      history: chatHistory,
-      config: {
-        systemInstruction: buildSystemPrompt(destinations),
-        responseMimeType: 'application/json',
-        temperature: 0.7,
-        maxOutputTokens: 512,
-      },
+    const ollamaRes = await fetch(`${OLLAMA_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        messages,
+        format: 'json',
+        stream: false,
+        options: { temperature: 0.7, num_predict: 600 },
+      }),
+      signal: AbortSignal.timeout(90_000),
     });
 
-    const result = await chat.sendMessage({ message: String(query).slice(0, 2000) });
-    const responseText = result.text;
+    if (!ollamaRes.ok) {
+      const errText = await ollamaRes.text().catch(() => '');
+      throw new Error(`Ollama ${ollamaRes.status}: ${errText.slice(0, 200)}`);
+    }
 
-    let parsed;
-    try {
-      parsed = JSON.parse(responseText);
-    } catch {
-      // Model returned non-JSON — extract reply text if possible
+    const ollamaData = await ollamaRes.json();
+    const responseText = ollamaData.message?.content || '';
+
+    const parsed = extractJSON(responseText);
+    if (!parsed) {
       return res.json({
-        reply: responseText.slice(0, 300) || "I got confused there — could you rephrase?",
+        reply: responseText.slice(0, 400) || "I got confused — could you rephrase that?",
         redirectTo: null,
         suggestedDestinations: [],
       });
@@ -142,24 +143,17 @@ router.post('/chat', async (req, res) => {
 
   } catch (error) {
     const msg = error?.message || '';
-    const isQuota = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
-    const isKey   = msg.includes('API_KEY') || msg.includes('401') || msg.includes('403');
+    const isDown = msg.includes('ECONNREFUSED') || msg.includes('fetch failed') || msg.includes('connect');
 
-    if (isQuota) {
-      return res.status(429).json({
-        reply: "The guide is taking a breather — free tier limit reached. Try again in a minute.",
-        redirectTo: null,
-        suggestedDestinations: [],
-      });
-    }
-    if (isKey) {
-      console.error('[ai] API key error — check GEMINI_API_KEY env var');
+    if (isDown) {
+      console.error('[ai] Ollama not reachable — is it running?');
       return res.json({
-        reply: "I'm having trouble connecting right now. Please try again shortly.",
+        reply: "The local AI guide is offline right now. Make sure Ollama is running (`ollama serve`) and try again.",
         redirectTo: null,
         suggestedDestinations: [],
       });
     }
+
     console.error('[ai] error:', msg.slice(0, 200));
     res.json({
       reply: "Something went wrong on my end. Try again in a moment.",

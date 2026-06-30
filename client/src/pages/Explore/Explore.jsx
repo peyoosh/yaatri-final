@@ -42,7 +42,7 @@ export default function Explore() {
       }));
       const priorHistory = history.slice(0, -1);
 
-      const { data } = await api.post('/ai/chat', { query: userMsg.text, history: priorHistory }, { timeout: 45_000 });
+      const { data } = await api.post('/ai/chat', { query: userMsg.text, history: priorHistory }, { timeout: 90_000 });
       const { reply, redirectTo, suggestedDestinations } = data || {};
 
       setMessages(prev => [...prev, {
@@ -61,11 +61,11 @@ export default function Explore() {
         setMessages(prev => [...prev, { id: Date.now() + 2, type: 'bot', text: serverMsg, suggestedDestinations: [] }]);
       } else if (isNetwork) {
         const waitId = Date.now() + 2;
-        setMessages(prev => [...prev, { id: waitId, type: 'bot', text: "The guide is waking up — retrying in 15 seconds…", suggestedDestinations: [] }]);
+        setMessages(prev => [...prev, { id: waitId, type: 'bot', text: "Loading local AI model — this takes a few seconds on first use…", suggestedDestinations: [] }]);
         await new Promise(r => setTimeout(r, 15000));
         try {
           const retryHistory = [...messages, userMsg].slice(-6).map(m => ({ role: m.type === 'user' ? 'user' : 'model', parts: [{ text: String(m.text || '').slice(0, 800) }] })).slice(0, -1);
-          const { data } = await api.post('/ai/chat', { query: userMsg.text, history: retryHistory }, { timeout: 60_000 });
+          const { data } = await api.post('/ai/chat', { query: userMsg.text, history: retryHistory }, { timeout: 90_000 });
           const { reply, redirectTo, suggestedDestinations } = data || {};
           setMessages(prev => [...prev.filter(m => m.id !== waitId), { id: Date.now() + 3, type: 'bot', text: reply, suggestedDestinations: suggestedDestinations || [], redirectTo: redirectTo || null }]);
         } catch {
