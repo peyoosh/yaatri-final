@@ -59,7 +59,33 @@ function TravelerDashboard({ user }) {
   }, []);
 
   const handleCancel = async (bk) => {
-    if (!window.confirm(`Cancel booking for ${bk.destination?.name || 'this trip'}? This cannot be undone.`)) return;
+    const destName = bk.destination?.name || 'this trip';
+    const gross = Number(bk.pricing?.grossTotal || bk.pricing?.totalCost || 0);
+    const start = bk.startDate ? new Date(bk.startDate) : null;
+    const hoursUntil = start ? (start.getTime() - Date.now()) / 3_600_000 : null;
+
+    let refundPct = 80;
+    let refundNote = '80% refund — 20% platform fee applies.';
+    if (bk.status === 'pending_payment') {
+      refundPct = 100;
+      refundNote = '100% refund — payment not yet captured.';
+    } else if (hoursUntil !== null && hoursUntil < 0) {
+      refundPct = 0;
+      refundNote = 'No refund — trip has already started.';
+    } else if (hoursUntil !== null && hoursUntil < 48) {
+      refundPct = 0;
+      refundNote = 'No refund — cancellation within 48 hours of departure.';
+    } else if (hoursUntil !== null && hoursUntil < 168) {
+      refundPct = 50;
+      refundNote = '50% refund — cancellation within 7 days of departure.';
+    }
+
+    const refundAmount = gross > 0 ? Math.round(gross * refundPct / 100) : 0;
+    const refundLine = gross > 0
+      ? `\n\nRefund: NPR ${refundAmount.toLocaleString('en-IN')} (${refundPct}% of NPR ${gross.toLocaleString('en-IN')})\n${refundNote}`
+      : '';
+
+    if (!window.confirm(`Cancel booking for ${destName}?${refundLine}\n\nThis cannot be undone.`)) return;
     setCancellingId(bk._id);
     try {
       const { data } = await api.patch(`/bookings/${bk._id}/cancel`);

@@ -470,6 +470,8 @@ router.patch('/:id/cancel', protect, async (req, res) => {
         const grossOnFile = Number(booking.pricing?.grossTotal || booking.pricing?.totalCost || 0);
         const refundEligible = Number(booking.refund?.eligibleAmount || 0);
         const forfeit = Number(booking.refund?.forfeitedAmount || 0);
+        const refundPct = grossOnFile > 0 ? Math.round((refundEligible / grossOnFile) * 100) : 0;
+        const forfeitPct = 100 - refundPct;
         const subject = `Your Yaatri booking has been cancelled — ${destName}`;
         const text = [
           `Hi ${userDoc.username || 'traveller'},`,
@@ -479,10 +481,10 @@ router.patch('/:id/cancel', protect, async (req, res) => {
           `Booking ref:        ${String(booking._id).slice(-8).toUpperCase()}`,
           `Status:             CANCELLED`,
           `Amount on file:     NPR ${grossOnFile.toLocaleString('en-IN')}`,
-          `Refund eligible:    NPR ${refundEligible.toLocaleString('en-IN')}  (80%)`,
-          `Cancellation fee:   NPR ${forfeit.toLocaleString('en-IN')}  (20% — platform policy)`,
+          `Refund eligible:    NPR ${refundEligible.toLocaleString('en-IN')}  (${refundPct}%)`,
+          `Cancellation fee:   NPR ${forfeit.toLocaleString('en-IN')}  (${forfeitPct}% — tiered policy)`,
           '',
-          'Refunds are processed within 5–7 business days.',
+          refundEligible > 0 ? 'Refunds are processed within 5–7 business days.' : 'No refund applies under the <48-hour or post-departure cancellation policy.',
           'Reply to this email if anything looks wrong.',
           '',
           '— Yaatri Hub',
@@ -495,10 +497,10 @@ router.patch('/:id/cancel', protect, async (req, res) => {
               <tr><td style="opacity:0.6; padding:4px 0; width:160px;">Booking ref</td><td style="font-family:monospace; color:#A2D729;">${String(booking._id).slice(-8).toUpperCase()}</td></tr>
               <tr><td style="opacity:0.6; padding:4px 0;">Status</td><td><strong>CANCELLED</strong></td></tr>
               <tr><td style="opacity:0.6; padding:4px 0;">Amount on file</td><td>NPR ${grossOnFile.toLocaleString('en-IN')}</td></tr>
-              <tr><td style="opacity:0.6; padding:4px 0;">Refund eligible (80%)</td><td style="color:#A2D729; font-weight:700;">NPR ${refundEligible.toLocaleString('en-IN')}</td></tr>
-              <tr><td style="opacity:0.6; padding:4px 0;">Cancellation fee (20%)</td><td style="color:#ff6b6b; font-weight:700;">NPR ${forfeit.toLocaleString('en-IN')}</td></tr>
+              <tr><td style="opacity:0.6; padding:4px 0;">Refund eligible (${refundPct}%)</td><td style="color:#A2D729; font-weight:700;">NPR ${refundEligible.toLocaleString('en-IN')}</td></tr>
+              <tr><td style="opacity:0.6; padding:4px 0;">Cancellation fee (${forfeitPct}%)</td><td style="color:#ff6b6b; font-weight:700;">NPR ${forfeit.toLocaleString('en-IN')}</td></tr>
             </table>
-            <p style="margin-top:18px; font-size:13px; opacity:0.75; line-height:1.6;">The 20% cancellation fee is a fixed marketplace policy. The remaining 80% is processed within 5–7 business days. Reply to this email if anything looks wrong.</p>
+            <p style="margin-top:18px; font-size:13px; opacity:0.75; line-height:1.6;">${refundEligible > 0 ? `The remaining ${refundPct}% (NPR ${refundEligible.toLocaleString('en-IN')}) is processed within 5–7 business days.` : 'No refund applies under the cancellation policy for this booking — either the trip was within 48 hours or had already started.'} Reply to this email if anything looks wrong.</p>
             <p style="margin-top:24px; font-size:11px; opacity:0.5;">— Yaatri Hub</p>
           </div>
         `;

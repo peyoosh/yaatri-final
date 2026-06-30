@@ -40,10 +40,8 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-40 h-20 transition-all duration-300 ${
-          isScrolled
-            ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-100'
-            : 'bg-transparent'
+        className={`fixed top-0 left-0 right-0 z-40 h-20 bg-white/95 backdrop-blur-md border-b border-slate-100 transition-all duration-300 ${
+          isScrolled ? 'shadow-sm' : ''
         }`}
       >
         <div className="w-full h-full px-6 lg:px-12 xl:px-20 flex items-center justify-between">
@@ -59,7 +57,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
               className="h-10 w-auto object-contain group-hover:scale-105 transition-transform"
             />
             <div>
-              <span className={`text-xl font-extrabold tracking-tight ${isScrolled ? 'text-brand-slate' : 'text-white'}`}>
+              <span className="text-xl font-extrabold tracking-tight text-brand-slate">
                 YAATRI<span className="text-brand-blue">HUB</span>
               </span>
               <p className="text-[9px] font-bold tracking-[0.2em] text-brand-saffron uppercase -mt-1">NEPAL</p>
@@ -73,7 +71,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
               className={`font-semibold text-sm transition-colors cursor-pointer relative ${
                 isActive('/destinations') || isActive('/destination')
                   ? 'text-brand-blue'
-                  : isScrolled ? 'text-slate-600 hover:text-brand-blue' : 'text-white/90 hover:text-white'
+                  : 'text-slate-600 hover:text-brand-blue'
               }`}
             >
               Destinations
@@ -99,7 +97,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
               className={`font-semibold text-sm transition-colors cursor-pointer relative ${
                 isActive('/blog')
                   ? 'text-brand-blue'
-                  : isScrolled ? 'text-slate-600 hover:text-brand-blue' : 'text-white/90 hover:text-white'
+                  : 'text-slate-600 hover:text-brand-blue'
               }`}
             >
               Blog Journal
@@ -146,7 +144,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
                     </div>
                   )}
                   <div className="text-left">
-                    <p className={`text-xs font-bold group-hover:text-brand-blue transition-colors ${isScrolled ? 'text-brand-slate' : 'text-white'}`}>
+                    <p className="text-xs font-bold group-hover:text-brand-blue transition-colors text-brand-slate">
                       @{loggedInUser.username}
                     </p>
                     <p className="text-[10px] font-medium text-slate-400 capitalize">{loggedInUser.role}</p>
@@ -165,9 +163,7 @@ const Navbar = ({ loggedInUser, handleLogout }) => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate('/login')}
-                  className={`px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-                    isScrolled ? 'text-slate-700 hover:text-brand-blue' : 'text-white/90 hover:text-white'
-                  }`}
+                  className="px-4 py-2 text-sm font-semibold transition-colors cursor-pointer text-slate-700 hover:text-brand-blue"
                 >
                   Sign in
                 </button>
